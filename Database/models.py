@@ -161,3 +161,13 @@ class mentorship(SQLModel, table=True):
     status: str = Field(default="pending", sa_column=Column("status", String, nullable=False, default="pending"))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
+
+class registration_verification(SQLModel, table=True):
+    __tablename__ = "registration_verifications"
+    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+    name: str = Field(sa_column=Column("name", String, nullable=False))
+    email: str = Field(sa_column=Column("email", String, unique=True, index=True, nullable=False))
+    password_hash: str = Field(sa_column=Column("password_hash", String, nullable=False))
+    code_hash: str = Field(sa_column=Column("code_hash", String, nullable=False))
+    expires_at: datetime = Field(sa_column=Column("expires_at", DateTime(timezone=True), nullable=False))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))

@@ -13,6 +13,16 @@ class RegisterRequest(BaseModel):
     password: str
 
 
+class VerificationStartResponse(BaseModel):
+    message: str
+    email: str
+
+
+class VerifyEmailRequest(BaseModel):
+    email: str
+    code: str
+
+
 class UserResponse(BaseModel):
     id: str
     name: str
