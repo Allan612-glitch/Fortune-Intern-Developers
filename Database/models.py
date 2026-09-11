@@ -38,6 +38,13 @@ class program(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
     name: str = Field(sa_column=Column("name", String, nullable=False))
     description: str = Field(sa_column=Column("description", String))
+    company: str = Field(default="Fortune Intern Network", sa_column=Column("company", String, nullable=False, default="Fortune Intern Network"))
+    category: str = Field(default="Internship", sa_column=Column("category", String, nullable=False, default="Internship"))
+    status: str = Field(default="open", sa_column=Column("status", String, nullable=False, default="open"))
+    location: str = Field(default="Remote", sa_column=Column("location", String, nullable=False, default="Remote"))
+    duration: str = Field(default="3 months", sa_column=Column("duration", String, nullable=False, default="3 months"))
+    skills: str | None = Field(default=None, sa_column=Column("skills", String))
+    deadline: datetime | None = Field(default=None, sa_column=Column("deadline", DateTime(timezone=True)))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
 
@@ -47,6 +54,8 @@ class application(SQLModel, table=True):
     user_id: UUID = Field(sa_column=Column("user_id", Uuid, ForeignKey("users.id"), nullable=False))
     program_id: UUID = Field(sa_column=Column("program_id", Uuid, ForeignKey("programs.id"), nullable=False))
     status: str = Field(sa_column=Column("status", String, nullable=False))
+    resume_filename: str | None = Field(default=None, sa_column=Column("resume_filename", String))
+    resume_path: str | None = Field(default=None, sa_column=Column("resume_path", String))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
 

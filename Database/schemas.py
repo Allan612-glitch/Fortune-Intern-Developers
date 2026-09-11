@@ -57,13 +57,46 @@ class ApplicationCreateRequest(BaseModel):
     program_name: str
 
 
+class ProgramResponse(BaseModel):
+    id: str
+    name: str
+    description: str
+    company: str
+    category: str
+    status: str
+    location: str
+    duration: str
+    skills: list[str]
+    deadline: str | None = None
+
+
 class ApplicationResponse(BaseModel):
     id: str
     user_id: str
     program_id: str
     program_name: str
     status: str
+    resume_filename: str | None = None
     created_at: str
+
+
+class DashboardApplication(BaseModel):
+    id: str
+    program_name: str
+    status: str
+    created_at: str
+
+
+class DashboardResponse(BaseModel):
+    profile_completion: int
+    total_applications: int
+    active_applications: int
+    interviews: int
+    accepted_applications: int
+    rejected_applications: int
+    open_programs: int
+    next_deadline: str | None = None
+    recent_applications: list[DashboardApplication]
 
 
 class TokenResponse(BaseModel):

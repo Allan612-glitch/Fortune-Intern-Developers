@@ -3,7 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from Backend.api.routes.applications import router as application_router
 from Backend.api.routes.auth import router as auth_router
+from Backend.api.routes.dashboard import router as dashboard_router
 from Backend.api.routes.profiles import router as profile_router
+from Backend.api.routes.programs import router as program_router
 from Backend.core.config import settings
 
 
@@ -19,6 +21,8 @@ def create_app() -> FastAPI:
     application.include_router(auth_router)
     application.include_router(profile_router)
     application.include_router(application_router)
+    application.include_router(program_router)
+    application.include_router(dashboard_router)
 
     @application.get("/", tags=["health"])
     def read_root():

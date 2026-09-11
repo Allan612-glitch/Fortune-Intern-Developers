@@ -5,3 +5,4 @@ psycopg[binary]
 alembic
 pwdlib[argon2]
 PyJWT
+python-multipart
