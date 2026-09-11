@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from Backend.api.routes.applications import router as application_router
 from Backend.api.routes.auth import router as auth_router
+from Backend.api.routes.profiles import router as profile_router
 from Backend.core.config import settings
 
 
@@ -15,6 +17,8 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     application.include_router(auth_router)
+    application.include_router(profile_router)
+    application.include_router(application_router)
 
     @application.get("/", tags=["health"])
     def read_root():

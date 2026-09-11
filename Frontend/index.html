@@ -1520,7 +1520,7 @@ body { background: #d8d8cc; }
 
         <div class="profile-head">
           <div class="avatar-wrap">
-            AM
+            <span class="avatar-initials">AM</span>
             <label class="avatar-edit">
               <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
               <input type="file" id="avatarInput" accept="image/*" style="display: none;">
@@ -1529,8 +1529,15 @@ body { background: #d8d8cc; }
           <div class="profile-name" id="profileName">Your Name</div>
           <div class="profile-email" id="profileEmail">your-email@example.com</div>
 
+          <div class="field"><label>University</label><input type="text" id="universityField" placeholder="e.g., University of Ghana"></div>
+          <div class="field"><label>Course</label><input type="text" id="courseField" placeholder="e.g., Computer Science"></div>
           <div class="field"><label>Major</label><input type="text" value="Computer Science" id="majorField"></div>
+          <div class="field"><label>Year of Study</label><input type="number" id="studyYearField" min="1" max="10" placeholder="e.g., 3"></div>
           <div class="field"><label>Graduation Year</label><input type="number" value="2027" id="gradYearField" min="2024" max="2035"></div>
+          <div class="field"><label>Skills</label><input type="text" id="skillsField" placeholder="e.g., Python, SQL, Communication"></div>
+          <div class="field"><label>Phone Number</label><input type="tel" id="phoneNumberField" placeholder="e.g., +233 24 000 0000"></div>
+          <div class="field"><label>Location</label><input type="text" id="locationField" placeholder="e.g., Accra, Ghana"></div>
+          <div class="field"><label>Bio</label><textarea id="bioField" rows="3" placeholder="Tell us a bit about yourself..."></textarea></div>
         </div>
 
         <div class="settings-card">
@@ -1626,6 +1633,7 @@ let currentAppPage = 'overview';
 let chartsReady = false;
 const authStorageKey = 'fortuneInternAuth';
 const apiBaseUrl = 'http://localhost:8000';
+let currentProfilePicture = '';
 
 function getStoredAuth() {
   try {
@@ -1655,6 +1663,81 @@ function renderAuthenticatedUser(user) {
   if (greetingAvatar) greetingAvatar.textContent = getInitials(user.name);
   if (profileName) profileName.textContent = user.name;
   if (profileEmail) profileEmail.textContent = user.email;
+}
+
+function getAuthHeaders() {
+  const auth = getStoredAuth();
+  return auth ? { Authorization: 'Bearer ' + auth.access_token } : {};
+}
+
+function renderProfileAvatar(imageData) {
+  const wrap = document.querySelector('.avatar-wrap');
+  if (!wrap) return;
+
+  const label = wrap.querySelector('.avatar-edit');
+  const currentUser = getAuthenticatedUser();
+  const initials = getInitials(currentUser ? currentUser.name : 'Fortune User');
+
+  wrap.innerHTML = '';
+  if (imageData) {
+    const img = document.createElement('img');
+    img.src = imageData;
+    img.alt = 'Profile';
+    wrap.appendChild(img);
+  } else {
+    const initialsNode = document.createElement('span');
+    initialsNode.className = 'avatar-initials';
+    initialsNode.textContent = initials;
+    wrap.appendChild(initialsNode);
+  }
+
+  if (label) {
+    wrap.appendChild(label);
+  }
+}
+
+async function loadProfileSettings() {
+  const auth = getStoredAuth();
+  if (!auth) return;
+
+  try {
+    const response = await fetch(apiBaseUrl + '/api/profile', {
+      headers: getAuthHeaders()
+    });
+    if (!response.ok) throw new Error('Unable to load profile');
+    const profile = await response.json();
+
+    const majorField = document.getElementById('majorField');
+    const gradYearField = document.getElementById('gradYearField');
+    const universityField = document.getElementById('universityField');
+    const courseField = document.getElementById('courseField');
+    const studyYearField = document.getElementById('studyYearField');
+    const skillsField = document.getElementById('skillsField');
+    const phoneNumberField = document.getElementById('phoneNumberField');
+    const locationField = document.getElementById('locationField');
+    const bioField = document.getElementById('bioField');
+    const emailNotif = document.getElementById('emailNotif');
+    const smsNotif = document.getElementById('smsNotif');
+    const oppNotif = document.getElementById('oppNotif');
+
+    if (majorField) majorField.value = profile.major || '';
+    if (gradYearField) gradYearField.value = profile.graduation_year ?? '';
+    if (universityField) universityField.value = profile.university || '';
+    if (courseField) courseField.value = profile.course || '';
+    if (studyYearField) studyYearField.value = profile.year_of_study ?? '';
+    if (skillsField) skillsField.value = profile.skills || '';
+    if (phoneNumberField) phoneNumberField.value = profile.phone_number || '';
+    if (locationField) locationField.value = profile.location || '';
+    if (bioField) bioField.value = profile.bio || '';
+    if (emailNotif) emailNotif.checked = Boolean(profile.email_notifications);
+    if (smsNotif) smsNotif.checked = Boolean(profile.sms_notifications);
+    if (oppNotif) oppNotif.checked = Boolean(profile.opportunity_alerts);
+
+    currentProfilePicture = profile.profile_picture || '';
+    renderProfileAvatar(currentProfilePicture);
+  } catch (error) {
+    console.warn('Profile load failed:', error.message);
+  }
 }
 
 function setAuthenticatedUser(auth) {
@@ -1712,6 +1795,14 @@ function showPage(pageName) {
   if (pageName === 'overview' && !chartsReady) {
     setTimeout(initCharts, 100);
     chartsReady = true;
+  }
+
+  if (pageName === 'profile') {
+    loadProfileSettings();
+  }
+
+  if (pageName === 'programs' || pageName === 'overview') {
+    loadApplications();
   }
 
   window.scrollTo(0, 0);
@@ -1807,11 +1898,63 @@ function showToast(msg, type = 'success') {
 }
 
 /* ===================== SETTINGS ===================== */
-function saveSettings() { showToast('Settings saved successfully!'); }
+async function saveSettings() {
+  const auth = getStoredAuth();
+  if (!auth) {
+    showToast('Please log in to save your profile.', 'error');
+    return;
+  }
+
+  const payload = {
+    major: document.getElementById('majorField').value.trim(),
+    graduation_year: document.getElementById('gradYearField').value ? Number(document.getElementById('gradYearField').value) : null,
+    university: document.getElementById('universityField').value.trim(),
+    course: document.getElementById('courseField').value.trim(),
+    year_of_study: document.getElementById('studyYearField').value ? Number(document.getElementById('studyYearField').value) : null,
+    skills: document.getElementById('skillsField').value.trim(),
+    phone_number: document.getElementById('phoneNumberField').value.trim(),
+    location: document.getElementById('locationField').value.trim(),
+    email_notifications: document.getElementById('emailNotif').checked,
+    sms_notifications: document.getElementById('smsNotif').checked,
+    opportunity_alerts: document.getElementById('oppNotif').checked,
+    bio: document.getElementById('bioField').value.trim(),
+    profile_picture: currentProfilePicture
+  };
+
+  try {
+    const response = await fetch(apiBaseUrl + '/api/profile', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
+      },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.detail || 'Unable to save profile');
+    currentProfilePicture = result.profile_picture || currentProfilePicture;
+    renderProfileAvatar(currentProfilePicture);
+    showToast('Settings saved successfully!');
+  } catch (error) {
+    showToast(error.message === 'Failed to fetch' ? 'Profile service unavailable.' : error.message, 'error');
+  }
+}
+
 function resetSettings() {
   document.getElementById('emailNotif').checked = true;
   document.getElementById('smsNotif').checked = false;
   document.getElementById('oppNotif').checked = true;
+  document.getElementById('majorField').value = '';
+  document.getElementById('gradYearField').value = '';
+  document.getElementById('universityField').value = '';
+  document.getElementById('courseField').value = '';
+  document.getElementById('studyYearField').value = '';
+  document.getElementById('skillsField').value = '';
+  document.getElementById('phoneNumberField').value = '';
+  document.getElementById('locationField').value = '';
+  document.getElementById('bioField').value = '';
+  currentProfilePicture = '';
+  renderProfileAvatar(currentProfilePicture);
   showToast('Settings reset');
 }
 
@@ -1821,14 +1964,8 @@ document.getElementById('avatarInput').addEventListener('change', (e) => {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = (ev) => {
-    const wrap = document.querySelector('.avatar-wrap');
-    const existingImg = wrap.querySelector('img');
-    if (existingImg) existingImg.remove();
-    const img = document.createElement('img');
-    img.src = ev.target.result;
-    img.alt = 'Profile';
-    wrap.insertBefore(img, wrap.firstChild);
-    wrap.childNodes.forEach(n => { if (n.nodeType === 3 && n.textContent.trim()) n.remove(); });
+    currentProfilePicture = ev.target.result;
+    renderProfileAvatar(currentProfilePicture);
   };
   reader.readAsDataURL(file);
   showToast('Profile photo updated!');
@@ -1843,16 +1980,83 @@ document.getElementById('resumeFile').addEventListener('change', (e) => {
   else { txt.textContent = 'Upload Resume (PDF)'; btn.classList.remove('has-file'); }
 });
 
+async function loadApplications() {
+  const auth = getStoredAuth();
+  if (!auth) return;
+
+  try {
+    const response = await fetch(apiBaseUrl + '/api/applications', {
+      headers: getAuthHeaders()
+    });
+    if (!response.ok) throw new Error('Unable to load applications');
+    const applications = await response.json();
+
+    const myTab = document.getElementById('tabMy');
+    if (!myTab) return;
+
+    const cards = applications.map((app) => {
+      const statusClass = app.status === 'submitted' ? 'status-review' : 'status-interview';
+      const statusLabel = app.status === 'submitted' ? 'Submitted' : app.status;
+      return `
+        <div class="app-card">
+          <div class="app-head">
+            <div>
+              <div class="app-title">${escapeHtml(app.program_name)}</div>
+              <div class="app-company">Fortune Intern Network</div>
+            </div>
+            <span class="status ${statusClass}">${statusLabel}</span>
+          </div>
+          <div class="app-foot">
+            <div class="app-date">Applied ${new Date(app.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    myTab.innerHTML = cards || `
+      <div class="card">
+        <p class="page-subtitle" style="margin: 0;">You have not submitted any applications yet.</p>
+      </div>
+    `;
+  } catch (error) {
+    console.warn('Application load failed:', error.message);
+  }
+}
+
 /* ===================== APPLY FORM ===================== */
-document.getElementById('applyForm').addEventListener('submit', (e) => {
+document.getElementById('applyForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const form = e.target;
   const data = new FormData(form);
   const name = data.get('fullName');
-  showToast('Application submitted, ' + name.split(' ')[0] + '!');
-  form.reset();
-  document.getElementById('uploadText').textContent = 'Upload Resume (PDF)';
-  document.getElementById('uploadBtn').classList.remove('has-file');
+  const program = data.get('program');
+
+  const auth = getStoredAuth();
+  if (!auth) {
+    showToast('Please log in to submit an application.', 'error');
+    return;
+  }
+
+  try {
+    const response = await fetch(apiBaseUrl + '/api/applications', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
+      },
+      body: JSON.stringify({ program_name: program })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.detail || 'Unable to submit application');
+
+    showToast('Application submitted, ' + name.split(' ')[0] + '!');
+    form.reset();
+    document.getElementById('uploadText').textContent = 'Upload Resume (PDF)';
+    document.getElementById('uploadBtn').classList.remove('has-file');
+    await loadApplications();
+  } catch (error) {
+    showToast(error.message === 'Failed to fetch' ? 'Application service unavailable.' : error.message, 'error');
+  }
 });
 
 /* ===================== CONTACT FORM ===================== */
@@ -2237,6 +2441,11 @@ async function validateStoredSession() {
 
 document.addEventListener('DOMContentLoaded', () => {
   validateStoredSession();
+  const auth = getStoredAuth();
+  if (auth) {
+    loadProfileSettings();
+    loadApplications();
+  }
 });
 </script>
 </body>
