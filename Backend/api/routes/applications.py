@@ -7,7 +7,7 @@ from sqlmodel import Session, select
 
 from Backend.api.deps import get_current_user
 from Backend.database import get_session
-from Database.models import application, program, user
+from Database.models import application, notification, program, user
 from Database.schemas import ApplicationCreateRequest, ApplicationResponse
 
 router = APIRouter(prefix="/api/applications", tags=["applications"])
@@ -152,6 +152,13 @@ async def create_application(
         resume_path=resume_path,
     )
     session.add(new_application)
+    session.add(notification(
+        user_id=account.id,
+        message=f"Your application for {program_name} was submitted successfully.",
+        target_type="application",
+        target_id=str(new_application.id),
+        read="false",
+    ))
     session.commit()
     session.refresh(new_application)
 

@@ -10,6 +10,8 @@ class user(SQLModel, table=True):
     name: str = Field(sa_column=Column("name", String, nullable=False))
     email: str = Field(sa_column=Column("email", String, unique=True, index=True))
     password_hash: str = Field(sa_column=Column("password_hash", String, nullable=False))
+    is_admin: bool = Field(default=False, sa_column=Column("is_admin", Boolean, nullable=False, default=False))
+    is_suspended: bool = Field(default=False, sa_column=Column("is_suspended", Boolean, nullable=False, default=False))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
 
@@ -72,7 +74,9 @@ class notification(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
     user_id: UUID = Field(sa_column=Column("user_id", Uuid, ForeignKey("users.id"), nullable=False))
     message: str = Field(sa_column=Column("message", String, nullable=False))
-    read: bool = Field(sa_column=Column("read", String, nullable=False))
+    target_type: str | None = Field(default=None, sa_column=Column("target_type", String))
+    target_id: str | None = Field(default=None, sa_column=Column("target_id", String))
+    read: bool = Field(default=False, sa_column=Column("read", String, nullable=False, default="false"))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
 
@@ -135,6 +139,7 @@ class mentor(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
     user_id: UUID = Field(sa_column=Column("user_id", Uuid, ForeignKey("users.id"), nullable=False))
     expertise: str = Field(sa_column=Column("expertise", String, nullable=False))
+    is_approved: bool = Field(default=False, sa_column=Column("is_approved", Boolean, nullable=False, default=False))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
 
@@ -145,5 +150,14 @@ class support_ticket(SQLModel, table=True):
     subject: str = Field(sa_column=Column("subject", String, nullable=False))
     description: str = Field(sa_column=Column("description", String, nullable=False))
     status: str = Field(sa_column=Column("status", String, nullable=False))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
+
+class mentorship(SQLModel, table=True):
+    __tablename__ = "mentorships"
+    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+    mentee_id: UUID = Field(sa_column=Column("mentee_id", Uuid, ForeignKey("users.id"), nullable=False))
+    mentor_id: UUID = Field(sa_column=Column("mentor_id", Uuid, ForeignKey("mentors.id"), nullable=False))
+    status: str = Field(default="pending", sa_column=Column("status", String, nullable=False, default="pending"))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))

@@ -17,6 +17,12 @@ class UserResponse(BaseModel):
     id: str
     name: str
     email: str
+    is_admin: bool = False
+
+
+class AdminUserResponse(UserResponse):
+    is_admin: bool
+    is_suspended: bool
 
 
 class ProfileResponse(BaseModel):
@@ -70,6 +76,22 @@ class ProgramResponse(BaseModel):
     deadline: str | None = None
 
 
+class AdminProgramCreateRequest(BaseModel):
+    name: str
+    description: str = ""
+    company: str = "Fortune Intern Network"
+    category: str = "Internship"
+    status: str = "open"
+    location: str = "Remote"
+    duration: str = "3 months"
+    skills: list[str] = []
+    deadline: str | None = None
+
+
+class AdminProgramUpdateRequest(AdminProgramCreateRequest):
+    pass
+
+
 class ApplicationResponse(BaseModel):
     id: str
     user_id: str
@@ -77,6 +99,22 @@ class ApplicationResponse(BaseModel):
     program_name: str
     status: str
     resume_filename: str | None = None
+    created_at: str
+
+
+class AdminApplicationStatusRequest(BaseModel):
+    status: str
+
+
+class AnnouncementCreateRequest(BaseModel):
+    title: str
+    content: str
+
+
+class AnnouncementResponse(BaseModel):
+    id: str
+    title: str
+    content: str
     created_at: str
 
 
@@ -97,6 +135,82 @@ class DashboardResponse(BaseModel):
     open_programs: int
     next_deadline: str | None = None
     recent_applications: list[DashboardApplication]
+
+
+class NotificationResponse(BaseModel):
+    id: str
+    message: str
+    target_type: str | None = None
+    target_id: str | None = None
+    read: bool
+    created_at: str
+
+
+class NotificationPreferencesResponse(BaseModel):
+    email_notifications: bool
+    sms_notifications: bool
+    opportunity_alerts: bool
+
+
+class NotificationPreferencesUpdateRequest(BaseModel):
+    email_notifications: bool = True
+    sms_notifications: bool = False
+    opportunity_alerts: bool = True
+
+
+class MentorCreateRequest(BaseModel):
+    expertise: str
+
+
+class MentorResponse(BaseModel):
+    id: str
+    user_id: str
+    name: str
+    expertise: str
+
+
+class MentorshipCreateRequest(BaseModel):
+    mentor_id: str
+
+
+class MentorshipResponse(BaseModel):
+    id: str
+    mentor_id: str
+    mentor_name: str
+    mentee_id: str
+    mentee_name: str | None = None
+    status: str
+    created_at: str
+
+
+class MentorshipDecisionRequest(BaseModel):
+    status: str
+
+
+class MentorMessageResponse(BaseModel):
+    id: str
+    sender_id: str
+    sender_name: str
+    content: str
+    created_at: str
+
+
+class MentorDashboardResponse(BaseModel):
+    pending_requests: list[MentorshipResponse]
+    messages: list[MentorMessageResponse]
+
+
+class MessageCreateRequest(BaseModel):
+    receiver_id: str
+    content: str
+
+
+class MessageResponse(BaseModel):
+    id: str
+    sender_id: str
+    receiver_id: str
+    content: str
+    created_at: str
 
 
 class TokenResponse(BaseModel):

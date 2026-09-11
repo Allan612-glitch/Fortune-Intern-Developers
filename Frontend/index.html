@@ -8,7 +8,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700;800;900&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <style>
 /* ===================== STRICT CSS RESET ===================== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -88,7 +87,7 @@ h1, h2, h3, h4, h5, h6 { font-family: 'Poppins', 'Inter', sans-serif; }
 }
 
 .brand { display: flex; align-items: center; gap: 10px; }
-.brand-logo-wrap { width: 40px; height: 40px; flex-shrink: 0; }
+.brand-logo-wrap { width: 40px; height: 40px; flex-shrink: 0; cursor: pointer; }
 .brand-logo-wrap svg { width: 100%; height: 100%; }
 .brand-text { display: flex; flex-direction: column; line-height: 1.05; }
 .brand-name { font-family: var(--font-heading); font-weight: 800; font-size: 0.95rem; color: var(--primary); letter-spacing: 0.3px; }
@@ -109,6 +108,20 @@ h1, h2, h3, h4, h5, h6 { font-family: 'Poppins', 'Inter', sans-serif; }
   width: 8px; height: 8px; background: var(--danger);
   border-radius: 50%; border: 2px solid var(--white);
 }
+.notification-panel {
+  position: fixed; top: calc(var(--header-h) + 8px); right: max(12px, calc(50% - 224px));
+  width: min(360px, calc(100% - 24px)); max-height: 420px; overflow-y: auto;
+  background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg); z-index: 150; padding: 14px; display: none;
+}
+.notification-panel.open { display: block; }
+.notification-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.notification-head h3 { font-size: 1rem; }
+.notification-item { display: block; width: 100%; text-align: left; padding: 12px 4px; border-bottom: 1px solid var(--border); }
+.notification-item.unread { font-weight: 700; }
+.notification-item p { font-size: 0.84rem; color: var(--text); margin-bottom: 4px; }
+.notification-item small { color: var(--muted); font-size: 0.72rem; }
+.notification-empty { padding: 18px 4px 6px; color: var(--muted); font-size: 0.84rem; }
 
 /* ===================== MAIN CONTENT ===================== */
 .app-main {
@@ -366,6 +379,7 @@ h1, h2, h3, h4, h5, h6 { font-family: 'Poppins', 'Inter', sans-serif; }
 .btn-dark { background: var(--primary); color: var(--white); box-shadow: 0 4px 14px rgba(10, 31, 68, 0.3); }
 .btn-yellow { background: var(--yellow); color: var(--primary); box-shadow: 0 4px 14px rgba(245, 185, 39, 0.3); }
 .btn-outline { background: var(--white); color: var(--primary); border: 1.5px solid var(--border); }
+.btn:disabled { cursor: not-allowed; opacity: 0.55; box-shadow: none; }
 .btn-ghost { background: transparent; color: var(--accent); padding: 10px 14px; font-weight: 600; }
 .btn-block { width: 100%; }
 .btn-sm { padding: 10px 16px; font-size: 0.85rem; }
@@ -970,7 +984,7 @@ body { background: #d8d8cc; }
 
   <!-- HEADER -->
   <header class="app-header">
-    <div class="brand">
+    <div class="brand" id="headerBrand" role="button" tabindex="0" aria-label="Go to Home">
       <div class="brand-logo-wrap">
         <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
           <g fill="#F5B927">
@@ -1000,11 +1014,23 @@ body { background: #d8d8cc; }
       </div>
     </div>
     <div class="header-actions">
+      <button class="icon-btn" id="notificationBtn" aria-label="Open notifications" aria-expanded="false">
+        <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg>
+        <span class="notif-dot" id="notificationDot" style="display: none;"></span>
+      </button>
       <button class="icon-btn" id="menuBtn" aria-label="Open menu">
         <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
       </button>
     </div>
   </header>
+
+  <aside class="notification-panel" id="notificationPanel" aria-label="Notifications">
+    <div class="notification-head">
+      <h3>Notifications</h3>
+      <button class="btn btn-ghost btn-sm" id="markAllNotificationsRead">Mark all read</button>
+    </div>
+    <div id="notificationList"></div>
+  </aside>
 
   <!-- DRAWER -->
   <div class="drawer-overlay" id="drawerOverlay"></div>
@@ -1037,6 +1063,8 @@ body { background: #d8d8cc; }
       <a href="#" class="drawer-link" data-page="programs-landing">Programs</a>
       <a href="#" class="drawer-link" data-page="about">About Us</a>
       <a href="#" class="drawer-link" data-page="contact">Contact</a>
+      <a href="#" class="drawer-link" data-page="mentorship">Mentorship</a>
+      <a href="#" class="drawer-link" data-page="admin" id="adminLink" style="display: none;">Admin Dashboard</a>
       <a href="#" class="drawer-link" data-page="login">Login</a>
     </nav>
     <div class="drawer-foot">
@@ -1057,6 +1085,7 @@ body { background: #d8d8cc; }
         <p>Fortune Intern Network is a transformative platform focused on empowering students, developing leaders, and expanding career opportunities across tertiary institutions in Ghana and beyond.</p>
         <div class="hero-btns">
           <button class="btn btn-primary btn-lg btn-block" id="heroExploreBtn">Explore Programs</button>
+          <button class="btn btn-outline btn-lg btn-block" id="heroDashboardBtn" style="display: none;">Open Dashboard</button>
           <a href="https://wa.me/233257038948" target="_blank" class="btn btn-yellow btn-lg btn-block">Partner With Us</a>
         </div>
       </div>
@@ -1075,29 +1104,7 @@ body { background: #d8d8cc; }
 
       <div class="section">
         <div class="section-head"><h2>Featured Programs</h2><p>Discover internship tracks designed to give you real-world experience and accelerate your career.</p></div>
-        <div class="featured-grid">
-          <div class="featured-card" style="background: linear-gradient(135deg, #1E3A8A 0%, #0A1F44 100%);" onclick="navigateToApp('programs')">
-            <div class="featured-card-content"><span class="featured-tag">Technology</span><h3>Software Engineering</h3><p>Build scalable applications with modern frameworks</p></div>
-          </div>
-          <div class="featured-card" style="background: linear-gradient(135deg, #7C3AED 0%, #A855F7 100%);" onclick="navigateToApp('programs')">
-            <div class="featured-card-content"><span class="featured-tag">Data Science</span><h3>Data Analytics Fellowship</h3><p>Transform data into actionable business insights</p></div>
-          </div>
-          <div class="featured-card" style="background: linear-gradient(135deg, #059669 0%, #10B981 100%);" onclick="navigateToApp('programs')">
-            <div class="featured-card-content"><span class="featured-tag">Business</span><h3>Marketing Strategy</h3><p>Lead campaigns for global brands</p></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="section" style="background: var(--bg);">
-        <div class="section-head"><h2>Our Traction</h2><p>Measurable impact across Ghana's educational landscape</p></div>
-        <div class="stats-wrap">
-          <div class="stats-grid">
-            <div><div class="stat-num" data-target="500">0</div><div class="stat-lbl">Students Placed</div></div>
-            <div><div class="stat-num" data-target="50">0</div><div class="stat-lbl">Partner Companies</div></div>
-            <div><div class="stat-num" data-target="25">0</div><div class="stat-lbl">Universities</div></div>
-            <div><div class="stat-num" data-target="95">0</div><div class="stat-lbl">% Success Rate</div></div>
-          </div>
-        </div>
+        <div class="featured-grid" id="homeProgramHighlights"><div class="card"><p class="page-subtitle" style="margin: 0;">Loading open programs...</p></div></div>
       </div>
 
       <div class="section" id="aboutSection">
@@ -1237,29 +1244,6 @@ body { background: #d8d8cc; }
           </div>
           <div class="comp-label"><span>Profile Completion</span><span class="comp-value" id="dashboardProfileCompletion">0%</span></div>
           <div class="progress-track"><div class="progress-fill" id="dashboardProgressFill" style="width: 0%;"></div></div>
-          <div class="timeline">
-            <div class="tl-item done"><div class="tl-dot">✓</div><div class="tl-label">Foundation</div><div class="tl-date">Jan 10</div></div>
-            <div class="tl-item done"><div class="tl-dot">✓</div><div class="tl-label">Advanced Theory</div><div class="tl-date">Feb 05</div></div>
-            <div class="tl-item now"><div class="tl-dot"></div><div class="tl-label">Core Project</div><div class="tl-date">Mar 20</div></div>
-            <div class="tl-item"><div class="tl-dot"></div><div class="tl-label">Peer Review</div><div class="tl-date">Apr 12</div></div>
-            <div class="tl-item"><div class="tl-dot"></div><div class="tl-label">Thesis</div><div class="tl-date">May 25</div></div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="chart-head">
-            <div class="chart-head-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg></div>
-            <h3>Competency Matrix</h3>
-          </div>
-          <div class="chart-wrap"><canvas id="radarChart"></canvas></div>
-        </div>
-
-        <div class="card">
-          <div class="chart-head">
-            <div class="chart-head-icon"><svg viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg></div>
-            <h3>Learning Intensity</h3>
-          </div>
-          <div class="chart-wrap"><canvas id="lineChart"></canvas></div>
         </div>
 
         <div class="stat-grid">
@@ -1290,13 +1274,7 @@ body { background: #d8d8cc; }
           <div class="metric-tag" id="dashboardApplicationStatus">No applications yet</div>
         </div>
 
-        <div class="card">
-          <div class="chart-head">
-            <div class="chart-head-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg></div>
-            <h3>Application Status</h3>
-          </div>
-          <div class="chart-wrap"><canvas id="barChart"></canvas></div>
-        </div>
+        <div class="card" id="dashboardRecentApplications"><div class="chart-head"><h3>Recent Applications</h3></div><p class="page-subtitle" style="margin: 0;">Loading your applications...</p></div>
       </div>
     </section>
 
@@ -1318,8 +1296,10 @@ body { background: #d8d8cc; }
           <input type="text" id="annSearch" placeholder="Search announcements...">
         </div>
 
-        <div id="annList">
-          <article class="ann-card" data-cat="event">
+          <div id="annList"><p class="page-subtitle" style="margin: 0;">Loading announcements...</p>
+            <!-- Published announcements are loaded from the API. -->
+            <!--
+              <article class="ann-card" data-cat="event">
             <div class="ann-img" style="background: linear-gradient(135deg, #1E3A8A 0%, #0A1F44 100%);">
               <span class="ann-badge">Event</span>
               <div class="ann-img-content">
@@ -1377,7 +1357,7 @@ body { background: #d8d8cc; }
               <p>Don't miss your chance to apply for the prestigious Summer Internship Program 2026.</p>
               <button class="btn btn-yellow btn-sm btn-block">Apply Now</button>
             </div>
-          </article>
+          </article>-->
         </div>
       </div>
     </section>
@@ -1393,53 +1373,7 @@ body { background: #d8d8cc; }
           <button class="prog-tab" data-tab="explore">Explore New</button>
         </div>
 
-        <div id="tabMy">
-          <div class="app-card">
-            <div class="app-head">
-              <div><div class="app-title">Tech Innovators Summer 2026</div><div class="app-company">TechForward Partners</div></div>
-              <span class="status status-review">In Review</span>
-            </div>
-            <div class="prog-steps">
-              <div class="prog-fill" style="width: 30%;"></div>
-              <div class="prog-step done"><div class="prog-dot">✓</div><div class="prog-lbl">Application</div></div>
-              <div class="prog-step now"><div class="prog-dot"></div><div class="prog-lbl">Review</div></div>
-              <div class="prog-step"><div class="prog-dot"></div><div class="prog-lbl">Interview</div></div>
-              <div class="prog-step"><div class="prog-dot"></div><div class="prog-lbl">Offer</div></div>
-            </div>
-            <div class="app-foot">
-              <div class="app-date">Applied Mar 10, 2026</div>
-              <button class="btn btn-outline btn-sm">View Details</button>
-            </div>
-          </div>
-
-          <div class="app-card">
-            <div class="app-head">
-              <div><div class="app-title">Data Science Fellowship</div><div class="app-company">Analytics Core</div></div>
-              <span class="status status-interview">Interview</span>
-            </div>
-            <div class="prog-steps">
-              <div class="prog-fill" style="width: 60%;"></div>
-              <div class="prog-step done"><div class="prog-dot">✓</div><div class="prog-lbl">Application</div></div>
-              <div class="prog-step done"><div class="prog-dot">✓</div><div class="prog-lbl">Review</div></div>
-              <div class="prog-step now"><div class="prog-dot"></div><div class="prog-lbl">Interview</div></div>
-              <div class="prog-step"><div class="prog-dot"></div><div class="prog-lbl">Offer</div></div>
-            </div>
-            <div class="app-foot">
-              <div class="app-date">Applied Feb 28, 2026</div>
-              <button class="btn btn-outline btn-sm">View Details</button>
-            </div>
-          </div>
-
-          <div class="app-card rejected">
-            <div class="app-head">
-              <div><div class="app-title">Creative Marketing Intern</div><div class="app-company">BrandSphere</div></div>
-              <span class="status status-rejected">Rejected</span>
-            </div>
-            <div class="app-foot">
-              <div class="app-date">Applied Jan 15, 2026</div>
-              <button class="btn btn-outline btn-sm">View Details</button>
-            </div>
-          </div>
+        <div id="tabMy"><div class="card"><p class="page-subtitle" style="margin: 0;">Loading your applications...</p></div>
         </div>
 
         <div id="tabExplore" class="hidden">
@@ -1547,13 +1481,81 @@ body { background: #d8d8cc; }
       </div>
     </section>
 
+    <!-- MENTORSHIP PAGE -->
+    <section id="page-mentorship" class="page-view">
+      <div class="app-page">
+        <h1 class="page-title">Mentorship</h1>
+        <p class="page-subtitle">Connect with professionals and ask for guidance.</p>
+        <div class="card">
+          <div class="section-title">Become a mentor</div>
+          <p class="page-subtitle">Share your experience and support students building their careers.</p>
+          <form id="mentorForm">
+            <div class="field"><label>Area of Expertise</label><input type="text" id="mentorExpertise" placeholder="e.g., Software Engineering" required></div>
+            <button type="submit" class="btn btn-primary btn-block">Register as Mentor</button>
+          </form>
+        </div>
+        <div class="card" id="mentorDashboard" style="display: none;">
+          <div class="section-title">Mentor dashboard</div>
+          <p class="page-subtitle">Review mentorship requests and messages from students.</p>
+          <div id="mentorRequests"></div>
+          <div class="section-title" style="margin-top: 18px;">Messages sent to you</div>
+          <div id="mentorInbox"></div>
+        </div>
+        <div class="section-title">Available mentors</div>
+        <div id="mentorList"></div>
+        <div class="section-title" style="margin-top: 24px;">Conversation</div>
+        <select id="conversationSelect" class="field input" style="width: 100%; padding: 12px 14px; margin-bottom: 12px;"><option value="">Select a mentor</option></select>
+        <div class="card" id="conversationList"><p class="page-subtitle" style="margin: 0;">Select a mentor to view messages.</p></div>
+        <form id="messageForm" class="contact-form">
+          <textarea id="messageContent" placeholder="Write a message..." required></textarea>
+          <button type="submit" class="btn btn-primary btn-block">Send Message</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ADMIN PAGE -->
+    <section id="page-admin" class="page-view">
+      <div class="app-page">
+        <h1 class="page-title">Admin Dashboard</h1>
+        <p class="page-subtitle">Manage users, programs, applications, mentors, and announcements.</p>
+        <div class="card">
+          <div class="section-title">Create program</div>
+          <form id="adminProgramForm">
+            <div class="field"><label>Name</label><input id="adminProgramName" required></div>
+            <div class="field"><label>Company</label><input id="adminProgramCompany" value="Fortune Intern Network" required></div>
+            <div class="field"><label>Category</label><input id="adminProgramCategory" value="Internship" required></div>
+            <div class="field"><label>Location</label><input id="adminProgramLocation" value="Remote" required></div>
+            <div class="field"><label>Description</label><textarea id="adminProgramDescription" required></textarea></div>
+            <div class="field"><label>Skills</label><input id="adminProgramSkills" placeholder="Python, SQL"></div>
+            <button class="btn btn-primary btn-block" type="submit">Create Program</button>
+          </form>
+        </div>
+        <div class="card"><div class="section-title">Applications</div><div id="adminApplications"><p class="page-subtitle">Loading applications...</p></div></div>
+        <div class="card"><div class="section-title">Users</div><div id="adminUsers"><p class="page-subtitle">Loading users...</p></div></div>
+        <div class="card"><div class="section-title">Mentors</div><div id="adminMentors"><p class="page-subtitle">Loading mentors...</p></div></div>
+        <div class="card">
+          <div class="section-title">Publish announcement</div>
+          <form id="adminAnnouncementForm">
+            <div class="field"><label>Title</label><input id="adminAnnouncementTitle" required></div>
+            <div class="field"><label>Content</label><textarea id="adminAnnouncementContent" required></textarea></div>
+            <button class="btn btn-primary btn-block" type="submit">Publish Announcement</button>
+          </form>
+          <div id="adminAnnouncements" style="margin-top: 16px;"></div>
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <!-- BOTTOM NAV -->
   <nav class="app-nav" id="appNav" style="display: none;">
-    <button class="nav-item active" data-page="overview" onclick="navigateToApp('overview')">
+    <button class="nav-item" data-page="home" onclick="showPage('home')">
+      <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path></svg>
+      <span>Home</span>
+    </button>
+    <button class="nav-item" data-page="overview" onclick="navigateToApp('overview')">
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg>
-      <span>Overview</span>
+      <span>Dashboard</span>
     </button>
     <button class="nav-item" data-page="announcements" onclick="navigateToApp('announcements')">
       <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
@@ -1647,11 +1649,92 @@ function renderAuthenticatedUser(user) {
   if (greetingAvatar) greetingAvatar.textContent = getInitials(user.name);
   if (profileName) profileName.textContent = user.name;
   if (profileEmail) profileEmail.textContent = user.email;
+  const dashboardButton = document.getElementById('heroDashboardBtn');
+  if (dashboardButton) dashboardButton.style.display = 'block';
 }
 
 function getAuthHeaders() {
   const auth = getStoredAuth();
   return auth ? { Authorization: 'Bearer ' + auth.access_token } : {};
+}
+
+async function loadNotifications() {
+  const auth = getStoredAuth();
+  if (!auth) return;
+  try {
+    const response = await fetch(apiBaseUrl + '/api/notifications', { headers: getAuthHeaders() });
+    if (!response.ok) throw new Error('Unable to load notifications');
+    const notifications = await response.json();
+    const list = document.getElementById('notificationList');
+    if (list) {
+      list.innerHTML = notifications.length ? notifications.map((item) => `
+        <button class="notification-item ${item.read ? '' : 'unread'}" data-notification-id="${item.id}" data-target-type="${item.target_type || ''}" data-target-id="${item.target_id || ''}">
+          <p>${escapeHtml(item.message)}</p>
+          <small>${new Date(item.created_at).toLocaleString()}</small>
+        </button>
+      `).join('') : '<div class="notification-empty">You have no notifications.</div>';
+      list.querySelectorAll('[data-notification-id]').forEach((item) => {
+        item.addEventListener('click', () => openNotification(item.dataset));
+      });
+    }
+    await loadUnreadNotificationCount();
+  } catch (error) {
+    console.warn('Notification load failed:', error.message);
+  }
+}
+
+async function loadUnreadNotificationCount() {
+  try {
+    const response = await fetch(apiBaseUrl + '/api/notifications/unread-count', { headers: getAuthHeaders() });
+    if (!response.ok) throw new Error('Unable to load notification count');
+    const result = await response.json();
+    const dot = document.getElementById('notificationDot');
+    if (dot) dot.style.display = result.count > 0 ? 'block' : 'none';
+  } catch (error) {
+    console.warn('Notification count failed:', error.message);
+  }
+}
+
+async function markNotificationRead(notificationId) {
+  const response = await fetch(apiBaseUrl + '/api/notifications/' + notificationId + '/read', {
+    method: 'PUT',
+    headers: getAuthHeaders()
+  });
+  if (response.ok) loadNotifications();
+}
+
+async function openNotification(notification) {
+  await markNotificationRead(notification.notificationId);
+  notificationPanel.classList.remove('open');
+  notificationBtn.setAttribute('aria-expanded', 'false');
+  if (notification.targetType === 'message' && notification.targetId) {
+    showPage('mentorship');
+    await loadMentors();
+    const selector = document.getElementById('conversationSelect');
+    if (selector) {
+      selector.value = notification.targetId;
+      await loadConversation(notification.targetId);
+    }
+    document.getElementById('messageContent')?.focus();
+    return;
+  }
+  if (notification.targetType === 'application') {
+    showPage('programs');
+    return;
+  }
+  if (notification.targetType === 'mentorship') {
+    showPage('mentorship');
+    return;
+  }
+  showPage('home');
+}
+
+async function markAllNotificationsRead() {
+  const response = await fetch(apiBaseUrl + '/api/notifications/read-all', {
+    method: 'PUT',
+    headers: getAuthHeaders()
+  });
+  if (response.ok) loadNotifications();
 }
 
 function renderProfileAvatar(imageData) {
@@ -1737,10 +1820,13 @@ function clearAuthentication() {
 
 function updateAuthControls() {
   const authenticated = isAuthenticated();
+  const currentUser = getAuthenticatedUser();
   const loginLink = document.querySelector('.drawer-link[data-page="login"]');
+  const adminLink = document.getElementById('adminLink');
   document.getElementById('drawerSignInBtn').style.display = authenticated ? 'none' : 'block';
   document.getElementById('drawerLogoutBtn').style.display = authenticated ? 'block' : 'none';
   if (loginLink) loginLink.style.display = authenticated ? 'none' : 'block';
+  if (adminLink) adminLink.style.display = authenticated && currentUser && currentUser.is_admin ? 'block' : 'none';
 }
 
 /* ===================== NAVIGATION ===================== */
@@ -1752,7 +1838,7 @@ function showPage(pageName) {
   const target = document.getElementById('page-' + pageName);
   if (target) target.classList.add('active');
 
-  const appPages = ['overview', 'announcements', 'programs', 'apply', 'profile'];
+  const appPages = ['home', 'overview', 'announcements', 'programs', 'apply', 'profile', 'admin'];
   const appNav = document.getElementById('appNav');
   const appMain = document.getElementById('appMain');
   if (appPages.includes(pageName)) {
@@ -1777,8 +1863,11 @@ function showPage(pageName) {
   });
 
   if (pageName === 'overview' && !chartsReady) {
-    setTimeout(initCharts, 100);
     chartsReady = true;
+  }
+
+  if (pageName === 'home') {
+    loadHomePrograms();
   }
 
   if (pageName === 'overview') {
@@ -1797,6 +1886,22 @@ function showPage(pageName) {
     loadPrograms();
   }
 
+  if (pageName === 'apply') {
+    loadPrograms();
+  }
+
+  if (pageName === 'mentorship') {
+    loadMentors();
+  }
+
+  if (pageName === 'admin') {
+    loadAdminDashboard();
+  }
+
+  if (pageName === 'announcements') {
+    loadAnnouncements();
+  }
+
   window.scrollTo(0, 0);
   closeDrawer();
 }
@@ -1805,6 +1910,10 @@ function navigateToApp(pageName) { showPage(pageName); }
 
 /* ===================== DRAWER ===================== */
 const menuBtn = document.getElementById('menuBtn');
+const notificationBtn = document.getElementById('notificationBtn');
+const notificationPanel = document.getElementById('notificationPanel');
+const markAllNotificationsReadButton = document.getElementById('markAllNotificationsRead');
+const headerBrand = document.getElementById('headerBrand');
 const drawer = document.getElementById('drawer');
 const drawerOverlay = document.getElementById('drawerOverlay');
 const drawerClose = document.getElementById('drawerClose');
@@ -1813,6 +1922,19 @@ function openDrawer() { drawer.classList.add('open'); drawerOverlay.classList.ad
 function closeDrawer() { drawer.classList.remove('open'); drawerOverlay.classList.remove('open'); document.body.style.overflow = ''; }
 
 menuBtn.addEventListener('click', openDrawer);
+headerBrand.addEventListener('click', () => showPage('home'));
+headerBrand.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    showPage('home');
+  }
+});
+notificationBtn.addEventListener('click', () => {
+  const isOpen = notificationPanel.classList.toggle('open');
+  notificationBtn.setAttribute('aria-expanded', String(isOpen));
+  if (isOpen) loadNotifications();
+});
+markAllNotificationsReadButton.addEventListener('click', markAllNotificationsRead);
 drawerClose.addEventListener('click', closeDrawer);
 drawerOverlay.addEventListener('click', closeDrawer);
 
@@ -1847,6 +1969,7 @@ document.getElementById('drawerLogoutBtn').addEventListener('click', () => {
   showPage('login');
 });
 document.getElementById('heroExploreBtn').addEventListener('click', () => { navigateToApp('programs'); });
+document.getElementById('heroDashboardBtn').addEventListener('click', () => { navigateToApp('overview'); });
 
 /* ===================== FILTER CHIPS ===================== */
 document.querySelectorAll('.filter-chip').forEach(chip => {
@@ -2049,18 +2172,11 @@ async function loadDashboard() {
     if (status) status.textContent = dashboard.total_applications
       ? `${dashboard.accepted_applications} accepted · ${dashboard.rejected_applications} rejected`
       : 'No applications yet';
-    const chart = window.Chart && Chart.getChart(document.getElementById('barChart'));
-    if (chart) {
-      chart.data.labels = ['Active', 'Interviews', 'Accepted', 'Rejected'];
-      chart.data.datasets = [{
-        label: 'Applications',
-        data: [dashboard.active_applications, dashboard.interviews, dashboard.accepted_applications, dashboard.rejected_applications],
-        backgroundColor: ['#0A1F44', '#2563EB', '#10B981', '#EF4444'],
-        borderRadius: 6,
-        borderSkipped: false
-      }];
-      chart.options.scales.y.ticks.stepSize = 1;
-      chart.update();
+    const recentApplications = document.getElementById('dashboardRecentApplications');
+    if (recentApplications) {
+      recentApplications.innerHTML = `<div class="chart-head"><h3>Recent Applications</h3></div>` + (dashboard.recent_applications.length
+        ? dashboard.recent_applications.map((application) => `<div class="app-foot" style="margin-bottom: 10px;"><span>${escapeHtml(application.program_name)}</span><span class="status status-review">${escapeHtml(application.status)}</span></div>`).join('')
+        : '<p class="page-subtitle" style="margin: 0;">You have not submitted any applications yet.</p>');
     }
   } catch (error) {
     console.warn('Dashboard load failed:', error.message);
@@ -2126,6 +2242,23 @@ async function loadPrograms() {
   }
 }
 
+async function loadHomePrograms() {
+  const highlights = document.getElementById('homeProgramHighlights');
+  if (!highlights) return;
+  try {
+    const response = await fetch(apiBaseUrl + '/api/programs?status=open');
+    if (!response.ok) throw new Error('Unable to load programs');
+    const programs = await response.json();
+    highlights.innerHTML = programs.length ? programs.slice(0, 3).map((program) => `
+      <div class="featured-card" style="background: linear-gradient(135deg, #1E3A8A 0%, #0A1F44 100%);" onclick="navigateToApp('programs')">
+        <div class="featured-card-content"><span class="featured-tag">${escapeHtml(program.category)}</span><h3>${escapeHtml(program.name)}</h3><p>${escapeHtml(program.description)}</p></div>
+      </div>
+    `).join('') : '<div class="card"><p class="page-subtitle" style="margin: 0;">No open programs are available right now.</p></div>';
+  } catch (error) {
+    highlights.innerHTML = '<div class="card"><p class="page-subtitle" style="margin: 0;">Programs are temporarily unavailable.</p></div>';
+  }
+}
+
 async function showProgramDetails(programId) {
   try {
     const response = await fetch(apiBaseUrl + '/api/programs/' + programId);
@@ -2144,6 +2277,288 @@ function applyToProgram(programId) {
   if (programSelect) programSelect.value = program.name;
   navigateToApp('apply');
 }
+
+async function loadMentors() {
+  try {
+    const auth = getStoredAuth();
+    const response = await fetch(apiBaseUrl + '/api/mentors');
+    if (!response.ok) throw new Error('Unable to load mentors');
+    const mentors = await response.json();
+    const currentUser = getAuthenticatedUser();
+    const mentorshipResponse = auth
+      ? await fetch(apiBaseUrl + '/api/mentorships', { headers: getAuthHeaders() })
+      : null;
+    const myMentorships = mentorshipResponse && mentorshipResponse.ok
+      ? await mentorshipResponse.json()
+      : [];
+    const requestedMentorIds = new Set(myMentorships.map((item) => item.mentor_id));
+    const visibleMentors = mentors.filter((mentor) => !currentUser || mentor.user_id !== currentUser.id);
+    const mentorList = document.getElementById('mentorList');
+    const conversationSelect = document.getElementById('conversationSelect');
+    if (mentorList) mentorList.innerHTML = visibleMentors.length ? visibleMentors.map((mentor) => {
+      const alreadyRequested = requestedMentorIds.has(mentor.id);
+      return `
+      <div class="explore-card">
+        <h3>${escapeHtml(mentor.name)}</h3>
+        <p>${escapeHtml(mentor.expertise)}</p>
+        <button class="btn btn-primary btn-sm" ${alreadyRequested ? 'disabled' : `onclick="requestMentor('${mentor.id}')"`}>
+          ${alreadyRequested ? 'Request sent' : 'Request mentorship'}
+        </button>
+      </div>
+    `;
+    }).join('') : '<div class="card"><p class="page-subtitle" style="margin: 0;">No other mentors are available yet.</p></div>';
+    if (conversationSelect) {
+      conversationSelect.innerHTML = '<option value="">Select a mentor</option>' + visibleMentors.map((mentor) => `<option value="${mentor.user_id}">${escapeHtml(mentor.name)}</option>`).join('');
+      conversationSelect.onchange = () => loadConversation(conversationSelect.value);
+    }
+    loadMentorDashboard();
+  } catch (error) {
+    console.warn('Mentor load failed:', error.message);
+  }
+}
+
+async function loadMentorDashboard() {
+  try {
+    const response = await fetch(apiBaseUrl + '/api/mentor/dashboard', { headers: getAuthHeaders() });
+    const dashboard = document.getElementById('mentorDashboard');
+    if (response.status === 403) {
+      if (dashboard) dashboard.style.display = 'none';
+      return;
+    }
+    if (!response.ok) throw new Error('Unable to load mentor dashboard');
+    const result = await response.json();
+    if (dashboard) dashboard.style.display = 'block';
+    const requests = document.getElementById('mentorRequests');
+    const inbox = document.getElementById('mentorInbox');
+    if (requests) requests.innerHTML = result.pending_requests.length ? result.pending_requests.map((request) => `
+      <div class="app-card">
+        <div class="app-title">Mentorship request</div>
+        <div class="app-company">From ${escapeHtml(request.mentee_name || 'Student')}</div>
+        <div class="app-foot">
+          <button class="btn btn-primary btn-sm" onclick="decideMentorship('${request.id}', 'accepted')">Accept</button>
+          <button class="btn btn-outline btn-sm" onclick="decideMentorship('${request.id}', 'declined')">Decline</button>
+        </div>
+      </div>
+    `).join('') : '<p class="page-subtitle">No pending mentorship requests.</p>';
+    if (inbox) inbox.innerHTML = result.messages.length ? result.messages.map((message) => `
+      <div class="app-card">
+        <div class="app-title">${escapeHtml(message.sender_name)}</div>
+        <p>${escapeHtml(message.content)}</p>
+        <div class="app-foot">
+          <div class="app-date">${new Date(message.created_at).toLocaleString()}</div>
+          <button class="btn btn-primary btn-sm" onclick="prepareMentorReply('${message.sender_id}', '${escapeHtml(message.sender_name)}')">Reply</button>
+        </div>
+      </div>
+    `).join('') : '<p class="page-subtitle">No messages have been sent to you yet.</p>';
+  } catch (error) {
+    console.warn('Mentor dashboard load failed:', error.message);
+  }
+}
+
+function prepareMentorReply(senderId, senderName = 'Student') {
+  const conversationSelect = document.getElementById('conversationSelect');
+  if (!conversationSelect) return;
+  let option = conversationSelect.querySelector(`option[value="${senderId}"]`);
+  if (!option) {
+    option = document.createElement('option');
+    option.value = senderId;
+    option.textContent = senderName;
+    conversationSelect.appendChild(option);
+  }
+  conversationSelect.value = senderId;
+  loadConversation(senderId);
+  document.getElementById('messageContent').focus();
+}
+
+async function decideMentorship(mentorshipId, decision) {
+  const response = await fetch(apiBaseUrl + '/api/mentorships/' + mentorshipId + '/decision', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify({ status: decision })
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    showToast(result.detail || 'Unable to update mentorship request.', 'error');
+    return;
+  }
+  showToast('Mentorship request ' + decision + '.');
+  loadMentorDashboard();
+}
+
+document.getElementById('mentorForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const expertise = document.getElementById('mentorExpertise').value.trim();
+  const response = await fetch(apiBaseUrl + '/api/mentors/me', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify({ expertise })
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    showToast(result.detail || 'Unable to register as a mentor.', 'error');
+    return;
+  }
+  document.getElementById('mentorExpertise').value = '';
+  showToast('You are now registered as a mentor.');
+  loadMentors();
+});
+
+async function requestMentor(mentorId) {
+  const response = await fetch(apiBaseUrl + '/api/mentorships', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify({ mentor_id: mentorId })
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    showToast(result.detail || 'Unable to request mentorship.', 'error');
+    return;
+  }
+  showToast('Mentorship request sent.');
+}
+
+async function loadConversation(userId) {
+  const conversation = document.getElementById('conversationList');
+  if (!userId || !conversation) return;
+  const response = await fetch(apiBaseUrl + '/api/messages/' + userId, { headers: getAuthHeaders() });
+  if (!response.ok) return;
+  const messages = await response.json();
+  const currentUser = getAuthenticatedUser();
+  const selectedParticipant = document.querySelector('#conversationSelect option:checked')?.textContent || 'Participant';
+  conversation.innerHTML = messages.length ? messages.map((message) => `<p style="margin-bottom: 8px;"><strong>${escapeHtml(message.sender_id === currentUser.id ? currentUser.name : selectedParticipant)}:</strong> ${escapeHtml(message.content)}</p>`).join('') : '<p class="page-subtitle" style="margin: 0;">No messages yet.</p>';
+}
+
+document.getElementById('messageForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const receiverId = document.getElementById('conversationSelect').value;
+  const content = document.getElementById('messageContent').value.trim();
+  if (!receiverId || !content) {
+    showToast('Select a mentor and write a message.', 'error');
+    return;
+  }
+  const response = await fetch(apiBaseUrl + '/api/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify({ receiver_id: receiverId, content })
+  });
+  if (!response.ok) {
+    const result = await response.json().catch(() => ({}));
+    showToast(result.detail || 'Unable to send message.', 'error');
+    return;
+  }
+  document.getElementById('messageContent').value = '';
+  await loadConversation(receiverId);
+  showToast('Message sent.');
+});
+
+async function adminRequest(path, options = {}) {
+  const response = await fetch(apiBaseUrl + '/api/admin' + path, {
+    ...options,
+    headers: { ...getAuthHeaders(), ...(options.headers || {}) }
+  });
+  if (!response.ok) throw new Error((await response.json().catch(() => ({}))).detail || 'Admin request failed');
+  return response.json();
+}
+
+async function loadAdminDashboard() {
+  if (!getAuthenticatedUser()?.is_admin) {
+    showPage('overview');
+    return;
+  }
+  try {
+    const [users, mentors, applications, announcements] = await Promise.all([
+      adminRequest('/users'), adminRequest('/mentors'), adminRequest('/applications'), adminRequest('/announcements')
+    ]);
+    document.getElementById('adminUsers').innerHTML = users.map((item) => `<div class="app-foot" style="margin-bottom: 10px;"><span>${escapeHtml(item.name)} · ${escapeHtml(item.email)}${item.is_admin ? ' · Admin' : ''}${item.is_suspended ? ' · Suspended' : ''}</span><button class="btn btn-outline btn-sm" onclick="setUserSuspension('${item.id}', ${!item.is_suspended})">${item.is_suspended ? 'Unsuspend' : 'Suspend'}</button></div>`).join('') || '<p class="page-subtitle">No users.</p>';
+    document.getElementById('adminMentors').innerHTML = mentors.map((item) => `<div class="app-foot" style="margin-bottom: 10px;"><span>${escapeHtml(item.name)} · ${escapeHtml(item.expertise)}${item.is_approved ? ' · Approved' : ' · Pending'}</span><button class="btn btn-outline btn-sm" onclick="setMentorApproval('${item.id}', ${!item.is_approved})">${item.is_approved ? 'Revoke approval' : 'Approve mentor'}</button></div>`).join('') || '<p class="page-subtitle">No mentors.</p>';
+    document.getElementById('adminApplications').innerHTML = applications.map((item) => `
+      <div class="app-card"><div class="app-title">${escapeHtml(item.program_name)}</div><div class="app-company">Applicant: ${escapeHtml(item.user_id.slice(0, 8))} · Status: ${escapeHtml(item.status)}</div><div class="app-foot"><button class="btn btn-outline btn-sm" onclick="downloadAdminResume('${item.id}', '${escapeHtml(item.resume_filename || 'resume')}')" ${item.resume_filename ? '' : 'disabled'}>View Resume</button>${item.status !== 'accepted' && item.status !== 'rejected' ? `<button class="btn btn-primary btn-sm" onclick="updateAdminApplicationStatus('${item.id}', 'accepted')">Accept</button><button class="btn btn-outline btn-sm" onclick="updateAdminApplicationStatus('${item.id}', 'rejected')">Reject</button>` : ''}</div></div>
+    `).join('') || '<p class="page-subtitle">No applications.</p>';
+    document.getElementById('adminAnnouncements').innerHTML = announcements.map((item) => `<div class="app-card"><strong>${escapeHtml(item.title)}</strong><p>${escapeHtml(item.content)}</p></div>`).join('') || '<p class="page-subtitle">No announcements.</p>';
+  } catch (error) {
+    showToast(error.message, 'error');
+  }
+}
+
+async function setUserSuspension(userId, suspended) {
+  try {
+    await adminRequest('/users/' + userId + '/suspension?suspended=' + suspended, { method: 'PUT' });
+    showToast(suspended ? 'User suspended.' : 'User unsuspended.');
+    loadAdminDashboard();
+  } catch (error) { showToast(error.message, 'error'); }
+}
+
+async function setMentorApproval(mentorId, approved) {
+  try {
+    await adminRequest('/mentors/' + mentorId + '/approval?approved=' + approved, { method: 'PUT' });
+    showToast(approved ? 'Mentor approved.' : 'Mentor approval revoked.');
+    loadAdminDashboard();
+  } catch (error) { showToast(error.message, 'error'); }
+}
+
+async function loadAnnouncements() {
+  try {
+    const response = await fetch(apiBaseUrl + '/api/announcements');
+    if (!response.ok) throw new Error('Unable to load announcements');
+    const announcements = await response.json();
+    const list = document.getElementById('annList');
+    if (!list) return;
+    list.innerHTML = announcements.length ? announcements.map((item) => `
+      <article class="ann-card" data-cat="news">
+        <div class="ann-img" style="background: linear-gradient(135deg, #0A1F44 0%, #2563EB 100%);"><span class="ann-badge">News</span><div class="ann-img-content"><div class="ann-img-title">Announcement</div></div></div>
+        <div class="ann-body"><h3>${escapeHtml(item.title)}</h3><div class="ann-meta"><span>${new Date(item.created_at).toLocaleDateString()}</span></div><p>${escapeHtml(item.content)}</p></div>
+      </article>
+    `).join('') : '<p class="page-subtitle">No announcements have been published yet.</p>';
+  } catch (error) { console.warn('Announcement load failed:', error.message); }
+}
+
+async function updateAdminApplicationStatus(applicationId, statusValue) {
+  try {
+    await adminRequest('/applications/' + applicationId + '/status', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: statusValue }) });
+    showToast('Application status updated.');
+    loadAdminDashboard();
+  } catch (error) {
+    showToast(error.message, 'error');
+  }
+}
+
+async function downloadAdminResume(applicationId, filename) {
+  try {
+    const response = await fetch(apiBaseUrl + '/api/admin/applications/' + applicationId + '/resume', { headers: getAuthHeaders() });
+    if (!response.ok) throw new Error('Unable to download resume');
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(await response.blob());
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  } catch (error) {
+    showToast('Unable to open resume.', 'error');
+  }
+}
+
+document.getElementById('adminProgramForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  try {
+    await adminRequest('/programs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('adminProgramName').value.trim(), company: document.getElementById('adminProgramCompany').value.trim(), category: document.getElementById('adminProgramCategory').value.trim(), location: document.getElementById('adminProgramLocation').value.trim(), description: document.getElementById('adminProgramDescription').value.trim(), skills: document.getElementById('adminProgramSkills').value.split(',').map((item) => item.trim()).filter(Boolean) }) });
+    event.target.reset();
+    showToast('Program created.');
+  } catch (error) {
+    showToast(error.message, 'error');
+  }
+});
+
+document.getElementById('adminAnnouncementForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  try {
+    await adminRequest('/announcements', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: document.getElementById('adminAnnouncementTitle').value.trim(), content: document.getElementById('adminAnnouncementContent').value.trim() }) });
+    event.target.reset();
+    showToast('Announcement published.');
+    loadAdminDashboard();
+    loadAnnouncements();
+  } catch (error) {
+    showToast(error.message, 'error');
+  }
+});
 
 /* ===================== APPLY FORM ===================== */
 document.getElementById('applyForm').addEventListener('submit', async (e) => {
@@ -2239,7 +2654,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 
     setAuthenticatedUser(result);
     showToast('Welcome back, ' + result.user.name + '!');
-    setTimeout(() => navigateToApp('overview'), 600);
+    setTimeout(() => showPage('home'), 600);
   } catch (error) {
     status.textContent = error.message === 'Failed to fetch'
       ? 'The authentication service is unavailable.'
@@ -2289,7 +2704,7 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
 
     setAuthenticatedUser(result);
     showToast('Account created successfully!');
-    setTimeout(() => navigateToApp('overview'), 600);
+    setTimeout(() => showPage('home'), 600);
   } catch (error) {
     status.textContent = error.message === 'Failed to fetch'
       ? 'The authentication service is unavailable.'
@@ -2403,16 +2818,14 @@ function escapeHtml(str) {
 const aiKB = {
   'program': "We offer several exciting programs including Software Engineering Intern, Data Analytics Fellow, Marketing Strategist, Leadership Development, Digital Training, and UX/UI Design Intern. Would you like details on any specific program?",
   'apply': "To apply, tap the 'Apply' tab in the bottom navigation. You'll need to provide your name, email, university, major, graduation year, program of interest, and upload your resume. Applications are reviewed within 5-7 business days.",
-  'about': "Fortune Intern Network is a transformative platform focused on empowering students, developing leaders, and expanding career opportunities across tertiary institutions in Ghana and beyond. We've placed 500+ students with 50+ partner companies.",
+  'about': "Fortune Intern Network empowers students, develops leaders, and expands career opportunities across tertiary institutions in Ghana and beyond.",
   'contact': "You can reach us at fortuneintern.gh@gmail.com, WhatsApp +233 25 703 8948, or visit us in Accra, Ghana. Our support team is always happy to help!",
-  'deadline': "Our Summer Internship 2026 applications close on March 31, 2026. I recommend applying early as slots are limited!",
   'hello': "Hello! 👋 Great to meet you. How can I help you today? I can assist with programs, applications, deadlines, or general questions about Fortune Intern Network.",
   'hi': "Hi there! 👋 Welcome to Fortune Intern Network. What would you like to know?",
   'hey': "Hey! 👋 How can I help you today?",
   'thanks': "You're welcome! 😊 Is there anything else I can help you with?",
   'thank': "My pleasure! Feel free to ask if you have more questions.",
-  'gpa': "Your current target GPA is 3.9. You're doing great! Keep up the excellent work with your assignments and office hours.",
-  'status': "You have 3 active applications: Tech Innovators (In Review), Data Science Fellowship (Interview stage), and Creative Marketing (Rejected). Would you like details on any of these?",
+  'status': "You can check your current application statuses from the Dashboard and Programs sections.",
   'internship': "We have internships in Technology, Data Science, Marketing, Leadership, Design, and Digital Training. Each program is 3-6 months and offers real-world experience with top companies.",
   'help': "I can help you with: 📋 Available programs, 📝 How to apply, ⏰ Deadlines, 📞 Contact info, 📊 Your academic progress, or general questions about Fortune Intern Network. What interests you?",
   'email': "Our official email is fortuneintern.gh@gmail.com. You can also reach support at the same address.",
@@ -2432,101 +2845,6 @@ function getAIResponse(input) {
   if (lower.includes('ghana') || lower.includes('location')) return "Fortune Intern Network is based in Accra, Ghana, and serves students across tertiary institutions throughout Ghana and beyond.";
   if (lower.includes('salary') || lower.includes('pay') || lower.includes('stipend')) return "Compensation varies by program and partner company. Most internships offer competitive stipends, and many lead to full-time offers. Check each program listing for details!";
   return "That's a great question! While I'm still learning, I can definitely help you with programs, applications, deadlines, contact info (fortuneintern.gh@gmail.com), and your academic progress. Could you rephrase or ask about one of these topics?";
-}
-
-/* ===================== CHARTS ===================== */
-function initCharts() {
-  const chartFont = { family: 'Inter', size: 11, weight: '600' };
-  const gridColor = 'rgba(226, 232, 240, 0.7)';
-
-  const radarCtx = document.getElementById('radarChart');
-  if (radarCtx && !radarCtx.dataset.init) {
-    new Chart(radarCtx, {
-      type: 'radar',
-      data: {
-        labels: ['Research', 'Critical Thinking', 'Analysis', 'Writing', 'Practical', 'Theory'],
-        datasets: [{
-          label: 'Current Level',
-          data: [85, 70, 80, 65, 75, 60],
-          backgroundColor: 'rgba(37, 99, 235, 0.22)',
-          borderColor: '#2563EB',
-          borderWidth: 2,
-          pointBackgroundColor: '#2563EB',
-          pointBorderColor: '#fff',
-          pointBorderWidth: 2,
-          pointRadius: 4
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: true,
-        plugins: { legend: { display: false } },
-        scales: {
-          r: {
-            beginAtZero: true, max: 100,
-            ticks: { display: false, stepSize: 20 },
-            grid: { color: gridColor },
-            angleLines: { color: gridColor },
-            pointLabels: { font: chartFont, color: '#64748B', padding: 8 }
-          }
-        }
-      }
-    });
-    radarCtx.dataset.init = '1';
-  }
-
-  const lineCtx = document.getElementById('lineChart');
-  if (lineCtx && !lineCtx.dataset.init) {
-    new Chart(lineCtx, {
-      type: 'line',
-      data: {
-        labels: ['W1', 'W2', 'W3', 'W4', 'W5', 'W6'],
-        datasets: [{
-          label: 'Learning Intensity',
-          data: [30, 45, 65, 55, 80, 95],
-          borderColor: '#2563EB',
-          backgroundColor: 'rgba(37, 99, 235, 0.08)',
-          borderWidth: 2.5, fill: true, tension: 0.4,
-          pointBackgroundColor: '#2563EB',
-          pointBorderColor: '#fff', pointBorderWidth: 2,
-          pointRadius: 4, pointHoverRadius: 6
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: true,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { grid: { display: false }, ticks: { font: chartFont, color: '#64748B' } },
-          y: { beginAtZero: true, max: 100, grid: { color: gridColor }, ticks: { display: false } }
-        }
-      }
-    });
-    lineCtx.dataset.init = '1';
-  }
-
-  const barCtx = document.getElementById('barChart');
-  if (barCtx && !barCtx.dataset.init) {
-    new Chart(barCtx, {
-      type: 'bar',
-      data: {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-        datasets: [
-          { label: 'Desktop', data: [65, 78, 90, 85, 95, 110], backgroundColor: '#0A1F44', borderRadius: 6, borderSkipped: false },
-          { label: 'Mobile', data: [45, 60, 75, 80, 88, 100], backgroundColor: '#2563EB', borderRadius: 6, borderSkipped: false }
-        ]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: true,
-        plugins: {
-          legend: { position: 'top', align: 'end', labels: { font: chartFont, color: '#64748B', boxWidth: 12, padding: 12, usePointStyle: true } }
-        },
-        scales: {
-          x: { grid: { display: false }, ticks: { font: chartFont, color: '#64748B' } },
-          y: { beginAtZero: true, grid: { color: gridColor }, ticks: { font: chartFont, color: '#94A3B8', stepSize: 30 } }
-        }
-      }
-    });
-    barCtx.dataset.init = '1';
-  }
 }
 
 /* ===================== COUNTER ANIMATION ===================== */
@@ -2580,7 +2898,7 @@ async function validateStoredSession() {
     if (!response.ok) throw new Error('Session expired');
     const user = await response.json();
     setAuthenticatedUser({ ...auth, user });
-    showPage('overview');
+    showPage('home');
   } catch (error) {
     clearAuthentication();
     showPage('login');
@@ -2594,6 +2912,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadProfileSettings();
     loadApplications();
     loadDashboard();
+    loadUnreadNotificationCount();
   }
 });
 </script>

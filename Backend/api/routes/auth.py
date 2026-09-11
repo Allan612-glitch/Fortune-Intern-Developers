@@ -11,7 +11,7 @@ router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
 
 def serialize_user(account: user) -> UserResponse:
-    return UserResponse(id=str(account.id), name=account.name, email=account.email)
+    return UserResponse(id=str(account.id), name=account.name, email=account.email, is_admin=account.is_admin)
 
 
 def validate_email(email: str) -> str:
