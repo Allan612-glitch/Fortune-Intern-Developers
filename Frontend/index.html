@@ -110,7 +110,7 @@ h1, h2, h3, h4, h5, h6 { font-family: 'Poppins', 'Inter', sans-serif; }
 }
 .notification-panel {
   position: fixed; top: calc(var(--header-h) + 8px); right: max(12px, calc(50% - 224px));
-  width: min(360px, calc(100% - 24px)); max-height: 420px; overflow-y: auto;
+  width: min(360px, calc(100% - 24px)); min-height: 120px; max-height: 420px; overflow-y: auto;
   background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-sm);
   box-shadow: var(--shadow-lg); z-index: 150; padding: 14px; display: none;
 }
@@ -588,6 +588,16 @@ h1, h2, h3, h4, h5, h6 { font-family: 'Poppins', 'Inter', sans-serif; }
 }
 .apply-card h2 { font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
 .apply-card > p { color: var(--muted); font-size: 0.88rem; margin-bottom: 20px; }
+.form-section { margin: 24px 0 18px; padding-top: 18px; border-top: 1px solid var(--border); }
+.form-section:first-of-type { margin-top: 0; padding-top: 0; border-top: 0; }
+.form-section-title { display: flex; align-items: center; gap: 9px; color: var(--primary); font-family: var(--font-heading); font-weight: 800; font-size: 0.92rem; letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 16px; }
+.form-section-title svg { width: 19px; height: 19px; stroke: var(--accent); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.fee-box { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 15px; border: 1px solid rgba(239, 68, 68, 0.25); background: rgba(239, 68, 68, 0.06); border-radius: var(--radius-sm); margin: 18px 0 12px; }
+.fee-copy { display: flex; align-items: center; gap: 10px; color: var(--text); font-size: 0.86rem; font-weight: 700; }
+.fee-copy svg { width: 19px; height: 19px; stroke: var(--muted); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+.fee-amount { color: var(--primary); font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; white-space: nowrap; }
+.payment-note { color: var(--muted); font-size: 0.75rem; margin: 0 0 16px; }
+@media (max-width: 380px) { .fee-box { align-items: flex-start; flex-direction: column; } }
 
 .field { text-align: left; margin-bottom: 14px; }
 .field label { display: block; font-family: var(--font-heading); font-weight: 600; font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
@@ -1032,7 +1042,7 @@ body { background: #d8d8cc; }
       <h3>Notifications</h3>
       <button class="btn btn-ghost btn-sm" id="markAllNotificationsRead">Mark all read</button>
     </div>
-    <div id="notificationList"></div>
+    <div id="notificationList"><div class="notification-empty">Loading notifications...</div></div>
   </aside>
 
   <!-- DRAWER -->
@@ -1415,22 +1425,30 @@ body { background: #d8d8cc; }
           <p>Fill in your details below. All fields marked are required.</p>
 
           <form id="applyForm">
-            <div class="field"><label>Full Name</label><input type="text" name="fullName" required placeholder="Enter your full name"></div>
-            <div class="field"><label>Email Address</label><input type="email" name="email" required placeholder="you@university.edu"></div>
-            <div class="field"><label>University</label><input type="text" name="university" required placeholder="Your university name"></div>
-            <div class="field"><label>Major / Field of Study</label><input type="text" name="major" required placeholder="e.g., Computer Science"></div>
-            <div class="field"><label>Graduation Year</label><input type="number" name="gradYear" required min="2024" max="2035" placeholder="2027"></div>
-            <div class="field">
-              <label>Program of Interest</label>
-              <select name="program" required>
-                <option value="">Select a program</option>
-                <option>Software Engineering Intern</option>
-                <option>Data Analytics Fellow</option>
-                <option>Marketing Strategist</option>
-                <option>Leadership Development</option>
-                <option>Digital Training</option>
-                <option>UX/UI Design Intern</option>
-              </select>
+            <div class="form-section">
+              <div class="form-section-title"><svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>Personal Information</div>
+              <div class="field"><label>First Name *</label><input type="text" name="firstName" required placeholder="Your official first name" autocomplete="given-name"></div>
+              <div class="field"><label>Last Name *</label><input type="text" name="lastName" required placeholder="Your official family name" autocomplete="family-name"></div>
+              <div class="field"><label>Gender *</label><select name="gender" required><option value="">Select gender</option><option>Male</option><option>Female</option><option>Prefer not to say</option></select></div>
+              <div class="field"><label>Phone Number *</label><input type="tel" name="phone" required placeholder="e.g., 024 000 0000" autocomplete="tel"></div>
+              <div class="field"><label>Email Address *</label><input type="email" name="email" required placeholder="you@example.com" autocomplete="email"></div>
+            </div>
+
+            <div class="form-section">
+              <div class="form-section-title"><svg viewBox="0 0 24 24"><path d="M3 21h18"></path><path d="M5 21V5l7-3 7 3v16"></path><path d="M9 9h1M14 9h1M9 13h1M14 13h1"></path></svg>Academic Information</div>
+              <div class="field"><label>Institution Name *</label><select name="university" required><option value="">Select your university</option><option>University of Ghana</option><option>Kwame Nkrumah University of Science and Technology</option><option>University of Cape Coast</option><option>University for Development Studies</option><option>University of Education, Winneba</option><option>University of Professional Studies, Accra</option><option>Ghana Institute of Management and Public Administration</option><option>Ashesi University</option><option>Central University</option><option>University of Energy and Natural Resources</option><option>Other Ghanaian institution</option></select></div>
+              <div class="field"><label>Program / Course of Study *</label><input type="text" name="course" required placeholder="e.g., Geomatics Engineering"></div>
+              <div class="field"><label>Year of Study *</label><select name="yearOfStudy" required><option value="">Select year</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
+              <div class="field"><label>Index Number *</label><input type="text" name="indexNumber" required placeholder="Your student ID or index number"></div>
+              <div class="field"><label>Graduation Year *</label><input type="number" name="gradYear" required min="2024" max="2035" placeholder="2027"></div>
+            </div>
+
+            <div class="form-section">
+              <div class="form-section-title"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M8 4V2M16 4V2M3 10h18"></path></svg>Company / Placement Information</div>
+              <div class="field"><label>Company / Organization Name *</label><input type="text" name="companyName" required placeholder="Host company or organization"></div>
+              <div class="field"><label>Company Address *</label><input type="text" name="companyAddress" required placeholder="Complete postal or physical address"></div>
+              <div class="field"><label>Suggested Company for Internship *</label><select name="suggestedCompany" required><option value="">Select a company</option><option>MTN Ghana</option><option>Telecel Ghana</option><option>Ghana Commercial Bank</option><option>Fidelity Bank Ghana</option><option>Ecobank Ghana</option><option>PwC Ghana</option><option>Deloitte Ghana</option><option>KPMG Ghana</option><option>Ghana Tech Lab</option><option>Electricity Company of Ghana</option><option>Other organization</option></select></div>
+              <div class="field"><label>Program of Interest *</label><select name="program" required><option value="">Select a program</option></select></div>
             </div>
 
             <label class="upload-btn" id="uploadBtn">
@@ -1439,7 +1457,9 @@ body { background: #d8d8cc; }
               <input type="file" id="resumeFile" accept=".pdf,.doc,.docx" required style="display: none;">
             </label>
 
-            <button type="submit" class="btn btn-primary btn-block btn-lg">Submit Application</button>
+            <div class="fee-box"><div class="fee-copy"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 10h18"></path></svg><span>One-time application fee, paid on submission</span></div><span class="fee-amount">GHS 3</span></div>
+            <p class="payment-note">Payment display only for now. No payment is processed by the backend.</p>
+            <button type="submit" class="btn btn-primary btn-block btn-lg">Pay GHS 3 &amp; Submit Application →</button>
           </form>
         </div>
       </div>
@@ -1462,7 +1482,7 @@ body { background: #d8d8cc; }
           <div class="profile-name" id="profileName">Your Name</div>
           <div class="profile-email" id="profileEmail">your-email@example.com</div>
 
-          <div class="field"><label>University</label><input type="text" id="universityField" placeholder="e.g., University of Ghana"></div>
+          <div class="field"><label>University</label><select id="universityField"><option value="">Select your university</option><option>University of Ghana</option><option>Kwame Nkrumah University of Science and Technology</option><option>University of Cape Coast</option><option>University for Development Studies</option><option>University of Education, Winneba</option><option>University of Professional Studies, Accra</option><option>Ghana Institute of Management and Public Administration</option><option>Ashesi University</option><option>Central University</option><option>University of Energy and Natural Resources</option><option>Other Ghanaian institution</option></select></div>
           <div class="field"><label>Course</label><input type="text" id="courseField" placeholder="e.g., Computer Science"></div>
           <div class="field"><label>Major</label><input type="text" value="Computer Science" id="majorField"></div>
           <div class="field"><label>Year of Study</label><input type="number" id="studyYearField" min="1" max="10" placeholder="e.g., 3"></div>
@@ -1675,12 +1695,16 @@ function getAuthHeaders() {
 
 async function loadNotifications() {
   const auth = getStoredAuth();
-  if (!auth) return;
+  const list = document.getElementById('notificationList');
+  if (!auth) {
+    if (list) list.innerHTML = '<div class="notification-empty">Sign in to view notifications.</div>';
+    return;
+  }
+  if (list) list.innerHTML = '<div class="notification-empty">Loading notifications...</div>';
   try {
     const response = await fetch(apiBaseUrl + '/api/notifications', { headers: getAuthHeaders() });
     if (!response.ok) throw new Error('Unable to load notifications');
     const notifications = await response.json();
-    const list = document.getElementById('notificationList');
     if (list) {
       list.innerHTML = notifications.length ? notifications.map((item) => `
         <button class="notification-item ${item.read ? '' : 'unread'}" data-notification-id="${item.id}" data-target-type="${item.target_type || ''}" data-target-id="${item.target_id || ''}">
@@ -1694,6 +1718,7 @@ async function loadNotifications() {
     }
     await loadUnreadNotificationCount();
   } catch (error) {
+    if (list) list.innerHTML = '<div class="notification-empty">Notifications are temporarily unavailable.</div>';
     console.warn('Notification load failed:', error.message);
   }
 }
@@ -2580,7 +2605,7 @@ document.getElementById('applyForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const form = e.target;
   const data = new FormData(form);
-  const name = data.get('fullName');
+  const name = `${data.get('firstName') || ''} ${data.get('lastName') || ''}`.trim();
   const program = data.get('program');
   const resumeFile = document.getElementById('resumeFile').files[0];
 
@@ -2609,7 +2634,7 @@ document.getElementById('applyForm').addEventListener('submit', async (e) => {
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.detail || 'Unable to submit application');
 
-    showToast('Application submitted, ' + name.split(' ')[0] + '!');
+    showToast('Application submitted, ' + (name.split(' ')[0] || 'applicant') + '!');
     form.reset();
     document.getElementById('uploadText').textContent = 'Upload Resume (PDF)';
     document.getElementById('uploadBtn').classList.remove('has-file');
