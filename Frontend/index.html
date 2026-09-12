@@ -764,7 +764,7 @@ h1, h2, h3, h4, h5, h6 { font-family: 'Poppins', 'Inter', sans-serif; }
   position: fixed; bottom: calc(var(--nav-h) + 80px);
   right: calc(50% - 224px);
   width: calc(100% - 32px); max-width: 360px;
-  height: 460px; max-height: calc(100vh - var(--nav-h) - 140px);
+  height: 600px; max-height: calc(100vh - var(--nav-h) - 140px);
   background: var(--white); border-radius: var(--radius);
   box-shadow: var(--shadow-lg); z-index: 91;
   display: flex; flex-direction: column; overflow: hidden;
@@ -773,7 +773,9 @@ h1, h2, h3, h4, h5, h6 { font-family: 'Poppins', 'Inter', sans-serif; }
   transition: all 0.25s ease;
 }
 .ai-window.open { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
-@media (max-width: 500px) { .ai-window { right: 16px; left: 16px; width: auto; } }
+@media (max-width: 500px) {
+  .ai-window { right: 8px; left: 8px; bottom: 8px; width: auto; height: calc(100dvh - 16px); max-height: none; }
+}
 
 .ai-head {
   background: linear-gradient(135deg, #0A1F44 0%, #1E3A8A 100%);
@@ -832,12 +834,13 @@ h1, h2, h3, h4, h5, h6 { font-family: 'Poppins', 'Inter', sans-serif; }
 }
 
 .ai-quick {
-  display: flex; flex-wrap: wrap; gap: 6px;
+  display: flex; flex-wrap: nowrap; gap: 6px;
   padding: 10px 14px; background: var(--bg);
   border-top: 1px solid var(--border);
+  overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch;
 }
 .ai-quick-btn {
-  padding: 6px 11px; background: var(--white);
+  flex: 0 0 auto; padding: 6px 11px; background: var(--white);
   border: 1px solid var(--border); border-radius: 16px;
   font-size: 0.75rem; color: var(--accent);
   font-weight: 600; font-family: var(--font-body); transition: all 0.2s;
@@ -1229,6 +1232,13 @@ body { background: #d8d8cc; }
               <div class="input-wrap">
                 <input id="registerPassword" name="password" type="password" placeholder="At least 8 characters" autocomplete="new-password" minlength="8" required>
                 <button type="button" class="password-toggle" data-password-target="registerPassword" aria-label="Show password"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="registerPasswordConfirm">Confirm Password</label>
+              <div class="input-wrap">
+                <input id="registerPasswordConfirm" name="passwordConfirm" type="password" placeholder="Re-enter your password" autocomplete="new-password" minlength="8" required>
+                <button type="button" class="password-toggle" data-password-target="registerPasswordConfirm" aria-label="Show password"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
               </div>
             </div>
             <button type="submit" class="login-btn">Create Account</button>
@@ -2747,6 +2757,12 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
   const button = form.querySelector('button[type="submit"]');
   const status = document.getElementById('registerStatus');
   const formData = new FormData(form);
+  if (formData.get('password') !== formData.get('passwordConfirm')) {
+    status.textContent = 'Passwords do not match.';
+    status.style.display = 'block';
+    document.getElementById('registerPasswordConfirm').focus();
+    return;
+  }
 
   button.disabled = true;
   button.textContent = 'Creating account...';
