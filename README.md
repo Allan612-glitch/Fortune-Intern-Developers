@@ -233,6 +233,4 @@ node -e "const fs=require('fs'); const html=fs.readFileSync('Frontend/index.html
 - Application status changes are controlled by admins.
 - The frontend is currently a single static HTML application rather than a bundled framework app.
 
-## License
 
-Add the project license here before publishing publicly.
