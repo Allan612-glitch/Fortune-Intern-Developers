@@ -1621,9 +1621,11 @@ body { background: #d8d8cc; }
     <div class="ai-head">
       <div class="ai-avatar"></div>
       <div>
-        <div class="ai-title">Fortune Career Desk</div>
-        <div class="ai-sub"><span class="ai-dot"></span> Online support</div>
+        <div class="ai-title">Super · AI Assistant</div>
+        <div class="ai-sub"><span class="ai-dot"></span><span id="aiStatus">Offline brain · no key needed</span></div>
       </div>
+      <button class="ai-close" id="aiClear" aria-label="Clear conversation" title="Clear conversation">↺</button>
+      <button class="ai-close" id="aiSettings" aria-label="Connect optional GPT" title="Connect optional GPT">⚙</button>
       <button class="ai-close" id="aiClose" aria-label="Close chat">
         <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
       </button>
@@ -1632,7 +1634,12 @@ body { background: #d8d8cc; }
     <div class="ai-quick" id="aiQuick">
       <button class="ai-quick-btn" data-q="What programs are available?">Available programs</button>
       <button class="ai-quick-btn" data-q="How do I apply?">How to apply</button>
+      <button class="ai-quick-btn" data-q="What are the application deadlines?">Deadlines</button>
+      <button class="ai-quick-btn" data-q="Which programs are paid?">Paid programs</button>
       <button class="ai-quick-btn" data-q="Tell me about the organization">About FIN</button>
+      <button class="ai-quick-btn" data-q="Build my CV">Build my CV</button>
+      <button class="ai-quick-btn" data-q="Write my cover letter">Cover letter</button>
+      <button class="ai-quick-btn" data-q="Check my application status">Application status</button>
       <button class="ai-quick-btn" data-q="Contact information">Contact us</button>
     </div>
     <form class="ai-input-row" id="aiForm">
@@ -2811,13 +2818,87 @@ const aiInput = document.getElementById('aiInput');
 const aiSendBtn = document.getElementById('aiSendBtn');
 const aiMsgs = document.getElementById('aiMsgs');
 let aiOpened = false;
+let aiBusy = false;
+let aiKey = localStorage.getItem('fin_super_key') || '';
+let aiModel = localStorage.getItem('fin_super_model') || 'gpt-4o-mini';
+let aiFlow = null;
+const aiPrograms = [
+  { title: 'Software Engineering', company: 'TechForward Partners', details: 'Remote on Accra hours · 6 months · GH₵ 3,800/month · closes 30 June' },
+  { title: 'Data Analytics Fellowship', company: 'Analytics Core', details: 'Hybrid Accra · 6 months · GH₵ 3,200/month · closes 30 June' },
+  { title: 'Marketing Strategy', company: 'BrandSphere', details: 'On-site Accra · 3 months · GH₵ 2,400/month + commission · rolling intake' },
+  { title: 'Global Operations Traineeship', company: 'FIN in-house', details: 'Accra · 12 months · GH₵ 4,200 rising · closes 31 July' }
+];
+const aiKnowledge = [
+  { topic: 'About FIN', keywords: 'about fin fortune intern network company accra ghana', content: 'Fortune Intern Network (FIN) is a hiring and training house in Accra, Ghana, established in 2018. Its motto is “Bridging Dreams and Careers”. FIN runs four paid programs and the free FIN Academy. Every application is read by a human and answered within 72 hours.' },
+  { topic: 'How to apply', keywords: 'apply application process steps resume cv eligibility', content: 'The form takes about 10 minutes: name, email, university, field of study, graduation year, program, a 30+ word why-you statement, and an optional PDF resume up to 5MB. The stages are Apply, blind Screening, a paid Work Sample, Conversation, and Offer.' },
+  { topic: 'CV writing', keywords: 'cv resume curriculum vitae knust format sections', content: 'Use this order: contact header, targeted profile, education, National Service, projects, experience, skills, leadership, awards, and referees. Keep it to 1–2 pages, use measurable VERB + TASK + TOOL + RESULT bullets, and never invent missing details.' },
+  { topic: 'Customer service', keywords: 'contact support help desk human phone whatsapp email', content: 'The FIN desk is human and based in Accra. WhatsApp or call +233 25 703 8948 Monday–Friday, 9:00–17:00 GMT. Email fortuneintern.gh@gmail.com and expect a reply within 72 hours.' }
+];
+
+function aiWords(value) { return String(value || '').toLowerCase().split(/[^a-z0-9]+/).filter(word => word.length > 1); }
+function aiFindKnowledge(query) {
+  const words = aiWords(query);
+  return aiKnowledge.map(entry => ({ entry, score: words.reduce((score, word) => score + (entry.keywords.includes(word) ? 3 : entry.content.toLowerCase().includes(word) ? 1 : 0), 0) }))
+    .filter(item => item.score > 1).sort((a, b) => b.score - a.score)[0]?.entry;
+}
+function aiProgramsHtml() {
+  return '<p><strong>Four programs, all paid:</strong></p><ul>' + aiPrograms.map(program => `<li><strong>${escapeHtml(program.title)}</strong> · ${escapeHtml(program.company)} — ${escapeHtml(program.details)}</li>`).join('') + '</ul>';
+}
+function aiContactHtml() {
+  return '<p>The FIN desk is human, in Accra. WhatsApp or call <a href="https://wa.me/233257038948" target="_blank" rel="noopener">+233 25 703 8948</a>, or email <a href="mailto:fortuneintern.gh@gmail.com">fortuneintern.gh@gmail.com</a>.</p>';
+}
+function aiOfflineResponse(input) {
+  const text = input.trim();
+  const lower = text.toLowerCase();
+  if (aiFlow) return aiHandleFlow(text);
+  if (/cover letter|motivation letter|application letter/.test(lower)) { aiFlow = { type: 'cover', step: 0, data: {} }; return '<p><strong>Let’s write your cover letter.</strong> What is your full name?</p>'; }
+  if (/\bcv\b|resume|curriculum/.test(lower)) { aiFlow = { type: 'cv', step: 0, data: {} }; return '<p><strong>Building your KNUST-format CV.</strong> What is your full name?</p>'; }
+  if (/program|internship|opportunit|vacanc|placement/.test(lower)) return aiProgramsHtml();
+  if (/how (do|to|can) i apply|application process|apply for|submit/.test(lower)) return '<p><strong>Applying takes about ten minutes.</strong> Submit your details, program choice, 30+ word why-you statement, and optional PDF resume. Then comes blind screening, a paid work sample, a 30-minute conversation, and an offer.</p>';
+  if (/contact|support|help desk|human|call|phone|whatsapp|email|reach/.test(lower)) return aiContactHtml();
+  if (/hello|hi|hey|akwaaba/.test(lower) && aiWords(lower).length < 5) return '<p><strong>Akwaaba!</strong> I’m Super, FIN’s offline-first assistant. I can explain programs, help you apply, build a CV, or write a cover letter. What should we tackle?</p>';
+  if (/thank/.test(lower)) return '<p>Anytime. I’m here when you need me.</p>';
+  const match = aiFindKnowledge(text);
+  if (match) return `<p><strong>${escapeHtml(match.topic)}.</strong></p><p>${escapeHtml(match.content)}</p>`;
+  return '<p>I’m on my offline brain, so my strongest topics are FIN programs, applications, KNUST-format CVs, cover letters, and customer service.</p><p>Ask about one of those, or connect optional GPT with the gear button for general questions.</p>';
+}
+function aiHandleFlow(text) {
+  const data = aiFlow.data;
+  if (/^(cancel|stop|quit)$/i.test(text)) { aiFlow = null; return '<p>Builder cancelled. What else can I help with?</p>'; }
+  if (aiFlow.type === 'cover') {
+    if (aiFlow.step === 0) { data.name = text; aiFlow.step = 1; return '<p>Which program is the letter for?</p>'; }
+    if (aiFlow.step === 1) { data.program = text; aiFlow.step = 2; return '<p>What are two or three honest strengths of yours?</p>'; }
+    if (aiFlow.step === 2) { data.strengths = text; aiFlow.step = 3; return '<p>What is your proudest achievement? One or two sentences.</p>'; }
+    data.achievement = text; aiFlow = null;
+    const letter = `Dear Selection Team at Fortune Intern Network,\n\nMy name is ${data.name}, and I am applying for the ${data.program}. I bring ${data.strengths}.\n\nThe work I am proudest of is ${data.achievement}. It taught me to solve real problems with care and persistence.\n\nI am ready to learn quickly and give a partner company genuine value from week one.\n\nSincerely,\n${data.name}`;
+    return `<p><strong>Your cover letter draft is ready.</strong></p><div class="ai-doc">${escapeHtml(letter).replace(/\n/g, '<br>')}</div>`;
+  }
+  if (aiFlow.step === 0) { data.name = text; aiFlow.step = 1; return '<p>Your programme and university, for example “BSc Mathematics, KNUST”.</p>'; }
+  if (aiFlow.step === 1) { data.education = text; aiFlow.step = 2; return '<p>Your stage, for example “Final-year student” or “Graduate, 2025”.</p>'; }
+  if (aiFlow.step === 2) { data.stage = text; aiFlow.step = 3; return '<p>Your skills, comma-separated and honest only.</p>'; }
+  if (aiFlow.step === 3) { data.skills = text; aiFlow.step = 4; return '<p>One project or experience in a sentence, or type “skip”.</p>'; }
+  data.experience = /^skip$/i.test(text) ? '[Add one project or experience]' : text;
+  aiFlow = null;
+  return `<p><strong>Your KNUST-format CV is ready.</strong> Fill the bracketed placeholders before sending it.</p><div class="ai-doc"><strong>${escapeHtml(data.name)}</strong><br>[email] · [+233 phone] · Accra, Ghana · [LinkedIn]<br><br><strong>PROFILE</strong><br>${escapeHtml(data.stage)} at ${escapeHtml(data.education)} seeking an internship.<br><br><strong>EDUCATION</strong><br>${escapeHtml(data.education)}<br><br><strong>PROJECTS & EXPERIENCE</strong><br>${escapeHtml(data.experience)}<br><br><strong>SKILLS</strong><br>${escapeHtml(data.skills)}<br><br><strong>REFEREES</strong><br>[Supervisor details and permission asked]</div>`;
+}
+function aiSetStatus() {
+  document.getElementById('aiStatus').textContent = aiKey ? `Powered by ${aiModel} · Online` : 'Offline brain · no key needed';
+}
+function aiSaveHistory(role, text) {
+  const history = JSON.parse(localStorage.getItem('fin_super_chat') || '[]');
+  history.push({ role, text });
+  localStorage.setItem('fin_super_chat', JSON.stringify(history.slice(-40)));
+}
+function aiLoadHistory() {
+  try { JSON.parse(localStorage.getItem('fin_super_chat') || '[]').forEach(item => addMessage(item.role, item.text, false)); } catch (error) { localStorage.removeItem('fin_super_chat'); }
+}
 
 function toggleAI() {
   aiOpened = !aiOpened;
   aiWindow.classList.toggle('open', aiOpened);
   if (aiOpened && aiMsgs.children.length === 0) {
     setTimeout(() => {
-      addBotMsg("Hi, I'm super, your ai assistant on the fortune intern network platform. Please feel free to ask me anything");
+      addBotMsg('<p><strong>Hello! I’m Super.</strong> I can explain FIN programs, guide applications, build a KNUST-format CV, or write a cover letter. How can I help?</p>');
     }, 350);
   }
   if (aiOpened) setTimeout(() => aiInput.focus(), 400);
@@ -2825,6 +2906,15 @@ function toggleAI() {
 
 aiFab.addEventListener('click', toggleAI);
 aiClose.addEventListener('click', () => { aiOpened = false; aiWindow.classList.remove('open'); });
+document.getElementById('aiClear').addEventListener('click', () => { localStorage.removeItem('fin_super_chat'); aiFlow = null; aiMsgs.innerHTML = ''; addBotMsg('<p>Conversation cleared. Fresh brain, same knowledge.</p>'); });
+document.getElementById('aiSettings').addEventListener('click', () => {
+  const key = window.prompt('Optional OpenAI API key. Leave blank to use the offline brain.', aiKey);
+  if (key === null) return;
+  aiKey = key.trim();
+  if (aiKey) { const model = window.prompt('Model name', aiModel); aiModel = (model || aiModel).trim(); localStorage.setItem('fin_super_key', aiKey); localStorage.setItem('fin_super_model', aiModel); }
+  else { localStorage.removeItem('fin_super_key'); localStorage.removeItem('fin_super_model'); }
+  aiSetStatus();
+});
 
 document.querySelectorAll('.ai-quick-btn').forEach(btn => {
   btn.addEventListener('click', () => { processUserMessage(btn.dataset.q); });
@@ -2846,19 +2936,17 @@ aiInput.addEventListener('keydown', (e) => {
 });
 
 function processUserMessage(text) {
+  if (aiBusy) return;
   addUserMsg(text);
   aiInput.value = '';
   showTyping();
   aiSendBtn.disabled = true;
-
-  const delay = 700 + Math.random() * 900;
-  setTimeout(() => {
-    removeTyping();
-    const reply = getAIResponse(text);
-    addBotMsg(reply);
-    aiSendBtn.disabled = false;
-    aiInput.focus();
-  }, delay);
+  aiBusy = true;
+  aiSaveHistory('user', text);
+  const answer = aiKey ? aiAskGPT(text) : Promise.resolve(aiOfflineResponse(text));
+  answer.then(reply => { removeTyping(); addBotMsg(reply); aiSaveHistory('bot', reply); })
+    .catch(() => { removeTyping(); const reply = aiOfflineResponse(text); addBotMsg(reply); aiSaveHistory('bot', reply); })
+    .finally(() => { aiBusy = false; aiSendBtn.disabled = false; aiInput.focus(); });
 }
 
 function addUserMsg(text) {
@@ -2872,13 +2960,35 @@ function addUserMsg(text) {
 }
 
 function addBotMsg(text) {
+  addMessage('bot', text, true);
+}
+
+function addMessage(role, text, save) {
   const div = document.createElement('div');
-  div.className = 'ai-msg bot';
+  div.className = 'ai-msg ' + (role === 'user' ? 'user' : 'bot');
   const now = new Date();
   const ts = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  div.innerHTML = escapeHtml(text) + '<span class="ts">' + ts + '</span>';
+  div.innerHTML = role === 'user' ? escapeHtml(text) : sanitizeAIHtml(text) + '<span class="ts">' + ts + '</span>';
   aiMsgs.appendChild(div);
   aiMsgs.scrollTop = aiMsgs.scrollHeight;
+}
+
+function sanitizeAIHtml(value) {
+  const template = document.createElement('template');
+  template.innerHTML = value;
+  template.content.querySelectorAll('script, style, iframe, object, form').forEach(node => node.remove());
+  template.content.querySelectorAll('*').forEach(node => [...node.attributes].forEach(attribute => {
+    if (attribute.name.toLowerCase().startsWith('on')) node.removeAttribute(attribute.name);
+  }));
+  return template.innerHTML;
+}
+
+async function aiAskGPT(text) {
+  const history = JSON.parse(localStorage.getItem('fin_super_chat') || '[]').slice(-12).map(item => ({ role: item.role === 'user' ? 'user' : 'assistant', content: item.text.replace(/<[^>]+>/g, ' ') }));
+  const response = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + aiKey }, body: JSON.stringify({ model: aiModel, max_tokens: 700, messages: [{ role: 'system', content: 'You are Super, the warm AI assistant for Fortune Intern Network in Ghana. Use only these FIN facts: ' + aiKnowledge.map(item => item.topic + ': ' + item.content).join('\n') + '. Do not invent programs, prices, or deadlines. Use simple HTML only: p, strong, em, ul, li, br, a.' }, ...history] }) });
+  if (!response.ok) throw new Error('GPT unavailable');
+  const result = await response.json();
+  return result.choices?.[0]?.message?.content || aiOfflineResponse(text);
 }
 
 function showTyping() {
@@ -2901,37 +3011,6 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-const aiKB = {
-  'program': "We offer several exciting programs including Software Engineering Intern, Data Analytics Fellow, Marketing Strategist, Leadership Development, Digital Training, and UX/UI Design Intern. Would you like details on any specific program?",
-  'apply': "To apply, tap the 'Apply' tab in the bottom navigation. You'll need to provide your name, email, university, major, graduation year, program of interest, and upload your resume. Applications are reviewed within 5-7 business days.",
-  'about': "Fortune Intern Network empowers students, develops leaders, and expands career opportunities across tertiary institutions in Ghana and beyond.",
-  'contact': "You can reach us at fortuneintern.gh@gmail.com, WhatsApp +233 25 703 8948, or visit us in Accra, Ghana. Our support team is always happy to help!",
-  'hello': "Hello! 👋 Great to meet you. How can I help you today? I can assist with programs, applications, deadlines, or general questions about Fortune Intern Network.",
-  'hi': "Hi there! 👋 Welcome to Fortune Intern Network. What would you like to know?",
-  'hey': "Hey! 👋 How can I help you today?",
-  'thanks': "You're welcome! 😊 Is there anything else I can help you with?",
-  'thank': "My pleasure! Feel free to ask if you have more questions.",
-  'status': "You can check your current application statuses from the Dashboard and Programs sections.",
-  'internship': "We have internships in Technology, Data Science, Marketing, Leadership, Design, and Digital Training. Each program is 3-6 months and offers real-world experience with top companies.",
-  'help': "I can help you with: 📋 Available programs, 📝 How to apply, ⏰ Deadlines, 📞 Contact info, 📊 Your academic progress, or general questions about Fortune Intern Network. What interests you?",
-  'email': "Our official email is fortuneintern.gh@gmail.com. You can also reach support at the same address.",
-  'resume': "For your resume, we recommend a clean 1-page PDF highlighting your education, skills, and any relevant projects or experience. Make sure to tailor it to the program you're applying for!"
-};
-
-function getAIResponse(input) {
-  const lower = input.toLowerCase();
-  for (const [key, response] of Object.entries(aiKB)) {
-    if (lower.includes(key)) return response;
-  }
-  if (lower.includes('who are you') || lower.includes('your name')) return "I'm Super, your AI assistant powered by ChatGPT-5! I'm here to help you navigate the Fortune Intern Network platform. Ask me about programs, applications, deadlines, or anything else!";
-  if (lower.includes('chatgpt') || lower.includes('gpt') || lower.includes('model')) return "I'm powered by ChatGPT-5, the latest AI model. I can understand context, provide detailed answers, and help you with anything related to Fortune Intern Network.";
-  if (lower.includes('feature') || lower.includes('what can you do')) return "I can help you explore programs, guide you through applications, check deadlines, provide contact information, track your academic progress, and answer questions about Fortune Intern Network. Just ask!";
-  if (lower.includes('yes') || lower.includes('sure') || lower.includes('okay')) return "Great! What would you like to know more about? I'm here to help with programs, applications, deadlines, or any other questions.";
-  if (lower.includes('no') || lower.includes('nothing')) return "No problem! Feel free to come back anytime. Have a great day! 😊";
-  if (lower.includes('ghana') || lower.includes('location')) return "Fortune Intern Network is based in Accra, Ghana, and serves students across tertiary institutions throughout Ghana and beyond.";
-  if (lower.includes('salary') || lower.includes('pay') || lower.includes('stipend')) return "Compensation varies by program and partner company. Most internships offer competitive stipends, and many lead to full-time offers. Check each program listing for details!";
-  return "That's a great question! While I'm still learning, I can definitely help you with programs, applications, deadlines, contact info (fortuneintern.gh@gmail.com), and your academic progress. Could you rephrase or ask about one of these topics?";
-}
 
 /* ===================== COUNTER ANIMATION ===================== */
 function animateCounters() {
