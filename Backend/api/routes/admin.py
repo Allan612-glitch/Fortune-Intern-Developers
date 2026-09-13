@@ -2,7 +2,7 @@ from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import RedirectResponse
+from fastapi.responses import Response
 from sqlmodel import Session, select
 
 from Backend.api.deps import get_current_admin
@@ -160,8 +160,13 @@ def download_application_resume(application_id: str, _: user = Depends(get_curre
 		row = None
 	if not row or not row.resume_path:
 		raise HTTPException(status_code=404, detail="Resume not found")
-	url = storage.get_resume_download_url(row.resume_path, row.resume_filename or "resume")
-	return RedirectResponse(url)
+	content, content_type = storage.download_resume(row.resume_path)
+	filename = row.resume_filename or "resume"
+	return Response(
+		content=content,
+		media_type=content_type or "application/octet-stream",
+		headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+	)
 
 
 @router.post("/announcements", response_model=AnnouncementResponse, status_code=status.HTTP_201_CREATED)
