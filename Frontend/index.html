@@ -1669,7 +1669,10 @@ let currentView = 'home';
 let currentAppPage = 'overview';
 let chartsReady = false;
 const authStorageKey = 'fortuneInternAuth';
-const apiBaseUrl = 'http://localhost:8000';
+
+const apiBaseUrl = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+  ? 'http://localhost:8000'
+  : 'https://YOUR-BACKEND-PROJECT.vercel.app';
 let currentProfilePicture = '';
 
 function getStoredAuth() {
