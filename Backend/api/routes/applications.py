@@ -2,16 +2,16 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import FileResponse
+from fastapi.responses import RedirectResponse
 from sqlmodel import Session, select
 
 from Backend.api.deps import get_current_user
+from Backend.core import storage
 from Backend.database import get_session
 from Database.models import application, notification, program, user
 from Database.schemas import ApplicationCreateRequest, ApplicationResponse
 
 router = APIRouter(prefix="/api/applications", tags=["applications"])
-UPLOADS_DIR = Path(__file__).resolve().parents[2] / "uploads" / "resumes"
 ALLOWED_RESUME_EXTENSIONS = {".pdf", ".doc", ".docx"}
 
 
@@ -73,10 +73,8 @@ def download_resume(
         row = None
     if not row or row.user_id != account.id or not row.resume_path:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found")
-    resume_path = Path(row.resume_path).resolve()
-    if UPLOADS_DIR.resolve() not in resume_path.parents or not resume_path.is_file():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found")
-    return FileResponse(resume_path, filename=row.resume_filename or resume_path.name)
+    url = storage.get_resume_download_url(row.resume_path, row.resume_filename or "resume")
+    return RedirectResponse(url)
 
 
 @router.post("", response_model=ApplicationResponse, status_code=status.HTTP_201_CREATED)
@@ -134,15 +132,13 @@ async def create_application(
         extension = Path(resume.filename).suffix.lower()
         if extension not in ALLOWED_RESUME_EXTENSIONS:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Resume must be a PDF, DOC, or DOCX file")
-        UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-        stored_name = f"{account.id}_{uuid4()}{extension}"
-        destination = UPLOADS_DIR / stored_name
         content = await resume.read()
         if len(content) > 10 * 1024 * 1024:
             raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Resume must be 10 MB or smaller")
-        destination.write_bytes(content)
+        stored_key = f"resumes/{account.id}/{uuid4()}{extension}"
+        storage.upload_resume(stored_key, content, content_type=resume.content_type)
         resume_filename = Path(resume.filename).name
-        resume_path = str(destination)
+        resume_path = stored_key
 
     new_application = application(
         user_id=account.id,

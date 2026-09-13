@@ -1,12 +1,12 @@
 from datetime import datetime
-from pathlib import Path
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import FileResponse
+from fastapi.responses import RedirectResponse
 from sqlmodel import Session, select
 
 from Backend.api.deps import get_current_admin
+from Backend.core import storage
 from Backend.database import get_session
 from Database.models import announcement, application, mentor, notification, program, user
 from Database.schemas import (
@@ -19,7 +19,6 @@ from Database.schemas import (
 	ApplicationResponse,
 	ProgramResponse,
 )
-from Backend.api.routes.applications import UPLOADS_DIR
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -161,10 +160,8 @@ def download_application_resume(application_id: str, _: user = Depends(get_curre
 		row = None
 	if not row or not row.resume_path:
 		raise HTTPException(status_code=404, detail="Resume not found")
-	resume_path = Path(row.resume_path).resolve()
-	if UPLOADS_DIR.resolve() not in resume_path.parents or not resume_path.is_file():
-		raise HTTPException(status_code=404, detail="Resume not found")
-	return FileResponse(resume_path, filename=row.resume_filename or resume_path.name)
+	url = storage.get_resume_download_url(row.resume_path, row.resume_filename or "resume")
+	return RedirectResponse(url)
 
 
 @router.post("/announcements", response_model=AnnouncementResponse, status_code=status.HTTP_201_CREATED)
