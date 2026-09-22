@@ -90,77 +90,77 @@ class user_settings(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
 
 #---------COURSES AND MILESTONES MODELS---------#
-class course(SQLModel, table=True):
-    __tablename__ = "courses"
-    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
-    name: str = Field(sa_column=Column("name", String, nullable=False))
-    description: str = Field(sa_column=Column("description", String))
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
+# class course(SQLModel, table=True):
+#     __tablename__ = "courses"
+#     id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+#     name: str = Field(sa_column=Column("name", String, nullable=False))
+#     description: str = Field(sa_column=Column("description", String))
+#     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
+#     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
 
-class course_enrollment(SQLModel, table=True):
-    __tablename__ = "course_enrollments"
-    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
-    user_id: UUID = Field(sa_column=Column("user_id", Uuid, ForeignKey("users.id"), nullable=False))
-    course_id: UUID = Field(sa_column=Column("course_id", Uuid, ForeignKey("courses.id"), nullable=False))
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
+# class course_enrollment(SQLModel, table=True):
+#     __tablename__ = "course_enrollments"
+#     id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+#     user_id: UUID = Field(sa_column=Column("user_id", Uuid, ForeignKey("users.id"), nullable=False))
+#     course_id: UUID = Field(sa_column=Column("course_id", Uuid, ForeignKey("courses.id"), nullable=False))
+#     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
+#     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
 
-class milestone(SQLModel, table=True):
-    __tablename__ = "milestones"
-    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
-    name: str = Field(sa_column=Column("name", String, nullable=False))
-    description: str = Field(sa_column=Column("description", String))
-    due_date: datetime = Field(sa_column=Column("due_date", DateTime(timezone=True), nullable=False))
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
+# class milestone(SQLModel, table=True):
+#     __tablename__ = "milestones"
+#     id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+#     name: str = Field(sa_column=Column("name", String, nullable=False))
+#     description: str = Field(sa_column=Column("description", String))
+#     due_date: datetime = Field(sa_column=Column("due_date", DateTime(timezone=True), nullable=False))
+#     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
+#     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
 
-class user_milestone(SQLModel, table=True):
-    __tablename__ = "user_milestones"
-    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
-    user_id: UUID = Field(sa_column=Column("user_id", Uuid, ForeignKey("users.id"), nullable=False))
-    milestone_id: UUID = Field(sa_column=Column("milestone_id", Uuid, ForeignKey("milestones.id"), nullable=False))
-    status: str = Field(sa_column=Column("status", String, nullable=False))
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
+# class user_milestone(SQLModel, table=True):
+#     __tablename__ = "user_milestones"
+#     id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+#     user_id: UUID = Field(sa_column=Column("user_id", Uuid, ForeignKey("users.id"), nullable=False))
+#     milestone_id: UUID = Field(sa_column=Column("milestone_id", Uuid, ForeignKey("milestones.id"), nullable=False))
+#     status: str = Field(sa_column=Column("status", String, nullable=False))
+#     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
+#     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
 
 #---------COMMUNICATION AND SUPPORT MODELS---------#
-class message(SQLModel, table=True):
-    __tablename__ = "messages"
-    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
-    sender_id: UUID = Field(sa_column=Column("sender_id", Uuid, ForeignKey("users.id"), nullable=False))
-    receiver_id: UUID = Field(sa_column=Column("receiver_id", Uuid, ForeignKey("users.id"), nullable=False))
-    content: str = Field(sa_column=Column("content", String, nullable=False))
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
+# class message(SQLModel, table=True):
+#     __tablename__ = "messages"
+#     id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+#     sender_id: UUID = Field(sa_column=Column("sender_id", Uuid, ForeignKey("users.id"), nullable=False))
+#     receiver_id: UUID = Field(sa_column=Column("receiver_id", Uuid, ForeignKey("users.id"), nullable=False))
+#     content: str = Field(sa_column=Column("content", String, nullable=False))
+#     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
+#     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
 
-class mentor(SQLModel, table=True):
-    __tablename__ = "mentors"
-    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
-    user_id: UUID = Field(sa_column=Column("user_id", Uuid, ForeignKey("users.id"), nullable=False))
-    expertise: str = Field(sa_column=Column("expertise", String, nullable=False))
-    is_approved: bool = Field(default=False, sa_column=Column("is_approved", Boolean, nullable=False, default=False))
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
+# class mentor(SQLModel, table=True):
+#     __tablename__ = "mentors"
+#     id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+#     user_id: UUID = Field(sa_column=Column("user_id", Uuid, ForeignKey("users.id"), nullable=False))
+#     expertise: str = Field(sa_column=Column("expertise", String, nullable=False))
+#     is_approved: bool = Field(default=False, sa_column=Column("is_approved", Boolean, nullable=False, default=False))
+#     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
+#     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
 
-class support_ticket(SQLModel, table=True):
-    __tablename__ = "support_tickets"
-    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
-    user_id: UUID = Field(sa_column=Column("user_id", Uuid, ForeignKey("users.id"), nullable=False))
-    subject: str = Field(sa_column=Column("subject", String, nullable=False))
-    description: str = Field(sa_column=Column("description", String, nullable=False))
-    status: str = Field(sa_column=Column("status", String, nullable=False))
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
+# class support_ticket(SQLModel, table=True):
+#     __tablename__ = "support_tickets"
+#     id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+#     user_id: UUID = Field(sa_column=Column("user_id", Uuid, ForeignKey("users.id"), nullable=False))
+#     subject: str = Field(sa_column=Column("subject", String, nullable=False))
+#     description: str = Field(sa_column=Column("description", String, nullable=False))
+#     status: str = Field(sa_column=Column("status", String, nullable=False))
+#     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
+#     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
 
-class mentorship(SQLModel, table=True):
-    __tablename__ = "mentorships"
-    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
-    mentee_id: UUID = Field(sa_column=Column("mentee_id", Uuid, ForeignKey("users.id"), nullable=False))
-    mentor_id: UUID = Field(sa_column=Column("mentor_id", Uuid, ForeignKey("mentors.id"), nullable=False))
-    status: str = Field(default="pending", sa_column=Column("status", String, nullable=False, default="pending"))
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
+# class mentorship(SQLModel, table=True):
+#     __tablename__ = "mentorships"
+#     id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+#     mentee_id: UUID = Field(sa_column=Column("mentee_id", Uuid, ForeignKey("users.id"), nullable=False))
+#     mentor_id: UUID = Field(sa_column=Column("mentor_id", Uuid, ForeignKey("mentors.id"), nullable=False))
+#     status: str = Field(default="pending", sa_column=Column("status", String, nullable=False, default="pending"))
+#     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
+#     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
 
 class registration_verification(SQLModel, table=True):
     __tablename__ = "registration_verifications"

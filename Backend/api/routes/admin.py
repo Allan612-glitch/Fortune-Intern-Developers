@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 from Backend.api.deps import get_current_admin
 from Backend.core import storage
 from Backend.database import get_session
-from Database.models import announcement, application, mentor, notification, program, user
+from Database.models import announcement, application, notification, program, user
 from Database.schemas import (
 	AdminApplicationStatusRequest,
 	AdminProgramCreateRequest,
@@ -46,12 +46,6 @@ def list_users(_: user = Depends(get_current_admin), session: Session = Depends(
 	return [AdminUserResponse(id=str(row.id), name=row.name, email=row.email, is_admin=row.is_admin, is_suspended=row.is_suspended) for row in session.exec(select(user).order_by(user.created_at.desc())).all()]
 
 
-@router.get("/mentors")
-def list_admin_mentors(_: user = Depends(get_current_admin), session: Session = Depends(get_session)):
-	rows = session.exec(select(mentor).order_by(mentor.created_at.desc())).all()
-	return [{"id": str(row.id), "user_id": str(row.user_id), "expertise": row.expertise, "name": session.get(user, row.user_id).name, "is_approved": row.is_approved} for row in rows if session.get(user, row.user_id)]
-
-
 @router.put("/users/{user_id}/suspension", response_model=AdminUserResponse)
 def update_user_suspension(user_id: str, suspended: bool, admin: user = Depends(get_current_admin), session: Session = Depends(get_session)):
 	try:
@@ -67,21 +61,6 @@ def update_user_suspension(user_id: str, suspended: bool, admin: user = Depends(
 	session.commit()
 	session.refresh(row)
 	return AdminUserResponse(id=str(row.id), name=row.name, email=row.email, is_admin=row.is_admin, is_suspended=row.is_suspended)
-
-
-@router.put("/mentors/{mentor_id}/approval")
-def update_mentor_approval(mentor_id: str, approved: bool, _: user = Depends(get_current_admin), session: Session = Depends(get_session)):
-	try:
-		row = session.get(mentor, UUID(mentor_id))
-	except ValueError:
-		row = None
-	if not row:
-		raise HTTPException(status_code=404, detail="Mentor not found")
-	row.is_approved = approved
-	session.add(row)
-	session.commit()
-	session.refresh(row)
-	return {"id": str(row.id), "is_approved": row.is_approved}
 
 
 @router.get("/applications", response_model=list[ApplicationResponse])

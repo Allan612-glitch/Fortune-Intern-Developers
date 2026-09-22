@@ -168,59 +168,59 @@ class NotificationPreferencesUpdateRequest(BaseModel):
     opportunity_alerts: bool = True
 
 
-class MentorCreateRequest(BaseModel):
-    expertise: str
+# class MentorCreateRequest(BaseModel):
+#     expertise: str
 
 
-class MentorResponse(BaseModel):
-    id: str
-    user_id: str
-    name: str
-    expertise: str
+# class MentorResponse(BaseModel):
+#     id: str
+#     user_id: str
+#     name: str
+#     expertise: str
 
 
-class MentorshipCreateRequest(BaseModel):
-    mentor_id: str
+# class MentorshipCreateRequest(BaseModel):
+#     mentor_id: str
 
 
-class MentorshipResponse(BaseModel):
-    id: str
-    mentor_id: str
-    mentor_name: str
-    mentee_id: str
-    mentee_name: str | None = None
-    status: str
-    created_at: str
+# class MentorshipResponse(BaseModel):
+#     id: str
+#     mentor_id: str
+#     mentor_name: str
+#     mentee_id: str
+#     mentee_name: str | None = None
+#     status: str
+#     created_at: str
 
 
-class MentorshipDecisionRequest(BaseModel):
-    status: str
+# class MentorshipDecisionRequest(BaseModel):
+#     status: str
 
 
-class MentorMessageResponse(BaseModel):
-    id: str
-    sender_id: str
-    sender_name: str
-    content: str
-    created_at: str
+# class MentorMessageResponse(BaseModel):
+#     id: str
+#     sender_id: str
+#     sender_name: str
+#     content: str
+#     created_at: str
 
 
-class MentorDashboardResponse(BaseModel):
-    pending_requests: list[MentorshipResponse]
-    messages: list[MentorMessageResponse]
+# class MentorDashboardResponse(BaseModel):
+#     pending_requests: list[MentorshipResponse]
+#     messages: list[MentorMessageResponse]
 
 
-class MessageCreateRequest(BaseModel):
-    receiver_id: str
-    content: str
+# class MessageCreateRequest(BaseModel):
+#     receiver_id: str
+#     content: str
 
 
-class MessageResponse(BaseModel):
-    id: str
-    sender_id: str
-    receiver_id: str
-    content: str
-    created_at: str
+# class MessageResponse(BaseModel):
+#     id: str
+#     sender_id: str
+#     receiver_id: str
+#     content: str
+#     created_at: str
 
 
 class TokenResponse(BaseModel):
