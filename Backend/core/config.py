@@ -12,11 +12,8 @@ class Settings:
     jwt_secret: str = os.getenv("JWT_SECRET", "")
     jwt_algorithm: str = "HS256"
     admin_email: str | None = os.getenv("ADMIN_EMAIL")
-    smtp_host: str | None = os.getenv("SMTP_HOST")
-    smtp_port: int = int(os.getenv("SMTP_PORT", "587"))
-    smtp_username: str | None = os.getenv("SMTP_USERNAME")
-    smtp_password: str | None = os.getenv("SMTP_PASSWORD")
-    smtp_from: str | None = os.getenv("SMTP_FROM")
+    resend_api_key: str | None = os.getenv("RESEND_API_KEY")
+    resend_from_email: str | None = os.getenv("RESEND_FROM_EMAIL")
     verification_code_expire_minutes: int = 10
     access_token_expire_minutes: int = 60
     cors_origins: list[str] = [

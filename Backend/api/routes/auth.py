@@ -1,9 +1,8 @@
 from datetime import datetime, timedelta, timezone
-from email.message import EmailMessage
 from secrets import randbelow
-import smtplib
 
 from fastapi import APIRouter, Depends, HTTPException, status
+import resend
 from sqlmodel import Session, select
 
 from Backend.api.deps import get_current_user
@@ -17,19 +16,21 @@ router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
 
 def send_verification_email(email: str, code: str) -> None:
-    if not all((settings.smtp_host, settings.smtp_username, settings.smtp_password, settings.smtp_from)):
+    if not all((settings.resend_api_key, settings.resend_from_email)):
         raise HTTPException(status_code=503, detail="Email verification is not configured")
-    message = EmailMessage()
-    message["Subject"] = "Verify your Fortune Intern Network account"
-    message["From"] = settings.smtp_from
-    message["To"] = email
-    message.set_content(f"Your Fortune Intern Network verification code is {code}. It expires in {settings.verification_code_expire_minutes} minutes.")
+
+    resend.api_key = settings.resend_api_key
     try:
-        with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15) as server:
-            server.starttls()
-            server.login(settings.smtp_username, settings.smtp_password)
-            server.send_message(message)
-    except (OSError, smtplib.SMTPException) as error:
+        resend.Emails.send({
+            "from": settings.resend_from_email,
+            "to": [email],
+            "subject": "Verify your Fortune Intern Network account",
+            "text": (
+                f"Your Fortune Intern Network verification code is {code}. "
+                f"It expires in {settings.verification_code_expire_minutes} minutes."
+            ),
+        })
+    except Exception as error:
         raise HTTPException(status_code=503, detail="Unable to send verification email") from error
 
 
@@ -64,7 +65,7 @@ def login(credentials: LoginRequest, session: Session = Depends(get_session)):
     )
 
 
-@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=VerificationStartResponse, status_code=status.HTTP_202_ACCEPTED)
 def register(credentials: RegisterRequest, session: Session = Depends(get_session)):
     email = validate_email(credentials.email)
     name = credentials.name.strip()
@@ -81,17 +82,65 @@ def register(credentials: RegisterRequest, session: Session = Depends(get_sessio
             detail="An account with this email already exists",
         )
 
-    account = user(name=name, email=email, password_hash=hash_password(credentials.password))
+    code = f"{randbelow(1_000_000):06d}"
+    pending_registration = session.exec(
+        select(registration_verification).where(registration_verification.email == email)
+    ).first()
+    if not pending_registration:
+        pending_registration = registration_verification(
+            name=name,
+            email=email,
+            password_hash=hash_password(credentials.password),
+            code_hash=hash_password(code),
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=settings.verification_code_expire_minutes),
+        )
+    else:
+        pending_registration.name = name
+        pending_registration.password_hash = hash_password(credentials.password)
+        pending_registration.code_hash = hash_password(code)
+        pending_registration.expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.verification_code_expire_minutes)
+
+    send_verification_email(email, code)
+    session.add(pending_registration)
+    session.commit()
+    return VerificationStartResponse(
+        message="Verification code sent",
+        email=email,
+    )
+
+
+@router.post("/verify-email", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+def verify_email(payload: VerifyEmailRequest, session: Session = Depends(get_session)):
+    email = validate_email(payload.email)
+    pending_registration = session.exec(
+        select(registration_verification).where(registration_verification.email == email)
+    ).first()
+    if not pending_registration:
+        raise HTTPException(status_code=400, detail="No pending registration was found for this email")
+
+    if pending_registration.expires_at <= datetime.now(timezone.utc):
+        session.delete(pending_registration)
+        session.commit()
+        raise HTTPException(status_code=400, detail="Verification code has expired")
+
+    if not verify_password(payload.code.strip(), pending_registration.code_hash):
+        raise HTTPException(status_code=400, detail="Invalid verification code")
+
+    if session.exec(select(user).where(user.email == email)).first():
+        session.delete(pending_registration)
+        session.commit()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="An account with this email already exists")
+
+    account = user(
+        name=pending_registration.name,
+        email=pending_registration.email,
+        password_hash=pending_registration.password_hash,
+    )
     session.add(account)
+    session.delete(pending_registration)
     session.commit()
     session.refresh(account)
     return TokenResponse(access_token=create_access_token(account.id), token_type="bearer", user=serialize_user(account))
-
-
-# FUTURE EMAIL VERIFICATION:
-# The pending registration model, SMTP sender, verification code generation,
-# and /verify-email endpoint are intentionally disabled until email delivery
-# is configured for the project.
 
 
 @router.get("/me", response_model=UserResponse)

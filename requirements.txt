@@ -8,3 +8,4 @@ PyJWT
 python-multipart
 python-dotenv
 boto3
+resend

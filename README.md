@@ -117,11 +117,13 @@ DATABASE_URL=postgresql+psycopg://fortune:fortune@localhost/fortune
 JWT_SECRET=use-a-random-secret-at-least-32-characters
 ADMIN_EMAIL=admin@example.com
 CORS_ORIGINS=http://localhost:5500,http://127.0.0.1:5500
+RESEND_API_KEY=re_your_resend_api_key
+RESEND_FROM_EMAIL=noreply@your-verified-domain.com
 ```
 
 `JWT_SECRET` must be at least 32 characters. The backend will refuse to start with the example placeholder or an insecure short value.
 
-SMTP settings are currently reserved for future email verification and should remain commented or unset until email delivery is implemented.
+Verify the sender domain in Resend before registering accounts. Registration emails contain a six-digit OTP that expires after 10 minutes. `POST /api/auth/register` sends the OTP and `POST /api/auth/verify-email` accepts the email and OTP before the account is created.
 
 ## Database Setup
 
@@ -189,7 +191,7 @@ Admins can manage users, mentors, programs, applications, resumes, and announcem
 - Admin routes require the persisted admin role or the configured `ADMIN_EMAIL`.
 - Resume downloads are ownership-checked for users and admin-authorized for administrators.
 - Uploaded resumes are stored under `Backend/uploads/`, which is excluded from Git.
-- Never commit `.env`, SMTP credentials, JWT secrets, or uploaded documents.
+- Never commit `.env`, Resend API keys, JWT secrets, or uploaded documents.
 
 ## Important API Groups
 
@@ -228,7 +230,7 @@ node -e "const fs=require('fs'); const html=fs.readFileSync('Frontend/index.html
 ## Current Development Notes
 
 - Payment is currently a frontend-only GHS 3 display. No payment provider or backend payment processing is connected.
-- Email verification is currently disabled and marked as future work. Registration currently creates and authenticates the account immediately.
+- Registration requires an email OTP sent through Resend before the account is created.
 - Mentor approval is required before a mentor appears in the public mentor directory.
 - Application status changes are controlled by admins.
 - The frontend is currently a single static HTML application rather than a bundled framework app.
