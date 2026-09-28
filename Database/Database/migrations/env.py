@@ -1,10 +1,15 @@
 import os
 from logging.config import fileConfig
+from pathlib import Path
 
+from dotenv import load_dotenv
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
+
+# .env lives at the repo root, three levels up from this file.
+load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

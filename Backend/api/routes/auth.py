@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from secrets import randbelow
+from secrets import randbelow, token_urlsafe
 
 from fastapi import APIRouter, Depends, HTTPException, status
 import resend
@@ -9,8 +9,18 @@ from Backend.api.deps import get_current_user
 from Backend.core.config import settings
 from Backend.core.security import create_access_token, hash_password, verify_password
 from Backend.database import get_session
-from Database.models import registration_verification, user
-from Database.schemas import LoginRequest, RegisterRequest, TokenResponse, UserResponse, VerificationStartResponse, VerifyEmailRequest
+from Database.models import password_reset, registration_verification, user
+from Database.schemas import (
+    ForgotPasswordRequest,
+    LoginRequest,
+    MessageResponse,
+    RegisterRequest,
+    ResetPasswordRequest,
+    TokenResponse,
+    UserResponse,
+    VerificationStartResponse,
+    VerifyEmailRequest,
+)
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
@@ -32,6 +42,28 @@ def send_verification_email(email: str, code: str) -> None:
         })
     except Exception as error:
         raise HTTPException(status_code=503, detail="Unable to send verification email") from error
+
+
+def send_password_reset_email(email: str, token: str) -> None:
+    if not all((settings.resend_api_key, settings.resend_from_email)):
+        raise HTTPException(status_code=503, detail="Email delivery is not configured")
+
+    reset_link = f"{settings.frontend_url}/reset-password.html?email={email}&token={token}"
+    resend.api_key = settings.resend_api_key
+    try:
+        resend.Emails.send({
+            "from": settings.resend_from_email,
+            "to": [email],
+            "subject": "Reset your Fortune Intern Network password",
+            "text": (
+                f"We received a request to reset your password. Use the link below to choose a new one:\n\n"
+                f"{reset_link}\n\n"
+                f"This link expires in {settings.password_reset_token_expire_minutes} minutes. "
+                f"If you didn't request this, you can safely ignore this email."
+            ),
+        })
+    except Exception as error:
+        raise HTTPException(status_code=503, detail="Unable to send password reset email") from error
 
 
 def serialize_user(account: user) -> UserResponse:
@@ -141,6 +173,67 @@ def verify_email(payload: VerifyEmailRequest, session: Session = Depends(get_ses
     session.commit()
     session.refresh(account)
     return TokenResponse(access_token=create_access_token(account.id), token_type="bearer", user=serialize_user(account))
+
+
+@router.post("/forgot-password", response_model=MessageResponse)
+def forgot_password(payload: ForgotPasswordRequest, session: Session = Depends(get_session)):
+    email = validate_email(payload.email)
+    generic_response = MessageResponse(
+        message="If an account with that email exists, a password reset link has been sent"
+    )
+
+    account = session.exec(select(user).where(user.email == email)).first()
+    if not account:
+        return generic_response
+
+    pending_resets = session.exec(
+        select(password_reset).where(password_reset.user_id == account.id, password_reset.used == False)  # noqa: E712
+    ).all()
+    for pending_reset in pending_resets:
+        pending_reset.used = True
+        session.add(pending_reset)
+
+    token = token_urlsafe(32)
+    reset_request = password_reset(
+        user_id=account.id,
+        token_hash=hash_password(token),
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=settings.password_reset_token_expire_minutes),
+    )
+    session.add(reset_request)
+    send_password_reset_email(email, token)
+    session.commit()
+    return generic_response
+
+
+@router.post("/reset-password", response_model=MessageResponse)
+def reset_password(payload: ResetPasswordRequest, session: Session = Depends(get_session)):
+    email = validate_email(payload.email)
+    if len(payload.new_password) < 8:
+        raise HTTPException(status_code=422, detail="Password must be at least 8 characters")
+
+    account = session.exec(select(user).where(user.email == email)).first()
+    if not account:
+        raise HTTPException(status_code=400, detail="Invalid or expired password reset link")
+
+    candidates = session.exec(
+        select(password_reset)
+        .where(password_reset.user_id == account.id, password_reset.used == False)  # noqa: E712
+        .order_by(password_reset.created_at.desc())
+    ).all()
+    matching_reset = next(
+        (candidate for candidate in candidates if verify_password(payload.token, candidate.token_hash)),
+        None,
+    )
+    if not matching_reset or matching_reset.expires_at <= datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="Invalid or expired password reset link")
+
+    account.password_hash = hash_password(payload.new_password)
+    account.updated_at = datetime.now(timezone.utc)
+    matching_reset.used = True
+    session.add(account)
+    session.add(matching_reset)
+    session.commit()
+    return MessageResponse(message="Password has been reset successfully")
 
 
 @router.get("/me", response_model=UserResponse)

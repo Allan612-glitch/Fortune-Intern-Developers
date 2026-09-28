@@ -16,6 +16,8 @@ class Settings:
     resend_from_email: str | None = os.getenv("RESEND_FROM_EMAIL")
     verification_code_expire_minutes: int = 10
     access_token_expire_minutes: int = 60
+    password_reset_token_expire_minutes: int = 30
+    frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:5500")
     cors_origins: list[str] = [
         origin.strip()
         for origin in os.getenv("CORS_ORIGINS", "http://localhost:5500,http://127.0.0.1:5500").split(",")

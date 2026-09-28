@@ -171,3 +171,12 @@ class registration_verification(SQLModel, table=True):
     code_hash: str = Field(sa_column=Column("code_hash", String, nullable=False))
     expires_at: datetime = Field(sa_column=Column("expires_at", DateTime(timezone=True), nullable=False))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
+
+class password_reset(SQLModel, table=True):
+    __tablename__ = "password_resets"
+    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+    user_id: UUID = Field(sa_column=Column("user_id", Uuid, ForeignKey("users.id"), nullable=False))
+    token_hash: str = Field(sa_column=Column("token_hash", String, nullable=False))
+    expires_at: datetime = Field(sa_column=Column("expires_at", DateTime(timezone=True), nullable=False))
+    used: bool = Field(default=False, sa_column=Column("used", Boolean, nullable=False, default=False))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
