@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID, uuid4
+import logging
 
 import resend
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -14,6 +15,7 @@ from Backend.database import get_session
 from Database.models import application, notification, program, user, user_profile
 from Database.schemas import ApplicationCreateRequest, ApplicationResponse
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/applications", tags=["applications"])
 ALLOWED_RESUME_EXTENSIONS = {".pdf", ".doc", ".docx"}
 
@@ -27,6 +29,7 @@ def send_application_documents_email(
     assessment_pdf: bytes,
 ) -> None:
     if not all((settings.resend_api_key, settings.resend_from_email)):
+        logger.warning("Skipping application documents email: RESEND_API_KEY/RESEND_FROM_EMAIL not configured")
         return
 
     resend.api_key = settings.resend_api_key
@@ -56,7 +59,7 @@ def send_application_documents_email(
             ],
         })
     except Exception:
-        pass
+        logger.exception("Failed to send application documents email to %s", to_email)
 
 
 def serialize_application(row: application, program_name: str) -> ApplicationResponse:
@@ -236,6 +239,6 @@ async def create_application(
             assessment_pdf=assessment_pdf,
         )
     except Exception:
-        pass
+        logger.exception("Failed to generate/send application documents for application %s", new_application.id)
 
     return serialize_application(new_application, program_name)
