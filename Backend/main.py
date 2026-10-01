@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from Backend.api.routes.applications import router as application_router
 from Backend.api.routes.auth import router as auth_router
@@ -31,6 +32,11 @@ def create_app() -> FastAPI:
     # application.include_router(mentorship_router)
     application.include_router(admin_router)
     application.include_router(announcements_router)
+
+    @application.exception_handler(Exception)
+    async def handle_unexpected_error(request: Request, exc: Exception):
+        # Ensures CORSMiddleware still attaches headers instead of the browser masking a 500 as a CORS failure
+        return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
     @application.get("/", tags=["health"])
     def read_root():

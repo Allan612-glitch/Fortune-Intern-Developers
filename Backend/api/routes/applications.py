@@ -1,18 +1,62 @@
+from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID, uuid4
 
+import resend
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import Response
 from sqlmodel import Session, select
 
 from Backend.api.deps import get_current_user
-from Backend.core import storage
+from Backend.core import documents, storage
+from Backend.core.config import settings
 from Backend.database import get_session
-from Database.models import application, notification, program, user
+from Database.models import application, notification, program, user, user_profile
 from Database.schemas import ApplicationCreateRequest, ApplicationResponse
 
 router = APIRouter(prefix="/api/applications", tags=["applications"])
 ALLOWED_RESUME_EXTENSIONS = {".pdf", ".doc", ".docx"}
+
+
+def send_application_documents_email(
+    *,
+    to_email: str,
+    student_name: str,
+    program_name: str,
+    letter_pdf: bytes,
+    assessment_pdf: bytes,
+) -> None:
+    if not all((settings.resend_api_key, settings.resend_from_email)):
+        return
+
+    resend.api_key = settings.resend_api_key
+    try:
+        resend.Emails.send({
+            "from": settings.resend_from_email,
+            "to": [to_email],
+            "subject": f"Your Fortune Intern Network application documents — {program_name}",
+            "text": (
+                f"Hi {student_name},\n\n"
+                f"Thank you for applying to {program_name} through Fortune Intern Network. "
+                "Attached are your internship recommendation letter and a blank assessment form "
+                "for your host supervisor to complete at the end of your attachment.\n\n"
+                "Best of luck!\nFortune Intern Network"
+            ),
+            "attachments": [
+                {
+                    "filename": "FIN_Recommendation_Letter.pdf",
+                    "content": list(letter_pdf),
+                    "content_type": "application/pdf",
+                },
+                {
+                    "filename": "FIN_Assessment_Form.pdf",
+                    "content": list(assessment_pdf),
+                    "content_type": "application/pdf",
+                },
+            ],
+        })
+    except Exception:
+        pass
 
 
 def serialize_application(row: application, program_name: str) -> ApplicationResponse:
@@ -141,7 +185,10 @@ async def create_application(
         if len(content) > 10 * 1024 * 1024:
             raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Resume must be 10 MB or smaller")
         stored_key = f"resumes/{account.id}/{uuid4()}{extension}"
-        storage.upload_resume(stored_key, content, content_type=resume.content_type)
+        try:
+            storage.upload_resume(stored_key, content, content_type=resume.content_type)
+        except RuntimeError as error:
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Resume storage is not configured") from error
         resume_filename = Path(resume.filename).name
         resume_path = stored_key
 
@@ -162,5 +209,33 @@ async def create_application(
     ))
     session.commit()
     session.refresh(new_application)
+
+    profile_record = session.exec(select(user_profile).where(user_profile.user_id == account.id)).first()
+    institution = (profile_record.university if profile_record and profile_record.university else None) or "Not specified"
+    program_course = profile_record.course if profile_record else None
+    contact = profile_record.phone_number if profile_record else None
+    reference_no = f"FIN/{datetime.now(timezone.utc).year}/{str(new_application.id)[:8].upper()}"
+
+    try:
+        letter_pdf = documents.build_recommendation_letter_pdf(
+            student_name=account.name,
+            institution=institution,
+            program_course=program_course,
+            contact=contact,
+            email=account.email,
+            host_company=program_record.company,
+            host_location=program_record.location,
+            reference_no=reference_no,
+        )
+        assessment_pdf = documents.build_assessment_form_pdf()
+        send_application_documents_email(
+            to_email=account.email,
+            student_name=account.name,
+            program_name=program_name,
+            letter_pdf=letter_pdf,
+            assessment_pdf=assessment_pdf,
+        )
+    except Exception:
+        pass
 
     return serialize_application(new_application, program_name)
