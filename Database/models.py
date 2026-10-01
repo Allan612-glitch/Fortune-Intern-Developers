@@ -58,6 +58,12 @@ class application(SQLModel, table=True):
     status: str = Field(sa_column=Column("status", String, nullable=False))
     resume_filename: str | None = Field(default=None, sa_column=Column("resume_filename", String))
     resume_path: str | None = Field(default=None, sa_column=Column("resume_path", String))
+    applicant_institution: str | None = Field(default=None, sa_column=Column("applicant_institution", String))
+    applicant_course: str | None = Field(default=None, sa_column=Column("applicant_course", String))
+    applicant_contact: str | None = Field(default=None, sa_column=Column("applicant_contact", String))
+    host_company_name: str | None = Field(default=None, sa_column=Column("host_company_name", String))
+    host_company_address: str | None = Field(default=None, sa_column=Column("host_company_address", String))
+    documents_sent: bool = Field(default=False, sa_column=Column("documents_sent", Boolean, nullable=False, default=False))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
 

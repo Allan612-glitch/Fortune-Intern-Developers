@@ -1,65 +1,18 @@
-from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID, uuid4
-import logging
 
-import resend
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import Response
 from sqlmodel import Session, select
 
 from Backend.api.deps import get_current_user
-from Backend.core import documents, storage
-from Backend.core.config import settings
+from Backend.core import storage
 from Backend.database import get_session
-from Database.models import application, notification, program, user, user_profile
+from Database.models import application, notification, program, user
 from Database.schemas import ApplicationCreateRequest, ApplicationResponse
 
-logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/applications", tags=["applications"])
 ALLOWED_RESUME_EXTENSIONS = {".pdf", ".doc", ".docx"}
-
-
-def send_application_documents_email(
-    *,
-    to_email: str,
-    student_name: str,
-    program_name: str,
-    letter_pdf: bytes,
-    assessment_pdf: bytes,
-) -> None:
-    if not all((settings.resend_api_key, settings.resend_from_email)):
-        logger.warning("Skipping application documents email: RESEND_API_KEY/RESEND_FROM_EMAIL not configured")
-        return
-
-    resend.api_key = settings.resend_api_key
-    try:
-        resend.Emails.send({
-            "from": settings.resend_from_email,
-            "to": [to_email],
-            "subject": f"Your Fortune Intern Network application documents — {program_name}",
-            "text": (
-                f"Hi {student_name},\n\n"
-                f"Thank you for applying to {program_name} through Fortune Intern Network. "
-                "Attached are your internship recommendation letter and a blank assessment form "
-                "for your host supervisor to complete at the end of your attachment.\n\n"
-                "Best of luck!\nFortune Intern Network"
-            ),
-            "attachments": [
-                {
-                    "filename": "FIN_Recommendation_Letter.pdf",
-                    "content": list(letter_pdf),
-                    "content_type": "application/pdf",
-                },
-                {
-                    "filename": "FIN_Assessment_Form.pdf",
-                    "content": list(assessment_pdf),
-                    "content_type": "application/pdf",
-                },
-            ],
-        })
-    except Exception:
-        logger.exception("Failed to send application documents email to %s", to_email)
 
 
 def serialize_application(row: application, program_name: str) -> ApplicationResponse:
@@ -211,6 +164,11 @@ async def create_application(
         status="submitted",
         resume_filename=resume_filename,
         resume_path=resume_path,
+        applicant_institution=institution_value or None,
+        applicant_course=course_value or None,
+        applicant_contact=contact_value or None,
+        host_company_name=company_name_value or None,
+        host_company_address=company_address_value or None,
     )
     session.add(new_application)
     session.add(notification(
@@ -222,35 +180,5 @@ async def create_application(
     ))
     session.commit()
     session.refresh(new_application)
-
-    profile_record = session.exec(select(user_profile).where(user_profile.user_id == account.id)).first()
-    institution = institution_value or (profile_record.university if profile_record else None) or "Not specified"
-    program_course = course_value or (profile_record.course if profile_record else None)
-    contact = contact_value or (profile_record.phone_number if profile_record else None)
-    host_company = company_name_value or program_record.company
-    host_location = company_address_value or program_record.location
-    reference_no = f"FIN/{datetime.now(timezone.utc).year}/{str(new_application.id)[:8].upper()}"
-
-    try:
-        letter_pdf = documents.build_recommendation_letter_pdf(
-            student_name=account.name,
-            institution=institution,
-            program_course=program_course,
-            contact=contact,
-            email=account.email,
-            host_company=host_company,
-            host_location=host_location,
-            reference_no=reference_no,
-        )
-        assessment_pdf = documents.build_assessment_form_pdf()
-        send_application_documents_email(
-            to_email=account.email,
-            student_name=account.name,
-            program_name=program_name,
-            letter_pdf=letter_pdf,
-            assessment_pdf=assessment_pdf,
-        )
-    except Exception:
-        logger.exception("Failed to generate/send application documents for application %s", new_application.id)
 
     return serialize_application(new_application, program_name)

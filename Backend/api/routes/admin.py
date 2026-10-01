@@ -1,12 +1,14 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
 from sqlmodel import Session, select
 
 from Backend.api.deps import get_current_admin
-from Backend.core import storage
+from Backend.core import documents, storage
+from Backend.core.mailer import send_application_documents_email
 from Backend.database import get_session
 from Database.models import announcement, application, notification, program, user
 from Database.schemas import (
@@ -21,6 +23,12 @@ from Database.schemas import (
 )
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+
+@router.get("/mentors")
+def list_admin_mentors(_: user = Depends(get_current_admin)):
+	# Mentorship feature is disabled (see Backend/api/routes/mentorship.py); kept as a stub so the admin dashboard still loads.
+	return []
 
 
 def program_response(row: program) -> ProgramResponse:
@@ -128,7 +136,38 @@ def update_application_status(application_id: str, payload: AdminApplicationStat
 		))
 	session.commit()
 	program_record = session.get(program, row.program_id)
-	return ApplicationResponse(id=str(row.id), user_id=str(row.user_id), program_id=str(row.program_id), program_name=program_record.name if program_record else "Program", status=row.status, resume_filename=row.resume_filename, created_at=row.created_at.isoformat())
+	program_name = program_record.name if program_record else "Program"
+
+	if payload.status == "accepted" and not row.documents_sent:
+		applicant = session.get(user, row.user_id)
+		if applicant:
+			try:
+				reference_no = f"FIN/{datetime.now(timezone.utc).year}/{str(row.id)[:8].upper()}"
+				letter_pdf = documents.build_recommendation_letter_pdf(
+					student_name=applicant.name,
+					institution=row.applicant_institution or "Not specified",
+					program_course=row.applicant_course,
+					contact=row.applicant_contact,
+					email=applicant.email,
+					host_company=row.host_company_name or (program_record.company if program_record else "Fortune Intern Network"),
+					host_location=row.host_company_address or (program_record.location if program_record else None),
+					reference_no=reference_no,
+				)
+				assessment_pdf = documents.build_assessment_form_pdf()
+				send_application_documents_email(
+					to_email=applicant.email,
+					student_name=applicant.name,
+					program_name=program_name,
+					letter_pdf=letter_pdf,
+					assessment_pdf=assessment_pdf,
+				)
+				row.documents_sent = True
+				session.add(row)
+				session.commit()
+			except Exception:
+				logging.getLogger(__name__).exception("Failed to send application documents for application %s", row.id)
+
+	return ApplicationResponse(id=str(row.id), user_id=str(row.user_id), program_id=str(row.program_id), program_name=program_name, status=row.status, resume_filename=row.resume_filename, created_at=row.created_at.isoformat())
 
 
 @router.get("/applications/{application_id}/resume")
