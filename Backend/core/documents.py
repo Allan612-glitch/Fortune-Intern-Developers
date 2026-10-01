@@ -1,4 +1,5 @@
 """Server-rendered PDF documents (assessment form + recommendation letter) sent to applicants."""
+import re
 from datetime import datetime, timezone
 from io import BytesIO
 
@@ -7,6 +8,7 @@ from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
+from reportlab.graphics.shapes import Drawing, Path, Rect
 from reportlab.platypus import HRFlowable, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 NAVY = colors.HexColor("#0A3161")
@@ -14,6 +16,20 @@ GOLD = colors.HexColor("#EDB523")
 INK = colors.HexColor("#12365E")
 TEXT = colors.HexColor("#16202E")
 LINE = colors.HexColor("#C9D2DE")
+SIGNATURE_INK = colors.HexColor("#2B3A9E")
+
+# Hand-signature stroke data lifted from the sigsvg path in letter.html (viewBox 0 0 200 150)
+SIGNATURE_PATHS = [
+    "M112 22 C 84 6, 44 16, 30 48 C 16 82, 24 116, 58 130 C 88 142, 122 134, 132 112 C 136 102, 132 94, 124 92",
+    "M66 46 C 74 38, 84 38, 88 44",
+    "M70 46 C 68 62, 66 80, 66 98",
+    "M68 72 C 74 68, 80 68, 84 70",
+    "M84 98 C 88 84, 92 72, 96 66 C 99 76, 101 88, 103 98 C 107 84, 111 72, 115 66 C 118 76, 120 88, 122 98",
+    "M108 64 C 102 44, 112 28, 122 32 C 132 36, 128 54, 114 60 C 110 62, 106 62, 104 60",
+    "M112 44 C 117 40, 121 43, 119 49",
+    "M112 62 C 110 74, 108 86, 106 96",
+    "M128 100 C 140 92, 154 90, 168 94 C 159 99, 153 105, 155 112",
+]
 
 _styles = getSampleStyleSheet()
 _brand_style = ParagraphStyle("FinBrand", parent=_styles["Normal"], fontName="Helvetica-Bold", fontSize=13, textColor=INK, alignment=TA_CENTER)
@@ -53,6 +69,35 @@ def _formatted_date(dt: datetime) -> str:
         "July", "August", "September", "October", "November", "December",
     ]
     return f"{_ordinal(dt.day)} {months[dt.month - 1]}, {dt.year}"
+
+
+def _build_signature_drawing(width: float = 58, height: float = 43.5) -> Drawing:
+    """Render the fixed FIN managing-director signature as vector strokes."""
+    view_w, view_h = 200.0, 150.0
+    scale = width / view_w
+    drawing = Drawing(width, height)
+    for path_data in SIGNATURE_PATHS:
+        nums = [float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", path_data)]
+        path = Path(strokeColor=SIGNATURE_INK, strokeWidth=1.3, fillColor=None, strokeLineCap=1, strokeLineJoin=1)
+        path.moveTo(nums[0] * scale, (view_h - nums[1]) * scale)
+        index = 2
+        while index + 6 <= len(nums):
+            x1, y1, x2, y2, x3, y3 = nums[index:index + 6]
+            path.curveTo(
+                x1 * scale, (view_h - y1) * scale,
+                x2 * scale, (view_h - y2) * scale,
+                x3 * scale, (view_h - y3) * scale,
+            )
+            index += 6
+        drawing.add(path)
+    return drawing
+
+
+def _build_checkbox_drawing(size: float = 9.5, stroke_color=None) -> Drawing:
+    """Draw an empty checkbox square (Helvetica has no glyph for \u2610, so a real shape is used instead)."""
+    drawing = Drawing(size, size)
+    drawing.add(Rect(0.75, 0.75, size - 1.5, size - 1.5, strokeColor=stroke_color or NAVY, strokeWidth=0.9, fillColor=None))
+    return drawing
 
 
 ASSESSMENT_FIELD_LABELS = [
@@ -104,7 +149,10 @@ def build_assessment_form_pdf() -> bytes:
     story.append(Paragraph("Section B: Performance Assessment", _section_style))
     story.append(Paragraph("(Please rate the intern on each criterion by ticking the appropriate box)", _hint_style))
     header_row = ["Criteria", "Excellent (5)", "Very Good (4)", "Good (3)", "Fair (2)", "Poor (1)"]
-    rate_rows = [header_row] + [[c, "\u2610", "\u2610", "\u2610", "\u2610", "\u2610"] for c in ASSESSMENT_CRITERIA]
+    rate_rows = [header_row] + [
+        [criterion, _build_checkbox_drawing(), _build_checkbox_drawing(), _build_checkbox_drawing(), _build_checkbox_drawing(), _build_checkbox_drawing()]
+        for criterion in ASSESSMENT_CRITERIA
+    ]
     rate_table = Table(rate_rows, colWidths=[64 * mm, 22.8 * mm, 22.8 * mm, 22.8 * mm, 22.8 * mm, 22.8 * mm])
     rate_table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), NAVY),
@@ -112,6 +160,7 @@ def build_assessment_form_pdf() -> bytes:
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
         ("FONTSIZE", (0, 0), (-1, -1), 8.6),
         ("ALIGN", (1, 0), (-1, -1), "CENTER"),
+        ("VALIGN", (1, 1), (-1, -1), "MIDDLE"),
         ("GRID", (0, 0), (-1, -1), 0.4, LINE),
         ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F5F8FC")]),
         ("TOPPADDING", (0, 0), (-1, -1), 4),
@@ -126,12 +175,21 @@ def build_assessment_form_pdf() -> bytes:
     story.append(comment_lines)
 
     story.append(Paragraph("Section D: Recommendation", _section_style))
-    for option in [
-        "\u2610 Highly Recommend for future employment",
-        "\u2610 Recommend with reservations",
-        "\u2610 Not recommended",
+    for option_text in [
+        "Highly Recommend for future employment",
+        "Recommend with reservations",
+        "Not recommended",
     ]:
-        story.append(Paragraph(option, _body_style))
+        rec_row = Table(
+            [[_build_checkbox_drawing(), Paragraph(option_text, _body_style)]],
+            colWidths=[6 * mm, 172 * mm],
+        )
+        rec_row.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("TOPPADDING", (0, 0), (-1, -1), 1),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+        ]))
+        story.append(rec_row)
 
     sig_rows = [
         [Paragraph("Supervisor's Signature:", _label_style), ""],
@@ -231,7 +289,9 @@ def build_recommendation_letter_pdf(
 
     story.append(Spacer(1, 4 * mm))
     story.append(Paragraph("Yours sincerely,", _body_style))
-    story.append(Spacer(1, 14 * mm))
+    story.append(Spacer(1, 2 * mm))
+    story.append(_build_signature_drawing())
+    story.append(Spacer(1, 1 * mm))
     story.append(Paragraph("<b>Emmanuel Amoasi</b>", _body_style))
     story.append(Paragraph("<b>Managing Director</b><br/>Fortune Intern Network", _body_style))
 

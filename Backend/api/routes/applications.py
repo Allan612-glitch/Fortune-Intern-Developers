@@ -142,10 +142,20 @@ async def create_application(
         program_id_value = str(form.get("program_id") or "")
         program_name_value = str(form.get("program_name") or "")
         resume = form.get("resume")
+        institution_value = str(form.get("university") or form.get("institution") or "").strip()
+        course_value = str(form.get("course") or "").strip()
+        contact_value = str(form.get("phone") or form.get("contact") or "").strip()
+        company_name_value = str(form.get("companyName") or form.get("company_name") or "").strip()
+        company_address_value = str(form.get("companyAddress") or form.get("company_address") or "").strip()
     else:
         payload = await request.json()
         program_id_value = str(payload.get("program_id") or "")
         program_name_value = str(payload.get("program_name") or "")
+        institution_value = str(payload.get("university") or payload.get("institution") or "").strip()
+        course_value = str(payload.get("course") or "").strip()
+        contact_value = str(payload.get("phone") or payload.get("contact") or "").strip()
+        company_name_value = str(payload.get("companyName") or payload.get("company_name") or "").strip()
+        company_address_value = str(payload.get("companyAddress") or payload.get("company_address") or "").strip()
 
     program_record = None
     if program_id_value:
@@ -214,9 +224,11 @@ async def create_application(
     session.refresh(new_application)
 
     profile_record = session.exec(select(user_profile).where(user_profile.user_id == account.id)).first()
-    institution = (profile_record.university if profile_record and profile_record.university else None) or "Not specified"
-    program_course = profile_record.course if profile_record else None
-    contact = profile_record.phone_number if profile_record else None
+    institution = institution_value or (profile_record.university if profile_record else None) or "Not specified"
+    program_course = course_value or (profile_record.course if profile_record else None)
+    contact = contact_value or (profile_record.phone_number if profile_record else None)
+    host_company = company_name_value or program_record.company
+    host_location = company_address_value or program_record.location
     reference_no = f"FIN/{datetime.now(timezone.utc).year}/{str(new_application.id)[:8].upper()}"
 
     try:
@@ -226,8 +238,8 @@ async def create_application(
             program_course=program_course,
             contact=contact,
             email=account.email,
-            host_company=program_record.company,
-            host_location=program_record.location,
+            host_company=host_company,
+            host_location=host_location,
             reference_no=reference_no,
         )
         assessment_pdf = documents.build_assessment_form_pdf()

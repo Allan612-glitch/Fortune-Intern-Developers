@@ -2700,6 +2700,11 @@ document.getElementById('applyForm').addEventListener('submit', async (e) => {
   applicationData.append('program_name', program);
   if (selectedProgram) applicationData.append('program_id', selectedProgram.id);
   applicationData.append('resume', resumeFile);
+  applicationData.append('university', data.get('university') || '');
+  applicationData.append('course', data.get('course') || '');
+  applicationData.append('phone', data.get('phone') || '');
+  applicationData.append('companyName', data.get('companyName') || '');
+  applicationData.append('companyAddress', data.get('companyAddress') || '');
 
   try {
     const response = await fetch(apiBaseUrl + '/api/applications', {
