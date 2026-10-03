@@ -1,9 +1,10 @@
 import { useState } from "react";
 import {
   printApplicationLetter,
-  saveApplication,
+  fromBackendApplication,
   type ApplicationRecord,
 } from "../services/applications";
+import { submitApplication } from "../services/platform";
 import logo from "../assets/attach1.png";
 
 const universities = [
@@ -76,6 +77,7 @@ function loadPaystack() {
 interface Props {
   prefilledCompany?: string;
   prefilledRole?: string;
+  programId?: string;
   ownerEmail?: string;
   onClose: () => void;
   onViewApplications?: () => void;
@@ -84,6 +86,7 @@ interface Props {
 export default function ApplyFormModal({
   prefilledCompany = "",
   prefilledRole = "",
+  programId,
   ownerEmail = "",
   onClose,
   onViewApplications,
@@ -140,37 +143,49 @@ export default function ApplyFormModal({
     if (!resume) return "Please upload your CV or Resume before continuing.";
     return "";
   };
-  const complete = (paymentReference: string) => {
+  const complete = async (paymentReference: string) => {
+    setLoading(true);
     const now = new Date().toISOString();
-    const application = saveApplication({
-      ownerEmail: ownerEmail || form.email.trim().toLowerCase(),
-      opportunity: prefilledRole || "Internship Application",
-      company: form.companyName,
-      companyAddress: form.companyAddress,
-      suggestedCompany: form.suggestedCompany,
-      gender: form.gender,
-      applicantName: `${form.firstName} ${form.lastName}`.trim(),
-      applicantEmail: form.email,
-      studentIndexNumber: form.indexNumber.trim(),
-      applicationDate: now,
-      lastUpdated: now,
-      status: "Submitted",
-      paymentStatus: "Payment Successful",
-      paymentReference,
-      resumeName: resume?.name || "",
-      resumeType: resume?.name.toLowerCase().endsWith(".docx")
-        ? "DOCX"
-        : resume?.name.toLowerCase().endsWith(".doc")
-          ? "DOC"
-          : "PDF",
-      resumeUploadedAt: now,
-      applicationLetterAvailable: true,
-      details: { personalInformation: form },
-    });
-    setSubmittedApplication(application);
-    setReference(application.reference);
-    setLoading(false);
-    setStep("success");
+    const payload = new FormData();
+    if (programId) payload.append("program_id", programId);
+    else payload.append("program_name", prefilledRole || "Internship Application");
+    if (resume) payload.append("resume", resume);
+    payload.append("university", form.institution === "Other" ? form.otherInstitution : form.institution);
+    payload.append("course", form.program);
+    payload.append("phone", form.phone);
+    payload.append("companyName", form.companyName);
+    payload.append("companyAddress", form.companyAddress);
+    payload.append("applicant_name", `${form.firstName} ${form.lastName}`.trim());
+    payload.append("gender", form.gender);
+    payload.append("student_index_number", form.indexNumber.trim());
+    payload.append("year_of_study", form.year);
+    payload.append("suggested_company", form.suggestedCompany);
+    try {
+      const result = await submitApplication(payload);
+      const application = {
+        ...fromBackendApplication(result, ownerEmail || form.email.trim().toLowerCase()),
+        company: form.companyName,
+        companyAddress: form.companyAddress,
+        applicantName: `${form.firstName} ${form.lastName}`.trim(),
+        applicantEmail: form.email,
+        studentIndexNumber: form.indexNumber.trim(),
+        paymentStatus: paymentReference.startsWith("FIN-DEMO")
+          ? "Payment Pending" as const
+          : "Payment Successful" as const,
+        paymentReference,
+        applicationDate: now,
+        lastUpdated: now,
+        applicationLetterAvailable: false,
+        details: { personalInformation: form },
+      };
+      setSubmittedApplication(application);
+      setReference(result.id);
+      setStep("success");
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to submit your application.");
+    } finally {
+      setLoading(false);
+    }
   };
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -204,13 +219,14 @@ export default function ApplyFormModal({
             },
           ],
         },
-        callback: (response: { reference: string }) =>
-          complete(response.reference),
+        callback: (response: { reference: string }) => {
+          void complete(response.reference);
+        },
         onClose: () => setLoading(false),
       }).openIframe();
       return;
     }
-    complete(`FIN-DEMO-${Date.now().toString().slice(-6)}`);
+    void complete(`FIN-DEMO-${Date.now().toString().slice(-6)}`);
   };
   const letter = () => {
     if (submittedApplication) printApplicationLetter(submittedApplication);
@@ -235,15 +251,17 @@ export default function ApplyFormModal({
           <p className="text-sm text-muted-foreground mt-3">
             Your internship application has been submitted successfully.
           </p>
-          <p className="text-sm font-semibold text-emerald-700 mt-3">
-            Your payment of GH₵4 has been received.
+          <p className="text-sm font-semibold text-amber-700 mt-3">
+            {submittedApplication?.paymentStatus === "Payment Successful"
+              ? "Paystack returned a successful payment result."
+              : "Payment was not confirmed; the application was submitted in demo mode."}
           </p>
           <div className="bg-secondary rounded-xl p-4 mt-5 text-left space-y-2 text-sm">
             <p>Opportunity: {prefilledRole || "Internship Application"}</p>
             <p>Reference: {reference}</p>
             <p>Submission date: {new Date().toLocaleDateString()}</p>
             <p>Application status: Submitted</p>
-            <p>Payment status: Paid</p>
+            <p>Payment status: {submittedApplication?.paymentStatus}</p>
           </div>
           <div className="mt-4 space-y-2 text-left">
             <div className="rounded-xl border border-border bg-secondary/60 p-3 text-xs text-muted-foreground">

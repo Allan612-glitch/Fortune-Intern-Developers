@@ -17,8 +17,10 @@ export default function ResetPasswordPage({
   const [show, setShow] = useState(false);
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
+    const params = new URLSearchParams(window.location.search);
+    const email = params.get("email") || "";
     const token =
-      new URLSearchParams(window.location.search).get("token") || "";
+      params.get("token") || "";
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
       return;
@@ -27,7 +29,7 @@ export default function ResetPasswordPage({
       setError("Passwords do not match.");
       return;
     }
-    if (!token) {
+    if (!email || !token) {
       setError(
         "This password reset link is invalid or has expired. Please request a new reset link.",
       );
@@ -35,7 +37,7 @@ export default function ResetPasswordPage({
     }
     setLoading(true);
     try {
-      await resetPassword(token, password);
+      await resetPassword(email, token, password);
       setSuccess(true);
     } catch {
       setError(

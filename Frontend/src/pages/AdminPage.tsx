@@ -1,4 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  listAdminApplications,
+  listAdminUsers,
+  listAnnouncements,
+  publishAnnouncement,
+  saveResumeDownload,
+  setApplicationStatus,
+  setUserSuspension,
+  type AdminUser,
+  type Announcement,
+  type BackendApplication,
+} from "../services/platform";
 
 const initialUsers = [
   {
@@ -87,18 +99,57 @@ const statusBadge: Record<string, string> = {
 };
 
 export default function AdminPage() {
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [applications, setApplications] = useState<BackendApplication[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [tab, setTab] = useState<"users" | "announcements" | "applications">(
     "users",
   );
   const [annTitle, setAnnTitle] = useState("");
   const [annContent, setAnnContent] = useState("");
   const [published, setPublished] = useState(false);
+  const [error, setError] = useState("");
 
-  const toggleSuspend = (id: number) =>
-    setUsers((prev) =>
-      prev.map((u) => (u.id === id ? { ...u, suspended: !u.suspended } : u)),
-    );
+  useEffect(() => {
+    Promise.all([listAdminUsers(), listAdminApplications(), listAnnouncements()])
+      .then(([loadedUsers, loadedApplications, loadedAnnouncements]) => {
+        setUsers(loadedUsers);
+        setApplications(loadedApplications);
+        setAnnouncements(loadedAnnouncements);
+      })
+      .catch((requestError) => setError(requestError instanceof Error ? requestError.message : "Unable to load admin data."));
+  }, []);
+
+  const toggleSuspend = async (account: AdminUser) => {
+    try {
+      const updated = await setUserSuspension(account.id, !account.is_suspended);
+      setUsers((current) => current.map((user) => user.id === updated.id ? updated : user));
+      setError("");
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to update user status.");
+    }
+  };
+
+  const updateStatus = async (application: BackendApplication, status: string) => {
+    try {
+      const updated = await setApplicationStatus(application.id, status);
+      setApplications((current) => current.map((row) => row.id === updated.id ? updated : row));
+      setError("");
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to update application status.");
+    }
+  };
+
+  const submitAnnouncement = async () => {
+    try {
+      await publishAnnouncement(annTitle, annContent);
+      setAnnouncements(await listAnnouncements());
+      setPublished(true);
+      setError("");
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to publish announcement.");
+    }
+  };
 
   return (
     <div className="p-4 lg:p-6 max-w-4xl">
@@ -140,11 +191,13 @@ export default function AdminPage() {
         </div>
       </div>
 
+      {error && <p className="mb-4 text-sm text-red-600" role="alert">{error}</p>}
+
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {[
           { label: "Total Users", value: users.length, icon: "👥" },
-          { label: "Announcements", value: 5, icon: "📢" },
+          { label: "Announcements", value: announcements.length, icon: "📢" },
           { label: "Applications", value: applications.length, icon: "📋" },
         ].map((s) => (
           <div
@@ -211,22 +264,22 @@ export default function AdminPage() {
                   <div>
                     <p className="font-semibold text-sm">{user.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {user.email} · {user.role}
+                      {user.email} · {user.is_admin ? "Admin" : "Student"}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {user.suspended && (
+                  {user.is_suspended && (
                     <span className="text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded-full font-medium">
                       Suspended
                     </span>
                   )}
-                  {user.role !== "Admin" && (
+                  {!user.is_admin && (
                     <button
-                      onClick={() => toggleSuspend(user.id)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${user.suspended ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-red-100 text-red-700 hover:bg-red-200"}`}
+                      onClick={() => void toggleSuspend(user)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${user.is_suspended ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-red-100 text-red-700 hover:bg-red-200"}`}
                     >
-                      {user.suspended ? "Unsuspend" : "Suspend"}
+                      {user.is_suspended ? "Unsuspend" : "Suspend"}
                     </button>
                   )}
                 </div>
@@ -251,21 +304,25 @@ export default function AdminPage() {
                 className="flex items-center justify-between px-5 py-4 hover:bg-muted/20 transition-colors"
               >
                 <div>
-                  <p className="font-semibold text-sm">{app.student}</p>
+                  <p className="font-semibold text-sm">{app.applicant_name || `Applicant ${app.user_id.slice(0, 8)}`}</p>
                   <p className="text-xs text-muted-foreground">
-                    {app.role} @ {app.company} · {app.date}
+                    {app.program_name} · {new Date(app.created_at).toLocaleDateString()}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {[app.student_index_number, app.gender, app.year_of_study].filter(Boolean).join(" · ") || "No academic details"}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <span
-                    className={`text-xs px-2.5 py-1 rounded-full font-medium capitalize ${statusBadge[app.status]}`}
+                    className={`text-xs px-2.5 py-1 rounded-full font-medium capitalize ${statusBadge[app.status] || "status-applied"}`}
                   >
                     {app.status}
                   </span>
-                  <button className="text-xs px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors font-semibold">
+                  {app.resume_filename && <button onClick={() => void saveResumeDownload(app.id, true).catch((requestError) => setError(requestError instanceof Error ? requestError.message : "Unable to download resume."))} className="text-xs font-semibold text-primary underline">Resume</button>}
+                  <button onClick={() => void updateStatus(app, "accepted")} className="text-xs px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors font-semibold">
                     Accept
                   </button>
-                  <button className="text-xs px-3 py-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors font-semibold">
+                  <button onClick={() => void updateStatus(app, "rejected")} className="text-xs px-3 py-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors font-semibold">
                     Reject
                   </button>
                 </div>
@@ -322,9 +379,7 @@ export default function AdminPage() {
                 />
               </div>
               <button
-                onClick={() => {
-                  if (annTitle && annContent) setPublished(true);
-                }}
+                onClick={() => void submitAnnouncement()}
                 className="w-full py-3 rounded-xl text-white font-semibold hover:opacity-90 transition-opacity"
                 style={{
                   background: "linear-gradient(135deg, #2D3561, #3d4a8a)",

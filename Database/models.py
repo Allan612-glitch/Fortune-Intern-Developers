@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Uuid
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, JSON, String, Uuid
 from sqlmodel import Field, SQLModel
 from uuid import UUID, uuid4
 from datetime import datetime,timezone
@@ -27,6 +27,9 @@ class user_profile(SQLModel, table=True):
     course: str | None = Field(default=None, sa_column=Column("course", String))
     year_of_study: int | None = Field(default=None, sa_column=Column("year_of_study", Integer))
     skills: str | None = Field(default=None, sa_column=Column("skills", String))
+    experience: list[dict[str, str]] | None = Field(default=None, sa_column=Column("experience", JSON))
+    cgpa: float | None = Field(default=None, sa_column=Column("cgpa", Float))
+    cgpa_scale: float | None = Field(default=None, sa_column=Column("cgpa_scale", Float))
     phone_number: str | None = Field(default=None, sa_column=Column("phone_number", String))
     location: str | None = Field(default=None, sa_column=Column("location", String))
     email_notifications: bool = Field(default=True, sa_column=Column("email_notifications", Boolean, nullable=False, default=True))
@@ -34,6 +37,16 @@ class user_profile(SQLModel, table=True):
     opportunity_alerts: bool = Field(default=True, sa_column=Column("opportunity_alerts", Boolean, nullable=False, default=True))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
+
+class profile_document(SQLModel, table=True):
+    __tablename__ = "profile_documents"
+    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+    user_id: UUID = Field(sa_column=Column("user_id", Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True))
+    filename: str = Field(sa_column=Column("filename", String, nullable=False))
+    storage_path: str = Field(sa_column=Column("storage_path", String, nullable=False))
+    content_type: str | None = Field(default=None, sa_column=Column("content_type", String))
+    file_size: int = Field(sa_column=Column("file_size", Integer, nullable=False))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
 
 class program(SQLModel, table=True):
     __tablename__ = "programs"
@@ -63,6 +76,11 @@ class application(SQLModel, table=True):
     applicant_contact: str | None = Field(default=None, sa_column=Column("applicant_contact", String))
     host_company_name: str | None = Field(default=None, sa_column=Column("host_company_name", String))
     host_company_address: str | None = Field(default=None, sa_column=Column("host_company_address", String))
+    applicant_name: str | None = Field(default=None, sa_column=Column("applicant_name", String))
+    gender: str | None = Field(default=None, sa_column=Column("gender", String))
+    student_index_number: str | None = Field(default=None, sa_column=Column("student_index_number", String))
+    year_of_study: str | None = Field(default=None, sa_column=Column("year_of_study", String))
+    suggested_company: str | None = Field(default=None, sa_column=Column("suggested_company", String))
     documents_sent: bool = Field(default=False, sa_column=Column("documents_sent", Boolean, nullable=False, default=False))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   printApplicationLetter,
-  loadApplications,
+  fromBackendApplication,
   type ApplicationRecord,
   type ApplicationStatus,
 } from "../services/applications";
+import { listApplications, saveResumeDownload } from "../services/platform";
 
 const statuses: Array<ApplicationStatus | "All"> = [
   "All",
@@ -45,26 +46,24 @@ export default function ApplicationsPage({ email }: { email: string }) {
   const [filter, setFilter] = useState<ApplicationStatus | "All">("All");
   const [sort, setSort] = useState<"recent" | "oldest">("recent");
   const [selected, setSelected] = useState<ApplicationRecord | null>(null);
+  const [error, setError] = useState("");
 
-  const refresh = () => {
-    const latest = loadApplications(email);
-    setApplications(latest);
-    setSelected((current) =>
-      current
-        ? latest.find(
-            (application) => application.reference === current.reference,
-          ) || null
-        : null,
-    );
+  const refresh = async () => {
+    try {
+      const latest = (await listApplications()).map((application) =>
+        fromBackendApplication(application, email),
+      );
+      setApplications(latest);
+      setSelected((current) => current
+        ? latest.find((application) => application.reference === current.reference) || null
+        : null);
+      setError("");
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to load applications.");
+    }
   };
   useEffect(() => {
-    refresh();
-    window.addEventListener("storage", refresh);
-    window.addEventListener("fortune-applications-updated", refresh);
-    return () => {
-      window.removeEventListener("storage", refresh);
-      window.removeEventListener("fortune-applications-updated", refresh);
-    };
+    void refresh();
   }, [email]);
 
   const visibleApplications = useMemo(
@@ -111,6 +110,7 @@ export default function ApplicationsPage({ email }: { email: string }) {
           </p>
         </div>
       </div>
+      {error && <p className="mb-4 text-sm text-red-600" role="alert">{error}</p>}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
         {[
@@ -261,6 +261,7 @@ function TrackingModal({
   application: ApplicationRecord;
   onClose: () => void;
 }) {
+  const [downloadError, setDownloadError] = useState("");
   const current = stageIndex(application);
   const paymentSuccessful =
     application.paymentStatus === "Payment Successful" ||
@@ -341,10 +342,13 @@ function TrackingModal({
                 copy
               />
               <Info label="Organization" value={application.company} />
+              <Info label="Applicant" value={application.applicantName || "Not recorded"} />
+              <Info label="Gender" value={application.gender || "Not recorded"} />
               <Info
                 label="Student Index Number"
                 value={application.studentIndexNumber || "Not recorded"}
               />
+              <Info label="Year of study" value={application.yearOfStudy || "Not recorded"} />
               <Info
                 label="Date submitted"
                 value={new Date(
@@ -381,6 +385,15 @@ function TrackingModal({
                 {application.resumeUploadedAt &&
                   ` · Uploaded ${new Date(application.resumeUploadedAt).toLocaleDateString()}`}
               </p>
+              {application.resumeName && (
+                <button
+                  onClick={() => void saveResumeDownload(application.reference).catch((error) => setDownloadError(error instanceof Error ? error.message : "Unable to download resume."))}
+                  className="mt-3 text-xs font-semibold text-primary underline"
+                >
+                  Download resume
+                </button>
+              )}
+              {downloadError && <p className="mt-2 text-xs text-red-600" role="alert">{downloadError}</p>}
             </div>
             <div className="border-t border-border pt-4">
               {application.applicationLetterAvailable ? (

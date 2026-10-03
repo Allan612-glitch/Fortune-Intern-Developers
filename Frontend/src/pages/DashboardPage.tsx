@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  loadApplications,
-  type ApplicationRecord,
-} from "../services/applications";
+import { getDashboard, type DashboardSummary } from "../services/platform";
 
 export default function DashboardPage({
   email,
@@ -11,21 +8,24 @@ export default function DashboardPage({
   email: string;
   onApplications: () => void;
 }) {
-  const [applications, setApplications] = useState<ApplicationRecord[]>([]);
+  const [dashboard, setDashboard] = useState<DashboardSummary | null>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const refresh = () => setApplications(loadApplications(email));
-    refresh();
-    window.addEventListener("storage", refresh);
-    window.addEventListener("fortune-applications-updated", refresh);
+    let active = true;
+    getDashboard()
+      .then((result) => {
+        if (active) setDashboard(result);
+      })
+      .catch((requestError) => {
+        if (active) setError(requestError instanceof Error ? requestError.message : "Unable to load dashboard.");
+      });
     return () => {
-      window.removeEventListener("storage", refresh);
-      window.removeEventListener("fortune-applications-updated", refresh);
+      active = false;
     };
   }, [email]);
 
-  const count = (status: ApplicationRecord["status"]) =>
-    applications.filter((application) => application.status === status).length;
+  const applications = dashboard?.recent_applications || [];
 
   return (
     <div className="p-4 lg:p-6 max-w-5xl">
@@ -45,11 +45,11 @@ export default function DashboardPage({
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
         {[
-          ["Total Applications", applications.length],
-          ["Under Review", count("Under Review")],
-          ["Shortlisted", count("Shortlisted")],
-          ["Accepted", count("Accepted")],
-          ["Rejected", count("Rejected")],
+          ["Total Applications", dashboard?.total_applications ?? 0],
+          ["Active Applications", dashboard?.active_applications ?? 0],
+          ["Interviews", dashboard?.interviews ?? 0],
+          ["Accepted", dashboard?.accepted_applications ?? 0],
+          ["Open Programs", dashboard?.open_programs ?? 0],
         ].map(([label, value]) => (
           <div
             key={String(label)}
@@ -60,7 +60,8 @@ export default function DashboardPage({
           </div>
         ))}
       </div>
-      {applications.length === 0 ? (
+      {error && <p className="mb-4 text-sm text-red-600" role="alert">{error}</p>}
+      {dashboard && applications.length === 0 ? (
         <div className="bg-white border border-border rounded-2xl p-8 text-center shadow-sm">
           <h2 className="font-semibold">No applications yet</h2>
           <p className="text-sm text-muted-foreground mt-2">
@@ -87,15 +88,13 @@ export default function DashboardPage({
           <div className="space-y-3">
             {applications.slice(0, 5).map((application) => (
               <div
-                key={application.reference}
+                  key={application.id}
                 className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-border rounded-xl p-4"
               >
                 <div>
-                  <p className="font-semibold text-sm">
-                    {application.opportunity}
-                  </p>
+                  <p className="font-semibold text-sm">{application.program_name}</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {application.company} · {application.reference}
+                    {new Date(application.created_at).toLocaleDateString()} · {application.id}
                   </p>
                 </div>
                 <span className="self-start sm:self-auto px-2.5 py-1 rounded-full bg-secondary text-primary text-xs font-semibold">

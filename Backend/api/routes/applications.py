@@ -23,6 +23,16 @@ def serialize_application(row: application, program_name: str) -> ApplicationRes
         program_name=program_name,
         status=row.status,
         resume_filename=row.resume_filename,
+        applicant_name=row.applicant_name,
+        gender=row.gender,
+        student_index_number=row.student_index_number,
+        year_of_study=row.year_of_study,
+        suggested_company=row.suggested_company,
+        applicant_institution=row.applicant_institution,
+        applicant_course=row.applicant_course,
+        applicant_contact=row.applicant_contact,
+        host_company_name=row.host_company_name,
+        host_company_address=row.host_company_address,
         created_at=row.created_at.isoformat(),
     )
 
@@ -100,6 +110,11 @@ async def create_application(
         contact_value = str(form.get("phone") or form.get("contact") or "").strip()
         company_name_value = str(form.get("companyName") or form.get("company_name") or "").strip()
         company_address_value = str(form.get("companyAddress") or form.get("company_address") or "").strip()
+        applicant_name_value = str(form.get("applicant_name") or "").strip()
+        gender_value = str(form.get("gender") or "").strip()
+        student_index_value = str(form.get("student_index_number") or "").strip()
+        year_of_study_value = str(form.get("year_of_study") or "").strip()
+        suggested_company_value = str(form.get("suggested_company") or "").strip()
     else:
         payload = await request.json()
         program_id_value = str(payload.get("program_id") or "")
@@ -109,6 +124,11 @@ async def create_application(
         contact_value = str(payload.get("phone") or payload.get("contact") or "").strip()
         company_name_value = str(payload.get("companyName") or payload.get("company_name") or "").strip()
         company_address_value = str(payload.get("companyAddress") or payload.get("company_address") or "").strip()
+        applicant_name_value = str(payload.get("applicant_name") or "").strip()
+        gender_value = str(payload.get("gender") or "").strip()
+        student_index_value = str(payload.get("student_index_number") or "").strip()
+        year_of_study_value = str(payload.get("year_of_study") or "").strip()
+        suggested_company_value = str(payload.get("suggested_company") or "").strip()
 
     program_record = None
     if program_id_value:
@@ -169,6 +189,11 @@ async def create_application(
         applicant_contact=contact_value or None,
         host_company_name=company_name_value or None,
         host_company_address=company_address_value or None,
+        applicant_name=applicant_name_value or None,
+        gender=gender_value or None,
+        student_index_number=student_index_value or None,
+        year_of_study=year_of_study_value or None,
+        suggested_company=suggested_company_value or None,
     )
     session.add(new_application)
     session.add(notification(

@@ -81,6 +81,12 @@ def list_admin_applications(_: user = Depends(get_current_admin), session: Sessi
 			id=str(row.id), user_id=str(row.user_id), program_id=str(row.program_id),
 			program_name=program_record.name if program_record else "Program",
 			status=row.status, resume_filename=row.resume_filename,
+			applicant_name=row.applicant_name, gender=row.gender,
+			student_index_number=row.student_index_number, year_of_study=row.year_of_study,
+			suggested_company=row.suggested_company,
+			applicant_institution=row.applicant_institution, applicant_course=row.applicant_course,
+			applicant_contact=row.applicant_contact, host_company_name=row.host_company_name,
+			host_company_address=row.host_company_address,
 			created_at=row.created_at.isoformat(),
 		))
 	return results
@@ -167,7 +173,16 @@ def update_application_status(application_id: str, payload: AdminApplicationStat
 			except Exception:
 				logging.getLogger(__name__).exception("Failed to send application documents for application %s", row.id)
 
-	return ApplicationResponse(id=str(row.id), user_id=str(row.user_id), program_id=str(row.program_id), program_name=program_name, status=row.status, resume_filename=row.resume_filename, created_at=row.created_at.isoformat())
+	return ApplicationResponse(
+		id=str(row.id), user_id=str(row.user_id), program_id=str(row.program_id),
+		program_name=program_name, status=row.status, resume_filename=row.resume_filename,
+		applicant_name=row.applicant_name, gender=row.gender,
+		student_index_number=row.student_index_number, year_of_study=row.year_of_study,
+		suggested_company=row.suggested_company,
+		applicant_institution=row.applicant_institution, applicant_course=row.applicant_course,
+		applicant_contact=row.applicant_contact, host_company_name=row.host_company_name,
+		host_company_address=row.host_company_address, created_at=row.created_at.isoformat(),
+	)
 
 
 @router.get("/applications/{application_id}/resume")

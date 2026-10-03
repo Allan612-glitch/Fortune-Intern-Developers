@@ -5,6 +5,8 @@ import AIChatWidget from "./components/AIChatWidget";
 import LandingPage from "./pages/LandingPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import { getCurrentUser, getProfile } from "./services/auth";
+import { getAccessToken, setAccessToken } from "./services/api";
 
 export type AppUser = {
   name: string;
@@ -49,7 +51,34 @@ export default function App() {
   useEffect(() => {
     const path = window.location.pathname;
     if (path === "/forgot-password") setAuthScreen("forgot");
-    if (path === "/reset-password") setAuthScreen("reset");
+    if (path === "/reset-password" || path.endsWith("/reset-password.html"))
+      setAuthScreen("reset");
+    if (getAccessToken()) {
+      let active = true;
+      Promise.all([getCurrentUser(), getProfile()])
+        .then(([account, profile]) => {
+          if (!active) return;
+          setUser({
+            name: account.name,
+            email: account.email,
+            school: profile.university || "",
+            major: profile.major || profile.course || "",
+            avatar: account.name
+              .split(" ")
+              .map((part) => part[0])
+              .join("")
+              .toUpperCase()
+              .slice(0, 2),
+            isAdmin: account.is_admin,
+            verified: true,
+            role: "student",
+          });
+        })
+        .catch(() => setAccessToken(null));
+      return () => {
+        active = false;
+      };
+    }
   }, []);
 
   const handleRegister = (userData: AppUser) => {
@@ -70,6 +99,7 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    setAccessToken(null);
     setUser(null);
     setPendingUser(null);
     setShowOTP(false);

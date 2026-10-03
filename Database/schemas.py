@@ -1,5 +1,5 @@
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class LoginRequest(BaseModel):
@@ -33,6 +33,10 @@ class ResetPasswordRequest(BaseModel):
     new_password: str
 
 
+class ResendVerificationRequest(BaseModel):
+    email: str
+
+
 class MessageResponse(BaseModel):
     message: str
 
@@ -49,6 +53,13 @@ class AdminUserResponse(UserResponse):
     is_suspended: bool
 
 
+class ProfileExperience(BaseModel):
+    role: str
+    organization: str
+    period: str
+    description: str
+
+
 class ProfileResponse(BaseModel):
     id: str
     user_id: str
@@ -60,6 +71,9 @@ class ProfileResponse(BaseModel):
     course: str | None = None
     year_of_study: int | None = None
     skills: str | None = None
+    experience: list["ProfileExperience"] = Field(default_factory=list)
+    cgpa: float | None = None
+    cgpa_scale: float | None = None
     phone_number: str | None = None
     location: str | None = None
     email_notifications: bool = True
@@ -76,11 +90,22 @@ class ProfileUpdateRequest(BaseModel):
     course: str | None = None
     year_of_study: int | None = None
     skills: str | None = None
+    experience: list["ProfileExperience"] | None = None
+    cgpa: float | None = Field(default=None, ge=0)
+    cgpa_scale: float | None = Field(default=None, gt=0)
     phone_number: str | None = None
     location: str | None = None
     email_notifications: bool = True
     sms_notifications: bool = False
     opportunity_alerts: bool = True
+
+
+class ProfileDocumentResponse(BaseModel):
+    id: str
+    filename: str
+    content_type: str | None = None
+    file_size: int
+    created_at: str
 
 
 class ApplicationCreateRequest(BaseModel):
@@ -123,6 +148,16 @@ class ApplicationResponse(BaseModel):
     program_name: str
     status: str
     resume_filename: str | None = None
+    applicant_name: str | None = None
+    gender: str | None = None
+    student_index_number: str | None = None
+    year_of_study: str | None = None
+    suggested_company: str | None = None
+    applicant_institution: str | None = None
+    applicant_course: str | None = None
+    applicant_contact: str | None = None
+    host_company_name: str | None = None
+    host_company_address: str | None = None
     created_at: str
 
 

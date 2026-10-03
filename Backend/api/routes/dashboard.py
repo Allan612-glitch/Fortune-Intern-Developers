@@ -5,7 +5,7 @@ from sqlmodel import Session, select
 
 from Backend.api.deps import get_current_user
 from Backend.database import get_session
-from Database.models import application, program, user, user_profile
+from Database.models import application, profile_document, program, user, user_profile
 from Database.schemas import DashboardApplication, DashboardResponse
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
@@ -28,8 +28,12 @@ def get_dashboard(
 		profile.year_of_study if profile else None,
 		profile.graduation_year if profile else None,
 		profile.skills if profile else None,
+		profile.experience if profile else None,
+		profile.cgpa if profile else None,
+		profile.cgpa_scale if profile else None,
 		profile.phone_number if profile else None,
 		profile.location if profile else None,
+		bool(session.exec(select(profile_document).where(profile_document.user_id == account.id)).first()),
 	]
 	profile_completion = round(sum(bool(value) for value in profile_values) / len(profile_values) * 100)
 

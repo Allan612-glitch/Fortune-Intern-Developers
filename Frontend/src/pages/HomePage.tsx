@@ -1,33 +1,11 @@
+import { useEffect, useState } from "react";
 import type { AppUser, AppPage } from "../App";
+import { getDashboard, listPrograms, type DashboardSummary, type Program } from "../services/platform";
 
 const stats = [
   { value: "20+", label: "Current openings" },
   { value: "4 stages", label: "Live tracking" },
   { value: "< 72h", label: "Application review" },
-];
-
-const recentJobs = [
-  {
-    company: "Flutterwave",
-    role: "Software Engineering Intern",
-    location: "Accra · Remote",
-    logo: "FL",
-    tone: "bg-accent text-accent-foreground",
-  },
-  {
-    company: "MTN Ghana",
-    role: "Marketing & Growth Intern",
-    location: "Accra · On-site",
-    logo: "MT",
-    tone: "bg-amber-300 text-accent-foreground",
-  },
-  {
-    company: "mPharma",
-    role: "Business Operations Intern",
-    location: "Accra · Hybrid",
-    logo: "MP",
-    tone: "bg-emerald-600 text-white",
-  },
 ];
 
 const process = [
@@ -101,6 +79,17 @@ interface HomePageProps {
 }
 
 export default function HomePage({ user, setPage }: HomePageProps) {
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [dashboard, setDashboard] = useState<DashboardSummary | null>(null);
+  useEffect(() => {
+    Promise.all([listPrograms(), getDashboard()])
+      .then(([openPrograms, summary]) => {
+        setPrograms(openPrograms);
+        setDashboard(summary);
+      })
+      .catch(() => undefined);
+  }, []);
+
   return (
     <div className="overflow-hidden">
       <section className="relative gradient-hero text-white">
@@ -154,16 +143,16 @@ export default function HomePage({ user, setPage }: HomePageProps) {
                   </p>
                 </div>
                 <span className="text-[10px] font-bold px-2.5 py-1.5 rounded-full bg-emerald-50 text-emerald-700">
-                  3 active
+                  {dashboard?.active_applications ?? 0} active
                 </span>
               </div>
               <div className="p-5">
                 <div className="grid grid-cols-4 gap-2 mb-6">
                   {[
-                    ["Applied", "08"],
-                    ["Review", "04"],
-                    ["Interview", "02"],
-                    ["Offers", "01"],
+                    ["Applications", String(dashboard?.total_applications ?? 0)],
+                    ["Active", String(dashboard?.active_applications ?? 0)],
+                    ["Interviews", String(dashboard?.interviews ?? 0)],
+                    ["Offers", String(dashboard?.accepted_applications ?? 0)],
                   ].map(([label, value], index) => (
                     <div
                       key={label}
@@ -177,29 +166,22 @@ export default function HomePage({ user, setPage }: HomePageProps) {
                   ))}
                 </div>
                 <div className="space-y-3">
-                  {recentJobs.slice(0, 2).map((job, index) => (
+                  {(dashboard?.recent_applications || []).slice(0, 2).map((application) => (
                     <div
-                      key={job.company}
+                      key={application.id}
                       className="flex items-center gap-3 border border-border rounded-xl p-3"
                     >
                       <div
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold ${job.tone}`}
+                        className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold bg-secondary text-primary"
                       >
-                        {job.logo}
+                        {application.program_name.slice(0, 2).toUpperCase()}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-semibold truncate">
-                          {job.role}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">
-                          {job.company}
+                          {application.program_name}
                         </p>
                       </div>
-                      <span
-                        className={`text-[10px] font-semibold px-2 py-1 rounded-full ${index === 0 ? "bg-amber-50 text-amber-700" : "bg-violet-50 text-violet-700"}`}
-                      >
-                        {index === 0 ? "Review" : "Interview"}
-                      </span>
+                      <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-secondary text-primary">{application.status}</span>
                     </div>
                   ))}
                 </div>
@@ -349,28 +331,28 @@ export default function HomePage({ user, setPage }: HomePageProps) {
           </button>
         </div>
         <div className="grid md:grid-cols-3 gap-4">
-          {recentJobs.map((job) => (
+          {programs.slice(0, 3).map((program, index) => (
             <article
-              key={job.company}
+              key={program.id}
               className="bg-white border border-border rounded-2xl p-5 hover-lift"
             >
               <div className="flex items-start justify-between">
                 <div
-                  className={`w-11 h-11 rounded-xl flex items-center justify-center text-xs font-bold ${job.tone}`}
+                  className={`w-11 h-11 rounded-xl flex items-center justify-center text-xs font-bold ${["bg-accent text-accent-foreground", "bg-amber-300 text-accent-foreground", "bg-emerald-600 text-white"][index % 3]}`}
                 >
-                  {job.logo}
+                  {program.company.slice(0, 2).toUpperCase()}
                 </div>
                 <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-emerald-50 text-emerald-700">
                   New
                 </span>
               </div>
-              <h3 className="font-semibold text-sm mt-5">{job.role}</h3>
+              <h3 className="font-semibold text-sm mt-5">{program.name}</h3>
               <p className="text-xs text-muted-foreground mt-1">
-                {job.company}
+                {program.company}
               </p>
               <div className="flex items-center justify-between mt-5 pt-4 border-t border-border">
                 <span className="text-[11px] text-muted-foreground">
-                  {job.location}
+                  {program.location}
                 </span>
               </div>
               <button

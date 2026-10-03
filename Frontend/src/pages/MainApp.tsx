@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { AppUser, AppPage } from "../App";
 import logo from "../assets/attach1.png";
 import HomePage from "./HomePage";
@@ -10,6 +10,13 @@ import ApplyPage from "./ApplyPage";
 import ProfilePage from "./ProfilePage";
 import AdminPage from "./AdminPage";
 import LogoutConfirmationModal from "../components/LogoutConfirmationModal";
+import {
+  getUnreadNotificationCount,
+  listNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+  type NotificationItem,
+} from "../services/platform";
 
 interface MainAppProps {
   user: AppUser;
@@ -82,8 +89,50 @@ const navItems = [
 export default function MainApp({ user, onLogout }: MainAppProps) {
   const [page, setPage] = useState<AppPage>("home");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [notifCount] = useState(3);
+  const [notifCount, setNotifCount] = useState(0);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notificationError, setNotificationError] = useState("");
   const [showLogout, setShowLogout] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([listNotifications(), getUnreadNotificationCount()])
+      .then(([items, unread]) => {
+        if (!active) return;
+        setNotifications(items);
+        setNotifCount(unread.count);
+      })
+      .catch((error) => {
+        if (active) setNotificationError(error instanceof Error ? error.message : "Unable to load notifications.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [user.email]);
+
+  const openNotification = async (notification: NotificationItem) => {
+    try {
+      if (!notification.read) await markNotificationRead(notification.id);
+      setNotifications((current) => current.map((item) => item.id === notification.id ? { ...item, read: true } : item));
+      setNotifCount((count) => Math.max(0, count - (notification.read ? 0 : 1)));
+      setNotificationsOpen(false);
+      if (notification.target_type === "application") goTo("applications");
+      else goTo("announcements");
+    } catch (error) {
+      setNotificationError(error instanceof Error ? error.message : "Unable to update notification.");
+    }
+  };
+
+  const readAllNotifications = async () => {
+    try {
+      await markAllNotificationsRead();
+      setNotifications((current) => current.map((item) => ({ ...item, read: true })));
+      setNotifCount(0);
+    } catch (error) {
+      setNotificationError(error instanceof Error ? error.message : "Unable to update notifications.");
+    }
+  };
 
   const goTo = (p: AppPage) => {
     setPage(p);
@@ -136,9 +185,12 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
         </button>
 
         <div className="ml-auto flex items-center gap-3">
+          <div className="relative">
           <button
-            onClick={() => goTo("announcements")}
+            onClick={() => setNotificationsOpen((open) => !open)}
             className="relative p-2 rounded-lg hover:bg-muted transition-colors"
+            aria-label={`Notifications${notifCount ? `, ${notifCount} unread` : ""}`}
+            aria-expanded={notificationsOpen}
           >
             <svg
               className="w-5 h-5 text-foreground"
@@ -162,6 +214,24 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
               </span>
             )}
           </button>
+          {notificationsOpen && (
+            <div className="absolute right-0 top-full mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-border bg-white shadow-xl z-50">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                <h2 className="text-sm font-semibold">Notifications</h2>
+                {notifCount > 0 && <button onClick={() => void readAllNotifications()} className="text-xs font-semibold text-primary">Mark all read</button>}
+              </div>
+              {notificationError && <p className="px-4 py-2 text-xs text-red-600" role="alert">{notificationError}</p>}
+              <div className="max-h-80 overflow-y-auto">
+                {notifications.length ? notifications.slice(0, 8).map((notification) => (
+                  <button key={notification.id} onClick={() => void openNotification(notification)} className={`w-full text-left px-4 py-3 border-b border-border last:border-0 hover:bg-muted/40 ${notification.read ? "" : "bg-secondary/40"}`}>
+                    <p className="text-sm">{notification.message}</p>
+                    <time className="block mt-1 text-[11px] text-muted-foreground">{new Date(notification.created_at).toLocaleString()}</time>
+                  </button>
+                )) : <p className="px-4 py-6 text-sm text-muted-foreground">No notifications yet.</p>}
+              </div>
+            </div>
+          )}
+          </div>
           <button
             onClick={() => goTo("profile")}
             className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold hover:opacity-80 transition-opacity"
@@ -467,7 +537,6 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
       </nav>
       {showLogout && (
         <LogoutConfirmationModal
-          user={user}
           onCancel={() => setShowLogout(false)}
           onConfirm={onLogout}
         />

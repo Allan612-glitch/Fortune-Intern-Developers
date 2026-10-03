@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ApplyFormModal from "../components/ApplyFormModal";
 import type { AppPage, AppUser } from "../App";
+import { listPrograms, type Program } from "../services/platform";
 
 const jobs = [
   {
@@ -307,6 +308,35 @@ const jobs = [
 
 const types = ["All", "Technology", "Finance", "Marketing", "Media"];
 
+type ProgramCard = Program & {
+  role: string;
+  type: string;
+  tags: string[];
+  logo: string;
+  color: string;
+  remote: boolean;
+  desc: string;
+};
+
+function toProgramCard(program: Program, index: number): ProgramCard {
+  const colors = ["#0F766E", "#B45309", "#2563EB", "#DC2626", "#65A30D"];
+  return {
+    ...program,
+    role: program.name,
+    type: program.category,
+    tags: program.skills,
+    logo: program.company
+      .split(/\s+/)
+      .map((word) => word[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase(),
+    color: colors[index % colors.length],
+    remote: /remote|hybrid/i.test(program.location),
+    desc: program.description,
+  };
+}
+
 export default function ProgramsPage({
   setPage,
   user,
@@ -317,12 +347,32 @@ export default function ProgramsPage({
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("All");
   const [remoteOnly, setRemoteOnly] = useState(false);
-  const [selected, setSelected] = useState(jobs[0]);
-  const [applyTarget, setApplyTarget] = useState<(typeof jobs)[0] | null>(null);
+  const [jobs, setJobs] = useState<ProgramCard[]>([]);
+  const [selected, setSelected] = useState<ProgramCard | null>(null);
+  const [applyTarget, setApplyTarget] = useState<ProgramCard | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    listPrograms(search, filter)
+      .then((programs) => {
+        if (!active) return;
+        const cards = programs.map(toProgramCard);
+        setJobs(cards);
+        setSelected((current) => cards.find((item) => item.id === current?.id) || cards[0] || null);
+        setError("");
+      })
+      .catch((requestError) => {
+        if (active) setError(requestError instanceof Error ? requestError.message : "Unable to load programs.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [search, filter]);
 
   const filtered = jobs.filter((j) => {
     const matchSearch =
-      j.role.toLowerCase().includes(search.toLowerCase()) ||
+            j.name.toLowerCase().includes(search.toLowerCase()) ||
       j.company.toLowerCase().includes(search.toLowerCase());
     const matchType = filter === "All" || j.type === filter;
     const matchRemote = !remoteOnly || j.remote;
@@ -397,6 +447,7 @@ export default function ProgramsPage({
         </div>
 
         <div className="overflow-y-auto flex-1">
+          {error && <p className="px-4 py-3 text-sm text-red-600" role="alert">{error}</p>}
           <p className="px-4 pt-2 pb-1 text-xs text-muted-foreground">
             {filtered.length} programs found
           </p>
@@ -427,13 +478,13 @@ export default function ProgramsPage({
                   {job.logo}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-sm truncate">{job.role}</p>
+                  <p className="font-semibold text-sm truncate">{job.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {job.company} · {job.location}
                   </p>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-xs text-muted-foreground">
-                      {job.posted}
+                      {job.status}
                     </span>
                     <span className="lg:hidden text-[10px] font-semibold text-primary ml-auto">
                       View & apply
@@ -467,7 +518,7 @@ export default function ProgramsPage({
                   className="text-2xl font-bold"
                   style={{ fontFamily: "Inter, sans-serif" }}
                 >
-                  {selected.role}
+                  {selected.name}
                 </h2>
                 <p className="text-muted-foreground">
                   {selected.company} · {selected.location}
@@ -488,8 +539,8 @@ export default function ProgramsPage({
 
             <div className="grid grid-cols-3 gap-4 mb-6">
               {[
-                ["Applicants", selected.applicants.toString()],
-                ["Deadline", selected.deadline],
+                ["Duration", selected.duration],
+                ["Deadline", selected.deadline ? new Date(selected.deadline).toLocaleDateString() : "Not specified"],
                 ["Format", selected.remote ? "Remote" : "On-site"],
               ].map(([label, value]) => (
                 <div key={label} className="bg-muted/40 rounded-xl p-3">
@@ -538,7 +589,8 @@ export default function ProgramsPage({
       {applyTarget && (
         <ApplyFormModal
           prefilledCompany={applyTarget.company}
-          prefilledRole={applyTarget.role}
+          prefilledRole={applyTarget.name}
+          programId={applyTarget.id}
           ownerEmail={user.email}
           onClose={() => setApplyTarget(null)}
         />

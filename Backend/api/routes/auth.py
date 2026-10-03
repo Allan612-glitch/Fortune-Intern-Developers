@@ -15,6 +15,7 @@ from Database.schemas import (
     LoginRequest,
     MessageResponse,
     RegisterRequest,
+    ResendVerificationRequest,
     ResetPasswordRequest,
     TokenResponse,
     UserResponse,
@@ -131,6 +132,7 @@ def register(credentials: RegisterRequest, session: Session = Depends(get_sessio
         pending_registration.password_hash = hash_password(credentials.password)
         pending_registration.code_hash = hash_password(code)
         pending_registration.expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.verification_code_expire_minutes)
+        pending_registration.created_at = datetime.now(timezone.utc)
 
     send_verification_email(email, code)
     session.add(pending_registration)
@@ -139,6 +141,31 @@ def register(credentials: RegisterRequest, session: Session = Depends(get_sessio
         message="Verification code sent",
         email=email,
     )
+
+
+@router.post("/resend-verification", response_model=MessageResponse, status_code=status.HTTP_202_ACCEPTED)
+def resend_verification(payload: ResendVerificationRequest, session: Session = Depends(get_session)):
+    email = validate_email(payload.email)
+    response = MessageResponse(message="If a pending registration exists, a new code has been sent")
+    pending_registration = session.exec(
+        select(registration_verification).where(registration_verification.email == email)
+    ).first()
+    if not pending_registration:
+        return response
+
+    now = datetime.now(timezone.utc)
+    cooldown_ends = pending_registration.created_at + timedelta(seconds=60)
+    if cooldown_ends > now:
+        return response
+
+    code = f"{randbelow(1_000_000):06d}"
+    pending_registration.code_hash = hash_password(code)
+    pending_registration.expires_at = now + timedelta(minutes=settings.verification_code_expire_minutes)
+    pending_registration.created_at = now
+    send_verification_email(email, code)
+    session.add(pending_registration)
+    session.commit()
+    return response
 
 
 @router.post("/verify-email", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)

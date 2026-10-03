@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import type { AppUser } from "../App";
+import { listAnnouncements, publishAnnouncement, type Announcement } from "../services/platform";
 
 const announcements = [
   {
@@ -54,6 +56,33 @@ const announcements = [
 ];
 
 export default function AnnouncementsPage({ user }: { user: AppUser }) {
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [error, setError] = useState("");
+  const [publishing, setPublishing] = useState(false);
+  useEffect(() => {
+    listAnnouncements()
+      .then(setAnnouncements)
+      .catch((requestError) => setError(requestError instanceof Error ? requestError.message : "Unable to load announcements."));
+  }, []);
+
+  const publish = async () => {
+    if (!title.trim() || !content.trim()) return;
+    setPublishing(true);
+    try {
+      await publishAnnouncement(title.trim(), content.trim());
+      setAnnouncements(await listAnnouncements());
+      setTitle("");
+      setContent("");
+      setError("");
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to publish announcement.");
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   return (
     <div className="p-4 lg:p-6 max-w-3xl mx-auto">
       <div className="mb-6">
@@ -68,6 +97,7 @@ export default function AnnouncementsPage({ user }: { user: AppUser }) {
         </p>
       </div>
 
+      {error && <p className="mb-4 text-sm text-red-600" role="alert">{error}</p>}
       <div className="space-y-4">
         {announcements.map((ann) => (
           <div
@@ -78,15 +108,6 @@ export default function AnnouncementsPage({ user }: { user: AppUser }) {
               <h2 className="font-semibold text-base leading-snug flex-1">
                 {ann.title}
               </h2>
-              <span
-                className="flex-shrink-0 text-[11px] px-2.5 py-1 rounded-full text-white font-semibold"
-                style={{
-                  backgroundColor: ann.badgeColor,
-                  color: ann.badgeColor === "#F5B731" ? "#1a1f3a" : "white",
-                }}
-              >
-                {ann.badge}
-              </span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed mb-3">
               {ann.content}
@@ -96,11 +117,11 @@ export default function AnnouncementsPage({ user }: { user: AppUser }) {
                 className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold"
                 style={{ background: "#2D3561" }}
               >
-                {ann.author[0]}
+                F
               </div>
-              <span>{ann.author}</span>
+              <span>Fortune Intern Network</span>
               <span>·</span>
-              <span>{ann.date}</span>
+              <span>{new Date(ann.created_at).toLocaleDateString()}</span>
             </div>
           </div>
         ))}
@@ -119,6 +140,8 @@ export default function AnnouncementsPage({ user }: { user: AppUser }) {
               <input
                 placeholder="Announcement title..."
                 className="w-full px-4 py-2.5 rounded-xl border border-red-200 text-sm focus:outline-none focus:ring-2 bg-white"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
               />
             </div>
             <div>
@@ -129,15 +152,19 @@ export default function AnnouncementsPage({ user }: { user: AppUser }) {
                 placeholder="Announcement content..."
                 rows={3}
                 className="w-full px-4 py-2.5 rounded-xl border border-red-200 text-sm focus:outline-none focus:ring-2 bg-white resize-none"
+                value={content}
+                onChange={(event) => setContent(event.target.value)}
               />
             </div>
             <button
-              className="px-5 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-opacity"
+              onClick={publish}
+              disabled={publishing || !title.trim() || !content.trim()}
+              className="px-5 py-2.5 rounded-xl text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
               style={{
                 background: "linear-gradient(135deg, #2D3561, #3d4a8a)",
               }}
             >
-              Publish Announcement
+              {publishing ? "Publishing..." : "Publish Announcement"}
             </button>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import logoUrl from "../assets/attach1.png";
+import type { BackendApplication } from "./platform";
 
 export type ApplicationStatus =
   | "Submitted"
@@ -23,6 +24,7 @@ export interface ApplicationRecord {
   applicantName: string;
   applicantEmail: string;
   studentIndexNumber: string;
+  yearOfStudy?: string;
   applicationDate: string;
   lastUpdated: string;
   status: ApplicationStatus;
@@ -35,37 +37,47 @@ export interface ApplicationRecord {
   details?: Record<string, unknown>;
 }
 
-const storageKey = "fortune-intern-applications";
-
-export function loadApplications(ownerEmail?: string): ApplicationRecord[] {
-  try {
-    const saved = localStorage.getItem(storageKey);
-    const records = saved ? (JSON.parse(saved) as ApplicationRecord[]) : [];
-    return ownerEmail
-      ? records.filter(
-          (record) =>
-            record.ownerEmail === ownerEmail ||
-            (!record.ownerEmail && record.applicantEmail === ownerEmail),
-        )
-      : records;
-  } catch {
-    return [];
-  }
-}
-
-export function saveApplication(
-  application: Omit<ApplicationRecord, "reference">,
+export function fromBackendApplication(
+  application: BackendApplication,
+  ownerEmail: string,
 ): ApplicationRecord {
-  const record: ApplicationRecord = {
-    ...application,
-    reference: `FIN-${new Date().getFullYear()}-${String(Date.now()).slice(-6).padStart(6, "0")}`,
+  const status: Record<string, ApplicationStatus> = {
+    submitted: "Submitted",
+    review: "Under Review",
+    interview: "Shortlisted",
+    accepted: "Accepted",
+    rejected: "Rejected",
+    withdrawn: "Withdrawn",
   };
-  localStorage.setItem(
-    storageKey,
-    JSON.stringify([record, ...loadApplications()]),
-  );
-  window.dispatchEvent(new Event("fortune-applications-updated"));
-  return record;
+  return {
+    reference: application.id,
+    ownerEmail,
+    opportunity: application.program_name,
+    company: application.host_company_name || "",
+    companyAddress: application.host_company_address || "",
+    suggestedCompany: application.suggested_company || "",
+    gender: application.gender || "",
+    applicantName: application.applicant_name || "",
+    applicantEmail: ownerEmail,
+    studentIndexNumber: application.student_index_number || "",
+    yearOfStudy: application.year_of_study || "",
+    applicationDate: application.created_at,
+    lastUpdated: application.created_at,
+    status: status[application.status.toLowerCase()] || "Submitted",
+    paymentStatus: "Payment Pending",
+    paymentReference: "",
+    resumeName: application.resume_filename || "",
+    resumeType: "",
+    resumeUploadedAt: application.created_at,
+    applicationLetterAvailable: false,
+    details: {
+      personalInformation: {
+        institution: application.applicant_institution || "",
+        program: application.applicant_course || "",
+        phone: application.applicant_contact || "",
+      },
+    },
+  };
 }
 
 function escapeHtml(value: string) {

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import type { AppUser } from "../App";
-import { requestPasswordReset } from "../services/authNotifications";
+import { requestForgotPassword } from "../services/authNotifications";
+import { getProfile, login, register, resendVerification, updateProfile, verifyEmail } from "../services/auth";
 
 const ghanaUniversities = [
   "University of Ghana",
@@ -18,7 +19,7 @@ const ghanaUniversities = [
 
 const isValidEmail = (email: string) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-const isValidPassword = (pw: string) => pw.length >= 6;
+const isValidPassword = (pw: string) => pw.length >= 8;
 
 interface AuthPageProps {
   initialMode?: "login" | "register";
@@ -75,7 +76,7 @@ export default function AuthPage({
     form.password &&
     !isValidPassword(form.password)
   )
-    errors.password = "Password must be at least 6 characters";
+    errors.password = "Password must be at least 8 characters";
   if (mode === "register") {
     if ((touched.name || submitError) && !form.name)
       errors.name = "Full name is required";
@@ -107,21 +108,29 @@ export default function AuthPage({
     )
       return;
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 900));
-    setLoading(false);
-    onLogin({
-      name: form.email
-        .split("@")[0]
-        .replace(/[._]/g, " ")
-        .replace(/\b\w/g, (c) => c.toUpperCase()),
-      email: form.email,
-      school: "University of Ghana",
-      major: "Computer Science",
-      avatar: form.email.slice(0, 2).toUpperCase(),
-      isAdmin: false,
-      verified: true,
-      role: form.userType,
-    });
+    try {
+      const account = await login(form.email.trim(), form.password);
+      const profile = await getProfile();
+      onLogin({
+        name: account.name,
+        email: account.email,
+        school: profile.university || "",
+        major: profile.major || profile.course || "",
+        avatar: account.name
+          .split(" ")
+          .map((part) => part[0])
+          .join("")
+          .toUpperCase()
+          .slice(0, 2),
+        isAdmin: account.is_admin,
+        verified: true,
+        role: "student",
+      });
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Unable to sign in.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -145,9 +154,9 @@ export default function AuthPage({
     )
       return;
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1000));
-    setLoading(false);
-    onRegister({
+    try {
+      await register(form.name.trim(), form.email.trim(), form.password);
+      onRegister({
       name: form.name,
       email: form.email,
       school: form.school || "N/A",
@@ -161,7 +170,12 @@ export default function AuthPage({
       isAdmin: false,
       verified: false,
       role: "student",
-    });
+      });
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Unable to create your account.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const switchMode = (m: "login" | "register") => {
@@ -415,7 +429,7 @@ export default function AuthPage({
                   value={form.password}
                   onChange={(v) => set("password", v)}
                   onBlur={() => touch("password")}
-                  placeholder="Min. 6 characters"
+                  placeholder="Min. 8 characters"
                   error={errors.password}
                   icon={
                     <path
@@ -476,10 +490,16 @@ export default function AuthPage({
         </div>
       </div>
 
-      {showOTP && <OTPModal email={pendingEmail} onVerified={onOTPVerified} />}
+      {showOTP && (
+        <OTPModal
+          email={pendingEmail}
+          university={form.school}
+          major={form.major}
+          onVerified={onOTPVerified}
+        />
+      )}
       {recoveryOpen && (
         <PasswordRecoveryModal
-          role="student"
           initialEmail={form.email}
           onClose={() => setRecoveryOpen(false)}
         />
@@ -489,25 +509,31 @@ export default function AuthPage({
 }
 
 function PasswordRecoveryModal({
-  role,
   initialEmail,
   onClose,
 }: {
-  role: AppUser["role"];
   initialEmail: string;
   onClose: () => void;
 }) {
   const [email, setEmail] = useState(initialEmail);
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!isValidEmail(email)) return;
     setLoading(true);
-    await requestPasswordReset(email, role);
-    setLoading(false);
-    setSent(true);
+    setLoading(true);
+    try {
+      await requestForgotPassword(email.trim());
+      setSent(true);
+      setError("");
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to request a password reset.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -591,6 +617,7 @@ function PasswordRecoveryModal({
               onChange={setEmail}
               placeholder="you@university.edu.gh"
             />
+            {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
             <button
               type="submit"
               disabled={loading || !isValidEmail(email)}
@@ -751,20 +778,33 @@ function Spinner() {
 /* ── OTP Modal ── */
 function OTPModal({
   email,
+  university,
+  major,
   onVerified,
 }: {
   email: string;
+  university: string;
+  major: string;
   onVerified: () => void;
 }) {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [resent, setResent] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendSeconds, setResendSeconds] = useState(60);
   const refs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
     refs.current[0]?.focus();
   }, []);
+
+  useEffect(() => {
+    if (resendSeconds === 0) return;
+    const timer = window.setInterval(() => {
+      setResendSeconds((remaining) => Math.max(0, remaining - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [resendSeconds]);
 
   const handleInput = (i: number, val: string) => {
     if (!/^\d*$/.test(val)) return;
@@ -786,9 +826,33 @@ function OTPModal({
     }
     setLoading(true);
     setError("");
-    await new Promise((r) => setTimeout(r, 1200));
-    setLoading(false);
-    onVerified();
+    try {
+      await verifyEmail(email, code);
+      await updateProfile({ university, major, course: major });
+      onVerified();
+    } catch (verificationError) {
+      setError(
+        verificationError instanceof Error
+          ? verificationError.message
+          : "Unable to verify this code.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setResending(true);
+    setError("");
+    try {
+      await resendVerification(email);
+      setOtp(["", "", "", "", "", ""]);
+      setResendSeconds(60);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to resend the verification code.");
+    } finally {
+      setResending(false);
+    }
   };
 
   return (
@@ -879,17 +943,15 @@ function OTPModal({
         </button>
 
         <button
-          onClick={async () => {
-            setResent(true);
-            await new Promise((r) => setTimeout(r, 600));
-            setTimeout(() => setResent(false), 4000);
-          }}
-          disabled={resent}
+          onClick={() => void handleResend()}
+          disabled={resending || resendSeconds > 0}
           className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
         >
-          {resent
-            ? "✓ Code resent to your email!"
-            : "Didn't receive it? Resend code"}
+          {resending
+            ? "Sending a new code..."
+            : resendSeconds > 0
+              ? `Resend available in ${resendSeconds}s`
+              : "Didn't receive it? Resend code"}
         </button>
         <p className="text-[11px] text-muted-foreground mt-3">
           Code expires in 10 minutes

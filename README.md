@@ -2,7 +2,7 @@
 
 Fortune Intern Network is a Ghana-focused internship and career development platform. It connects students with internship programs, mentors, application tracking, notifications, and administrative tools.
 
-The project currently includes a FastAPI backend, PostgreSQL database, Alembic migrations, and a responsive static HTML/CSS/JavaScript frontend.
+The project includes a FastAPI backend, PostgreSQL database, Alembic migrations, and a React/Vite frontend.
 
 ## Features
 
@@ -127,12 +127,10 @@ Verify the sender domain in Resend before registering accounts. Registration ema
 
 ## Database Setup
 
-Create the PostgreSQL database and user referenced by `DATABASE_URL`, then run all migrations from the `Database` directory:
+Create the PostgreSQL database and user referenced by `DATABASE_URL`, then run migrations from the repository root:
 
 ```powershell
-cd Database
-..\.venv\Scripts\python.exe -m alembic -c alembic.ini upgrade head
-cd ..
+.\.venv\Scripts\python.exe -m alembic -c Database/alembic.ini upgrade head
 ```
 
 The migrations create the users, profiles, programs, applications, notifications, mentors, mentorships, announcements, admin role, moderation flags, and registration-verification support tables.
@@ -153,17 +151,15 @@ Backend URLs:
 
 ## Run the Frontend
 
-The frontend is a static file. For reliable API requests, serve it with a local HTTP server from the project root:
+Start the backend on `http://127.0.0.1:8000`, then run Vite:
 
 ```powershell
-python -m http.server 5500 --directory Frontend
+cd Frontend
+npm ci
+npm run dev
 ```
 
-Open:
-
-http://localhost:5500
-
-Do not open the HTML with `file://` if the browser blocks requests to the backend because of origin restrictions.
+Vite proxies `/api` requests to `http://127.0.0.1:8000` by default. Set `API_PROXY_TARGET` to change the development backend address. When the frontend and backend are hosted separately, set the frontend build variable `VITE_API_URL` to the backend origin and include the frontend origin in backend `CORS_ORIGINS`.
 
 ## Admin Access
 
@@ -233,6 +229,9 @@ node -e "const fs=require('fs'); const html=fs.readFileSync('Frontend/index.html
 - Registration requires an email OTP sent through Resend before the account is created.
 - Mentor approval is required before a mentor appears in the public mentor directory.
 - Application status changes are controlled by admins.
-- The frontend is currently a single static HTML application rather than a bundled framework app.
+- Payment is reported by the frontend's Paystack callback; the backend does not verify or persist payment status.
+- Profile experience, skills, CGPA, documents, and the application applicant/academic details are persisted by the backend. Profile name/username editing and payment verification are not supported.
+- Profile and resume documents use the configured Cloudflare R2 bucket. Document uploads require the R2 settings in `.env`.
+- Email verification codes can be resent for pending registrations, with a 60-second cooldown.
 
 

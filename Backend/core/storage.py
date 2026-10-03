@@ -30,14 +30,26 @@ def get_client():
     return _client
 
 
-def upload_resume(key: str, content: bytes, content_type: str | None = None) -> None:
+def upload_file(key: str, content: bytes, content_type: str | None = None) -> None:
     extra_args = {"ContentType": content_type} if content_type else {}
     get_client().put_object(Bucket=R2_BUCKET_NAME, Key=key, Body=content, **extra_args)
 
 
-def download_resume(key: str) -> tuple[bytes, str | None]:
+def download_file(key: str) -> tuple[bytes, str | None]:
     obj = get_client().get_object(Bucket=R2_BUCKET_NAME, Key=key)
     return obj["Body"].read(), obj.get("ContentType")
+
+
+def delete_file(key: str) -> None:
+    get_client().delete_object(Bucket=R2_BUCKET_NAME, Key=key)
+
+
+def upload_resume(key: str, content: bytes, content_type: str | None = None) -> None:
+    upload_file(key, content, content_type)
+
+
+def download_resume(key: str) -> tuple[bytes, str | None]:
+    return download_file(key)
 
 
 def get_resume_download_url(key: str, filename: str, expires_in: int = 300) -> str:
