@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /applications
+Disallow: /profile
+Disallow: /apply
+Disallow: /admin
+Sitemap: https://fortuneintern.com/sitemap.xml
