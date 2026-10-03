@@ -1,0 +1,11 @@
+{
+  "title": "Fortune Intern | Internship Opportunities for Students",
+  "description": "Fortune Intern connects students with internship opportunities and helps them discover, apply for, and track internships in one place.",
+  "robots": {
+    "index": true
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
