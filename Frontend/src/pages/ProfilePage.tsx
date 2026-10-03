@@ -309,12 +309,12 @@ export default function ProfilePage({ user }: { user: AppUser }) {
 
       {editing && (
         <div
-          className="fixed inset-0 z-[100] pointer-events-auto bg-black/55 backdrop-blur-sm p-4 flex items-center justify-center"
+          className="fixed inset-0 z-[100] pointer-events-auto overflow-y-auto bg-black/55 backdrop-blur-sm p-4 flex items-start sm:items-center justify-center"
           role="dialog"
           aria-modal="true"
           aria-labelledby="edit-profile-title"
         >
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+          <div className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-5">
               <h2 id="edit-profile-title" className="font-semibold text-lg">
                 Edit Profile
