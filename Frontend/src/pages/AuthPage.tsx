@@ -598,6 +598,9 @@ function PasswordRecoveryModal({
               Password reset instructions have been requested for{" "}
               <strong>{email}</strong>.
             </p>
+            <p className="text-[11px] text-muted-foreground mt-2">
+              If you don’t see the email, check your spam or junk folder.
+            </p>
             <button
               onClick={onClose}
               className="w-full mt-5 py-3 rounded-xl bg-primary text-white text-sm font-semibold"
@@ -886,6 +889,9 @@ function OTPModal({
           We sent a 6-digit code to
           <br />
           <span className="font-semibold text-foreground">{email}</span>
+        </p>
+        <p className="text-[11px] text-muted-foreground -mt-4 mb-4">
+          If it doesn’t arrive, check your spam or junk folder.
         </p>
 
         <div className="flex justify-center gap-2 mb-4">
