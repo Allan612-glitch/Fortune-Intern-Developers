@@ -206,6 +206,14 @@ def download_application_resume(application_id: str, _: user = Depends(get_curre
 def create_announcement(payload: AnnouncementCreateRequest, _: user = Depends(get_current_admin), session: Session = Depends(get_session)):
 	row = announcement(title=payload.title.strip(), content=payload.content.strip())
 	session.add(row)
+	for recipient in session.exec(select(user)).all():
+		session.add(notification(
+			user_id=recipient.id,
+			message=f"New announcement: {row.title}",
+			target_type="announcement",
+			target_id=str(row.id),
+			read="false",
+		))
 	session.commit()
 	session.refresh(row)
 	return AnnouncementResponse(id=str(row.id), title=row.title, content=row.content, created_at=row.created_at.isoformat())

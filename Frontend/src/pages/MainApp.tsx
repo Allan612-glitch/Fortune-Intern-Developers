@@ -187,7 +187,19 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
         <div className="ml-auto flex items-center gap-3">
           <div className="relative">
           <button
-            onClick={() => setNotificationsOpen((open) => !open)}
+            onClick={() => {
+              const shouldOpen = !notificationsOpen;
+              setNotificationsOpen(shouldOpen);
+              if (shouldOpen) {
+                Promise.all([listNotifications(), getUnreadNotificationCount()])
+                  .then(([items, unread]) => {
+                    setNotifications(items);
+                    setNotifCount(unread.count);
+                    setNotificationError("");
+                  })
+                  .catch((error) => setNotificationError(error instanceof Error ? error.message : "Unable to load notifications."));
+              }
+            }}
             className="relative p-2 rounded-lg hover:bg-muted transition-colors"
             aria-label={`Notifications${notifCount ? `, ${notifCount} unread` : ""}`}
             aria-expanded={notificationsOpen}
