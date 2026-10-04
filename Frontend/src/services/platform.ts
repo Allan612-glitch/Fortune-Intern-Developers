@@ -80,12 +80,20 @@ export interface NotificationPreferences {
   opportunity_alerts: boolean;
 }
 
-export function listPrograms(search = "", category = "All") {
+export function listPrograms(search = "", category = "All", status = "open") {
   const params = new URLSearchParams();
   if (search.trim()) params.set("search", search.trim());
   if (category !== "All") params.set("category", category);
+  if (status !== "open") params.set("status", status);
   const query = params.size ? `?${params}` : "";
   return apiRequest<Program[]>(`/api/programs${query}`);
+}
+
+export function createAdminProgram(payload: Omit<Program, "id">) {
+  return apiRequest<Program>("/api/admin/programs", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export function submitApplication(form: FormData) {
