@@ -521,17 +521,17 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
 
       {/* Mobile bottom nav */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-40 overflow-x-auto overscroll-x-contain lg:hidden bg-white border-t border-border"
+        className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-border"
         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
-        <div className="flex w-max min-w-full items-center">
-          {navItems.map((item) => {
+        <div className="flex w-full items-center">
+          {navItems.filter((item) => item.id !== "announcements").map((item) => {
             const active = page === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => goTo(item.id as AppPage)}
-                className="relative flex w-[72px] shrink-0 flex-col items-center gap-1 px-1 py-2.5 transition-colors"
+                className="relative flex flex-1 flex-col items-center gap-1 px-1 py-2.5 transition-colors"
                 style={{ color: active ? "#2D3561" : "#9ca3af" }}
               >
                 <svg
