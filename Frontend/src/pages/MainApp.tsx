@@ -239,7 +239,7 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
             )}
           </button>
           {notificationsOpen && (
-            <div className="absolute right-0 top-full mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-border bg-white shadow-xl z-50">
+            <div className="fixed left-2 right-2 top-16 z-50 mx-auto max-w-md rounded-xl border border-border bg-white shadow-xl sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[min(22rem,calc(100vw-2rem))]">
               <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                 <h2 className="text-sm font-semibold">Notifications</h2>
                 {notifCount > 0 && <button onClick={() => void readAllNotifications()} className="text-xs font-semibold text-primary">Mark all read</button>}
@@ -521,17 +521,17 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
 
       {/* Mobile bottom nav */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-border"
+        className="fixed bottom-0 left-0 right-0 z-40 overflow-x-auto overscroll-x-contain lg:hidden bg-white border-t border-border"
         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
-        <div className="flex items-center">
+        <div className="flex w-max min-w-full items-center">
           {navItems.map((item) => {
             const active = page === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => goTo(item.id as AppPage)}
-                className="flex-1 flex flex-col items-center py-2.5 gap-1 transition-colors"
+                className="relative flex w-[72px] shrink-0 flex-col items-center gap-1 px-1 py-2.5 transition-colors"
                 style={{ color: active ? "#2D3561" : "#9ca3af" }}
               >
                 <svg
@@ -543,7 +543,7 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
                   {item.icon}
                 </svg>
                 <span
-                  className="nav-label"
+                  className="nav-label w-full break-words text-center leading-tight"
                   style={{ color: active ? "#F5B731" : "#9ca3af" }}
                 >
                   {item.label}
