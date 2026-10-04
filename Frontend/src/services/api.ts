@@ -40,6 +40,16 @@ export async function apiBlob(path: string) {
   const token = getAccessToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
   const response = await fetch(`${apiBase}${path}`, { headers });
-  if (!response.ok) throw new Error(`Download failed (${response.status})`);
+  if (!response.ok) {
+    let message = `Download failed (${response.status})`;
+    try {
+      const body = await response.json();
+      if (typeof body.detail === "string") message = body.detail;
+      else if (typeof body.message === "string") message = body.message;
+    } catch {
+      // Keep the HTTP status when the response has no JSON error body.
+    }
+    throw new Error(message);
+  }
   return response.blob();
 }

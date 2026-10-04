@@ -137,14 +137,20 @@ export function downloadResume(id: string, admin = false) {
   );
 }
 
-export async function saveResumeDownload(id: string, admin = false) {
+export async function saveResumeDownload(
+  id: string,
+  admin = false,
+  filename = "resume",
+) {
   const blob = await downloadResume(id, admin);
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "resume";
+  link.download = filename || "resume";
+  document.body.appendChild(link);
   link.click();
-  URL.revokeObjectURL(url);
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export function listNotifications() {
