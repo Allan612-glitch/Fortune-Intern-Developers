@@ -90,52 +90,29 @@ function escapeHtml(value: string) {
   );
 }
 
-async function getLogoDataUrl() {
-  try {
-    const response = await fetch(logoUrl);
-    const blob = await response.blob();
-    return await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return "";
-  }
-}
-
-export async function printApplicationLetter(application: ApplicationRecord) {
+export function printApplicationLetter(application: ApplicationRecord) {
   const printWindow = window.open("", "_blank");
   if (!printWindow) return;
 
+  const logo = new URL(logoUrl, window.location.href).href;
   const details = (application.details?.personalInformation || {}) as Record<
     string,
     unknown
   >;
   const detail = (key: string, fallback = "") =>
     typeof details[key] === "string" ? String(details[key]) : fallback;
-  const [
-    logo,
-    name,
-    company,
-    companyAddress,
-    opportunity,
-    reference,
-    indexNumber,
-    email,
-    date,
-  ] = await Promise.all([
-    getLogoDataUrl(),
-    escapeHtml(application.applicantName),
-    escapeHtml(application.company),
-    escapeHtml(application.companyAddress || detail("companyAddress")),
-    escapeHtml(application.opportunity),
-    escapeHtml(application.reference),
-    escapeHtml(application.studentIndexNumber),
-    escapeHtml(application.applicantEmail),
-    escapeHtml(new Date(application.applicationDate).toLocaleDateString()),
-  ]);
+  const name = escapeHtml(application.applicantName);
+  const company = escapeHtml(application.company);
+  const companyAddress = escapeHtml(
+    application.companyAddress || detail("companyAddress"),
+  );
+  const opportunity = escapeHtml(application.opportunity);
+  const reference = escapeHtml(application.reference);
+  const indexNumber = escapeHtml(application.studentIndexNumber);
+  const email = escapeHtml(application.applicantEmail);
+  const date = escapeHtml(
+    new Date(application.applicationDate).toLocaleDateString(),
+  );
   const institution = escapeHtml(detail("institution"));
   const program = escapeHtml(detail("program"));
   const contact = escapeHtml(detail("phone"));
