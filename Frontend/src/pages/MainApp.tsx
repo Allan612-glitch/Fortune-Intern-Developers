@@ -49,6 +49,18 @@ const navItems = [
     ),
   },
   {
+    id: "announcements",
+    label: "Announcements",
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.8}
+        d="M3 11v2a1 1 0 001 1h2l4 4V6l-4 4H4a1 1 0 00-1 1zm7-2 9-4v14l-9-4m3 2 1.5 4H18l-2-5"
+      />
+    ),
+  },
+  {
     id: "programs",
     label: "Programs",
     icon: (
