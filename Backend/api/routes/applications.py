@@ -1,12 +1,13 @@
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.responses import Response
 from sqlmodel import Session, select
 
 from Backend.api.deps import get_current_user
 from Backend.core import storage
+from Backend.core.mailer import send_application_received_email
 from Backend.database import get_session
 from Database.models import application, notification, program, user
 from Database.schemas import ApplicationCreateRequest, ApplicationResponse
@@ -111,6 +112,7 @@ def get_resume_download_url(
 @router.post("", response_model=ApplicationResponse, status_code=status.HTTP_201_CREATED)
 async def create_application(
     request: Request,
+    background_tasks: BackgroundTasks,
     account: user = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -221,5 +223,19 @@ async def create_application(
     ))
     session.commit()
     session.refresh(new_application)
+    background_tasks.add_task(
+        send_application_received_email,
+        to_email=account.email,
+        student_name=new_application.applicant_name or account.name,
+        program_name=program_name,
+        year_of_study=new_application.year_of_study or "Not provided",
+        company=(
+            new_application.host_company_name
+            or new_application.suggested_company
+            or program_record.company
+        ),
+        reference=str(new_application.id),
+        submitted_at=new_application.created_at.strftime("%Y-%m-%d"),
+    )
 
     return serialize_application(new_application, program_name)
