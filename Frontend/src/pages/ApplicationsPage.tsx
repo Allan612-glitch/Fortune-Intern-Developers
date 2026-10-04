@@ -387,7 +387,7 @@ function TrackingModal({
               </p>
               {application.resumeName && (
                 <button
-                  onClick={() => void saveResumeDownload(application.reference, false, application.resumeName || "resume").catch((error) => setDownloadError(error instanceof Error ? error.message : "Unable to download resume."))}
+                  onClick={() => void saveResumeDownload(application.reference).catch((error) => setDownloadError(error instanceof Error ? error.message : "Unable to download resume."))}
                   className="mt-3 text-xs font-semibold text-primary underline"
                 >
                   Download resume

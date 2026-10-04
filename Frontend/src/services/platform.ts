@@ -1,4 +1,4 @@
-import { apiBlob, apiRequest } from "./api";
+import { apiRequest } from "./api";
 
 export interface Program {
   id: string;
@@ -130,27 +130,16 @@ export function setApplicationStatus(id: string, status: string) {
 }
 
 export function downloadResume(id: string, admin = false) {
-  return apiBlob(
+  return apiRequest<{ url: string }>(
     admin
-      ? `/api/admin/applications/${id}/resume`
-      : `/api/applications/${id}/resume`,
-  );
+      ? `/api/admin/applications/${id}/resume-url`
+      : `/api/applications/${id}/resume-url`,
+  ).then((result) => result.url);
 }
 
-export async function saveResumeDownload(
-  id: string,
-  admin = false,
-  filename = "resume",
-) {
-  const blob = await downloadResume(id, admin);
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename || "resume";
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+export async function saveResumeDownload(id: string, admin = false) {
+  const url = await downloadResume(id, admin);
+  window.location.assign(url);
 }
 
 export function listNotifications() {

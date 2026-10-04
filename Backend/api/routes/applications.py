@@ -92,6 +92,22 @@ def download_resume(
     )
 
 
+@router.get("/{application_id}/resume-url")
+def get_resume_download_url(
+    application_id: str,
+    account: user = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    try:
+        row = session.get(application, UUID(application_id))
+    except ValueError:
+        row = None
+    if not row or row.user_id != account.id or not row.resume_path:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found")
+    filename = row.resume_filename or "resume"
+    return {"url": storage.get_resume_download_url(row.resume_path, filename)}
+
+
 @router.post("", response_model=ApplicationResponse, status_code=status.HTTP_201_CREATED)
 async def create_application(
     request: Request,

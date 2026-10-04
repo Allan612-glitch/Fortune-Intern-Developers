@@ -318,7 +318,7 @@ export default function AdminPage() {
                   >
                     {app.status}
                   </span>
-                  {app.resume_filename && <button onClick={() => void saveResumeDownload(app.id, true, app.resume_filename || "resume").catch((requestError) => setError(requestError instanceof Error ? requestError.message : "Unable to download resume."))} className="text-xs font-semibold text-primary underline">Resume</button>}
+                  {app.resume_filename && <button onClick={() => void saveResumeDownload(app.id, true).catch((requestError) => setError(requestError instanceof Error ? requestError.message : "Unable to download resume."))} className="text-xs font-semibold text-primary underline">Resume</button>}
                   <button onClick={() => void updateStatus(app, "accepted")} className="text-xs px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors font-semibold">
                     Accept
                   </button>
