@@ -11,6 +11,7 @@ class Settings:
     )
     jwt_secret: str = os.getenv("JWT_SECRET", "")
     jwt_algorithm: str = "HS256"
+    google_client_id: str = os.getenv("GOOGLE_CLIENT_ID", "")
     admin_email: str | None = os.getenv("ADMIN_EMAIL")
     resend_api_key: str | None = os.getenv("RESEND_API_KEY")
     resend_from_email: str | None = os.getenv("RESEND_FROM_EMAIL")

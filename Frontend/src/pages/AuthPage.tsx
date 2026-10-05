@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
+import { GoogleLogin } from "@react-oauth/google";
 import type { AppUser } from "../App";
 import { requestForgotPassword } from "../services/authNotifications";
-import { getProfile, login, register, resendVerification, updateProfile, verifyEmail } from "../services/auth";
+import { getProfile, login, loginWithGoogle, register, resendVerification, updateProfile, verifyEmail } from "../services/auth";
 
 const ghanaUniversities = [
   "University of Ghana",
@@ -128,6 +129,39 @@ export default function AuthPage({
       });
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "Unable to sign in.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (response: { credential?: string }) => {
+    if (!response.credential) {
+      setSubmitError("Google sign-in did not return a credential.");
+      return;
+    }
+
+    setLoading(true);
+    setSubmitError("");
+    try {
+      const account = await loginWithGoogle(response.credential);
+      const profile = await getProfile();
+      onLogin({
+        name: account.name,
+        email: account.email,
+        school: profile.university || "",
+        major: profile.major || profile.course || "",
+        avatar: account.name
+          .split(" ")
+          .map((part) => part[0])
+          .join("")
+          .toUpperCase()
+          .slice(0, 2),
+        isAdmin: account.is_admin,
+        verified: true,
+        role: "student",
+      });
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Unable to sign in with Google.");
     } finally {
       setLoading(false);
     }
@@ -336,6 +370,18 @@ export default function AuthPage({
                   <div className="flex-1 h-px bg-border" />
                   <span className="text-xs text-muted-foreground">or</span>
                   <div className="flex-1 h-px bg-border" />
+                </div>
+
+                <div className="flex justify-center">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={() => setSubmitError("Google sign-in failed. Please try again.")}
+                    text="signin_with"
+                    theme="outline"
+                    shape="rectangular"
+                    size="large"
+                    width="100%"
+                  />
                 </div>
 
                 <button

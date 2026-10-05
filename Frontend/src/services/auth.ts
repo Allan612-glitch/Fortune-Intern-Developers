@@ -56,6 +56,15 @@ export async function login(email: string, password: string) {
   return result.user;
 }
 
+export async function loginWithGoogle(credential: string) {
+  const result = await apiRequest<TokenResponse>("/api/auth/google", {
+    method: "POST",
+    body: JSON.stringify({ credential }),
+  });
+  setAccessToken(result.access_token);
+  return result.user;
+}
+
 export function register(name: string, email: string, password: string) {
   return apiRequest<{ message: string; email: string }>("/api/auth/register", {
     method: "POST",

@@ -1,5 +1,6 @@
 fastapi
 uvicorn[standard]
+google-auth
 sqlmodel
 psycopg[binary]
 alembic
