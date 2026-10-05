@@ -2,6 +2,8 @@ from datetime import datetime, timedelta, timezone
 from secrets import randbelow, token_urlsafe
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token
 import resend
 from sqlmodel import Session, select
 
@@ -12,6 +14,7 @@ from Backend.database import get_session
 from Database.models import password_reset, registration_verification, user
 from Database.schemas import (
     ForgotPasswordRequest,
+    GoogleLoginRequest,
     LoginRequest,
     MessageResponse,
     RegisterRequest,
@@ -85,12 +88,65 @@ def validate_email(email: str) -> str:
 def login(credentials: LoginRequest, session: Session = Depends(get_session)):
     email = validate_email(credentials.email)
     account = session.exec(select(user).where(user.email == email)).first()
-    if not account or not verify_password(credentials.password, account.password_hash):
+    if not account or not account.password_hash or not verify_password(credentials.password, account.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
 
+    return TokenResponse(
+        access_token=create_access_token(account.id),
+        token_type="bearer",
+        user=serialize_user(account),
+    )
+
+
+@router.post("/google", response_model=TokenResponse)
+def google_login(payload: GoogleLoginRequest, session: Session = Depends(get_session)):
+    if not settings.google_client_id:
+        raise HTTPException(status_code=503, detail="Google sign-in is not configured")
+
+    try:
+        claims = id_token.verify_oauth2_token(
+            payload.credential,
+            google_requests.Request(),
+            settings.google_client_id,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=401, detail="Invalid Google credential") from error
+
+    subject = claims.get("sub")
+    email_claim = claims.get("email")
+    if (
+        not isinstance(subject, str)
+        or not isinstance(email_claim, str)
+        or claims.get("email_verified") is not True
+    ):
+        raise HTTPException(status_code=401, detail="Google account has no verified email")
+
+    email = validate_email(email_claim)
+    account = session.exec(select(user).where(user.google_sub == subject)).first()
+    if not account:
+        account = session.exec(select(user).where(user.email == email)).first()
+        if account:
+            if account.google_sub and account.google_sub != subject:
+                raise HTTPException(status_code=409, detail="This email is linked to another Google account")
+            account.google_sub = subject
+        else:
+            name = claims.get("name")
+            if not isinstance(name, str) or not name.strip():
+                name = email.partition("@")[0]
+            account = user(
+                name=name.strip(),
+                email=email,
+                password_hash=None,
+                google_sub=subject,
+            )
+            session.add(account)
+
+    session.add(account)
+    session.commit()
+    session.refresh(account)
     return TokenResponse(
         access_token=create_access_token(account.id),
         token_type="bearer",

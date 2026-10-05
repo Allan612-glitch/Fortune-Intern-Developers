@@ -11,6 +11,7 @@ class Settings:
     )
     jwt_secret: str = os.getenv("JWT_SECRET", "")
     jwt_algorithm: str = "HS256"
+    google_client_id: str = os.getenv("GOOGLE_CLIENT_ID", "")
     admin_email: str | None = os.getenv("ADMIN_EMAIL")
     resend_api_key: str | None = os.getenv("RESEND_API_KEY")
     resend_from_email: str | None = os.getenv("RESEND_FROM_EMAIL")
@@ -23,6 +24,7 @@ class Settings:
         for origin in os.getenv("CORS_ORIGINS", "http://localhost:5500,http://127.0.0.1:5500").split(",")
         if origin.strip()
     ]
+    cors_origin_regex: str | None = os.getenv("CORS_ORIGIN_REGEX") or None
 
 settings = Settings()
 if len(settings.jwt_secret) < 32 or settings.jwt_secret == "replace-with-a-long-random-secret-at-least-32-characters":

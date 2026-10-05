@@ -7,6 +7,10 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class GoogleLoginRequest(BaseModel):
+    credential: str = Field(min_length=1, max_length=8192)
+
+
 class RegisterRequest(BaseModel):
     name: str
     email: str
