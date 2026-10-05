@@ -398,7 +398,7 @@ export default function AuthPage({
                     onSuccess={handleGoogleSuccess}
                     onError={() => setSubmitError("Google sign-in failed. Please try again.")}
                     text="signin_with"
-                    theme="outline"
+                    theme="filled_blue"
                     shape="rectangular"
                     size="large"
                     width={String(googleButtonWidth)}
@@ -563,7 +563,7 @@ export default function AuthPage({
                     onSuccess={handleGoogleSuccess}
                     onError={() => setSubmitError("Google sign-up failed. Please try again.")}
                     text="signup_with"
-                    theme="outline"
+                    theme="filled_blue"
                     shape="rectangular"
                     size="large"
                     width={String(googleButtonWidth)}
