@@ -24,8 +24,6 @@ class Settings:
         for origin in os.getenv("CORS_ORIGINS", "http://localhost:5500,http://127.0.0.1:5500").split(",")
         if origin.strip()
     ]
-    cors_origin_regex: str | None = os.getenv("CORS_ORIGIN_REGEX") or None
-
 settings = Settings()
 if len(settings.jwt_secret) < 32 or settings.jwt_secret == "replace-with-a-long-random-secret-at-least-32-characters":
     raise RuntimeError("JWT_SECRET must be set to a random value of at least 32 characters")
