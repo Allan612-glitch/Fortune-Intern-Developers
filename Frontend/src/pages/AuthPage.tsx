@@ -58,6 +58,17 @@ export default function AuthPage({
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const [googleButtonWidth, setGoogleButtonWidth] = useState(384);
+
+  useEffect(() => {
+    const updateGoogleButtonWidth = () => {
+      setGoogleButtonWidth(Math.min(384, Math.max(200, window.innerWidth - 96)));
+    };
+
+    updateGoogleButtonWidth();
+    window.addEventListener("resize", updateGoogleButtonWidth);
+    return () => window.removeEventListener("resize", updateGoogleButtonWidth);
+  }, []);
 
   const set = (k: keyof typeof form, v: string) => {
     setForm((p) => ({ ...p, [k]: v }));
@@ -139,12 +150,22 @@ export default function AuthPage({
       setSubmitError("Google sign-in did not return a credential.");
       return;
     }
+    if (mode === "register" && !form.school) {
+      touch("school");
+      setSubmitError("Select your university before signing up with Google.");
+      return;
+    }
 
     setLoading(true);
     setSubmitError("");
     try {
       const account = await loginWithGoogle(response.credential);
       const profile = await getProfile();
+      if (mode === "register") {
+        await updateProfile({ university: form.school, major: form.major });
+        profile.university = form.school;
+        profile.major = form.major;
+      }
       onLogin({
         name: account.name,
         email: account.email,
@@ -380,7 +401,7 @@ export default function AuthPage({
                     theme="outline"
                     shape="rectangular"
                     size="large"
-                    width="100%"
+                    width={String(googleButtonWidth)}
                   />
                 </div>
 
@@ -526,6 +547,28 @@ export default function AuthPage({
                 <p className="text-[11px] text-muted-foreground text-center">
                   A 6-digit verification code will be sent to your email.
                 </p>
+
+                {submitError && (
+                  <p className="text-red-500 text-xs">{submitError}</p>
+                )}
+
+                <div className="relative flex items-center gap-3">
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="text-xs text-muted-foreground">or</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+
+                <div className="flex justify-center">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={() => setSubmitError("Google sign-up failed. Please try again.")}
+                    text="signup_with"
+                    theme="outline"
+                    shape="rectangular"
+                    size="large"
+                    width={String(googleButtonWidth)}
+                  />
+                </div>
               </form>
             )}
           </div>
