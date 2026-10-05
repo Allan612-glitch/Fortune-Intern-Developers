@@ -9,10 +9,12 @@ import siteConfiguration from "./.figma/make/site.json";
 export default defineConfig(({ mode }) => {
   // .figma/make/deploy-preview passes `--mode development` for cached-preview builds.
   const emitSourcemaps = mode === "development";
+  const envRoot = path.resolve(__dirname, "..");
   const googleClientId =
+    process.env.VITE_GOOGLE_CLIENT_ID ||
     process.env.GOOGLE_CLIENT_ID ||
-    loadEnv(mode, path.resolve(__dirname, ".."), "GOOGLE_CLIENT_ID")
-      .GOOGLE_CLIENT_ID ||
+    loadEnv(mode, envRoot, "VITE_GOOGLE_CLIENT_ID").VITE_GOOGLE_CLIENT_ID ||
+    loadEnv(mode, envRoot, "GOOGLE_CLIENT_ID").GOOGLE_CLIENT_ID ||
     "";
 
   return {

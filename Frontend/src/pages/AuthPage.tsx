@@ -59,6 +59,7 @@ export default function AuthPage({
   const [submitError, setSubmitError] = useState("");
   const [recoveryOpen, setRecoveryOpen] = useState(false);
   const [googleButtonWidth, setGoogleButtonWidth] = useState(384);
+  const googleClientConfigured = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim());
 
   useEffect(() => {
     const updateGoogleButtonWidth = () => {
@@ -393,17 +394,23 @@ export default function AuthPage({
                   <div className="flex-1 h-px bg-border" />
                 </div>
 
-                <div className="flex justify-center">
-                  <GoogleLogin
-                    onSuccess={handleGoogleSuccess}
-                    onError={() => setSubmitError("Google sign-in failed. Please try again.")}
-                    text="signin_with"
-                    theme="filled_blue"
-                    shape="rectangular"
-                    size="large"
-                    width={String(googleButtonWidth)}
-                  />
-                </div>
+                {googleClientConfigured ? (
+                  <div className="flex justify-center">
+                    <GoogleLogin
+                      onSuccess={handleGoogleSuccess}
+                      onError={() => setSubmitError("Google sign-in failed. Please try again.")}
+                      text="signin_with"
+                      theme="filled_blue"
+                      shape="rectangular"
+                      size="large"
+                      width={String(googleButtonWidth)}
+                    />
+                  </div>
+                ) : (
+                  <p className="text-center text-xs text-muted-foreground">
+                    Google sign-in is not configured for this deployment.
+                  </p>
+                )}
 
                 <button
                   type="button"
@@ -558,17 +565,23 @@ export default function AuthPage({
                   <div className="flex-1 h-px bg-border" />
                 </div>
 
-                <div className="flex justify-center">
-                  <GoogleLogin
-                    onSuccess={handleGoogleSuccess}
-                    onError={() => setSubmitError("Google sign-up failed. Please try again.")}
-                    text="signup_with"
-                    theme="filled_blue"
-                    shape="rectangular"
-                    size="large"
-                    width={String(googleButtonWidth)}
-                  />
-                </div>
+                {googleClientConfigured ? (
+                  <div className="flex justify-center">
+                    <GoogleLogin
+                      onSuccess={handleGoogleSuccess}
+                      onError={() => setSubmitError("Google sign-up failed. Please try again.")}
+                      text="signup_with"
+                      theme="filled_blue"
+                      shape="rectangular"
+                      size="large"
+                      width={String(googleButtonWidth)}
+                    />
+                  </div>
+                ) : (
+                  <p className="text-center text-xs text-muted-foreground">
+                    Google sign-in is not configured for this deployment.
+                  </p>
+                )}
               </form>
             )}
           </div>
