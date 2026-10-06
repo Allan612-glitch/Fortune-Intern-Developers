@@ -198,7 +198,7 @@ def download_application_resume(application_id: str, _: user = Depends(get_curre
 	return Response(
 		content=content,
 		media_type=content_type or "application/octet-stream",
-		headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+		headers={"Content-Disposition": storage.build_attachment_content_disposition(filename)},
 	)
 
 
