@@ -173,7 +173,7 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
               <button
                 key={id}
                 onClick={() => goTo(id)}
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+             className="inline-block text-sm font-medium text-muted-foreground cursor-pointer transition-all ease-in-out duration-300 hover:text-primary hover:scale-105"
               >
                 {label}
               </button>
@@ -183,7 +183,7 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
           <div className="hidden lg:flex items-center gap-2">
             <button
               onClick={() => onStudentPortal("login")}
-              className="px-4 py-2.5 text-sm font-semibold text-primary hover:bg-secondary rounded-xl transition-colors"
+              className="px-4 py-2.5 hover:cursor-pointer text-sm font-semibold text-primary hover:bg-secondary rounded-xl transition-colors"
             >
               Student Portal
             </button>
@@ -245,7 +245,7 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
               <div className="flex flex-col sm:flex-row gap-3 mt-8">
                 <button
                   onClick={() => onStudentPortal("login")}
-                  className="px-6 py-3.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-all shadow-lg shadow-primary/15 flex items-center justify-center gap-2"
+                  className="px-6 py-3.5 rounded-xl bg-primary text-white text-sm hover:cursor-pointer font-bold hover:bg-primary-hover transition-all shadow-lg shadow-primary/15 flex items-center justify-center gap-2"
                 >
                   Find an Internship <Icon name="arrow" className="w-4 h-4" />
                 </button>
@@ -461,10 +461,10 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
                   </div>
                   <button
                     onClick={() => onStudentPortal("login")}
-                    className="w-full mt-4 py-2.5 rounded-xl bg-secondary text-primary text-xs font-bold hover:bg-primary hover:text-white transition-colors"
+                    className="w-full mt-4 py-2.5 hover:cursor-pointer rounded-xl bg-secondary text-primary text-xs font-bold hover:bg-primary hover:text-white transition-colors"
                   >
                     View Opportunity
-                  </button>
+                  </button> 
                 </article>
               ))}
             </div>
@@ -521,7 +521,7 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
               </ul>
               <button
                 onClick={() => onStudentPortal("register")}
-                className="mt-8 px-6 py-3.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors"
+                className="mt-8 px-6 py-3.5 hover:cursor-pointer rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors"
               >
                 Start Your Career Journey
               </button>
@@ -599,13 +599,13 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
             <div className="flex flex-col sm:flex-row justify-center gap-3 mt-8">
               <button
                 onClick={() => onStudentPortal("login")}
-                className="px-6 py-3.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors"
+                className="px-6 py-3.5 hover:cursor-pointer rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors"
               >
                 Find an Internship
               </button>
               <button
                 onClick={() => onStudentPortal("register")}
-                className="px-6 py-3.5 rounded-xl bg-white border border-border text-primary text-sm font-bold hover:border-primary/30 transition-colors"
+                className="px-6 py-3.5 hover:cursor-pointer hover:bg-emerald-700 hover:text-white rounded-xl bg-white border border-border text-primary text-sm font-bold hover:border-primary/30 transition-colors"
               >
                 Join Fortune Intern Network
               </button>
