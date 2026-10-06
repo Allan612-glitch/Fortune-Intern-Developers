@@ -174,11 +174,10 @@ def download_profile_document(
         content, content_type = storage.download_file(row.storage_path)
     except Exception as error:
         raise HTTPException(status_code=503, detail="Profile document storage is unavailable") from error
-    safe_filename = row.filename.replace('"', "")
     return Response(
         content=content,
         media_type=content_type or "application/octet-stream",
-        headers={"Content-Disposition": f'attachment; filename="{safe_filename}"'},
+        headers={"Content-Disposition": storage.build_attachment_content_disposition(row.filename)},
     )
 
 

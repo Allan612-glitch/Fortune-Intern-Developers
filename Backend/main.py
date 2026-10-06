@@ -16,6 +16,14 @@ from Backend.core.config import settings
 
 def create_app() -> FastAPI:
     application = FastAPI(title="Fortune Intern API")
+
+    @application.middleware("http")
+    async def set_response_security_headers(request: Request, call_next):
+        response = await call_next(request)
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        return response
+
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,

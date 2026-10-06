@@ -1,5 +1,7 @@
 """Cloudflare R2 (S3-compatible) storage for resume uploads."""
 import os
+from pathlib import Path
+from urllib.parse import quote
 
 import boto3
 from botocore.config import Config
@@ -44,6 +46,19 @@ def delete_file(key: str) -> None:
     get_client().delete_object(Bucket=R2_BUCKET_NAME, Key=key)
 
 
+def build_attachment_content_disposition(filename: str, default_filename: str = "download") -> str:
+    safe_filename = Path(filename or "").name.strip()
+    safe_filename = safe_filename.replace("\r", "").replace("\n", "").replace('"', "").replace("\\", "")
+    safe_filename = "".join(character for character in safe_filename if character >= " " and character not in {"/", "\\"})
+    if not safe_filename:
+        safe_filename = default_filename
+
+    ascii_filename = safe_filename.encode("ascii", "ignore").decode("ascii").strip() or default_filename
+    ascii_filename = ascii_filename.replace('"', "").replace("\\", "")
+    encoded_filename = quote(safe_filename, safe="")
+    return f'attachment; filename="{ascii_filename}"; filename*=UTF-8\'\'{encoded_filename}'
+
+
 def upload_resume(key: str, content: bytes, content_type: str | None = None) -> None:
     upload_file(key, content, content_type)
 
@@ -58,7 +73,7 @@ def get_resume_download_url(key: str, filename: str, expires_in: int = 300) -> s
         Params={
             "Bucket": R2_BUCKET_NAME,
             "Key": key,
-            "ResponseContentDisposition": f'attachment; filename="{filename}"',
+            "ResponseContentDisposition": build_attachment_content_disposition(filename),
         },
         ExpiresIn=expires_in,
     )
