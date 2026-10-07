@@ -1,32 +1,52 @@
-import { useEffect, useState } from "react";
-import type { AppUser, AppPage } from "../App";
-import logo from "../assets/attach1.png";
-import HomePage from "./HomePage";
-import DashboardPage from "./DashboardPage";
-import ApplicationsPage from "./ApplicationsPage";
-import AnnouncementsPage from "./AnnouncementsPage";
-import ProgramsPage from "./ProgramsPage";
-import ApplyPage from "./ApplyPage";
-import ProfilePage from "./ProfilePage";
-import AdminPage from "./AdminPage";
-import LogoutConfirmationModal from "../components/LogoutConfirmationModal";
+import { useEffect, useState } from "react"
+import { useLocation, useNavigate } from "react-router-dom"
+
+import type { AppUser, AppPage } from "../App"
+
+import logo from "../assets/attach1.png"
+
+import HomePage from "./HomePage"
+
+import DashboardPage from "./DashboardPage"
+
+import ApplicationsPage from "./ApplicationsPage"
+
+import AnnouncementsPage from "./AnnouncementsPage"
+
+import ProgramsPage from "./ProgramsPage"
+
+import ApplyPage from "./ApplyPage"
+
+import ProfilePage from "./ProfilePage"
+
+import AdminPage from "./AdminPage"
+
+import LogoutConfirmationModal from "../components/LogoutConfirmationModal"
+
 import {
   getUnreadNotificationCount,
   listNotifications,
   markAllNotificationsRead,
   markNotificationRead,
   type NotificationItem,
-} from "../services/platform";
+} from "../services/platform"
 
 interface MainAppProps {
-  user: AppUser;
-  onLogout: () => void;
+  user: AppUser
+
+  onLogout: () => void
+
+  initialProgramId?: string | null
+
+  onInitialProgramHandled?: () => void
 }
 
 const navItems = [
   {
     id: "home",
+
     label: "Home",
+
     icon: (
       <path
         strokeLinecap="round"
@@ -36,9 +56,12 @@ const navItems = [
       />
     ),
   },
+
   {
     id: "dashboard",
+
     label: "Dashboard",
+
     icon: (
       <path
         strokeLinecap="round"
@@ -50,7 +73,9 @@ const navItems = [
   },
   {
     id: "announcements",
+
     label: "Announcements",
+
     icon: (
       <path
         strokeLinecap="round"
@@ -62,7 +87,9 @@ const navItems = [
   },
   {
     id: "programs",
+
     label: "Programs",
+
     icon: (
       <path
         strokeLinecap="round"
@@ -72,9 +99,12 @@ const navItems = [
       />
     ),
   },
+
   {
     id: "apply",
+
     label: "Apply",
+
     icon: (
       <path
         strokeLinecap="round"
@@ -84,9 +114,12 @@ const navItems = [
       />
     ),
   },
+
   {
     id: "profile",
+
     label: "Profile",
+
     icon: (
       <path
         strokeLinecap="round"
@@ -96,60 +129,135 @@ const navItems = [
       />
     ),
   },
-];
+]
 
-export default function MainApp({ user, onLogout }: MainAppProps) {
-  const [page, setPage] = useState<AppPage>("home");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [notifCount, setNotifCount] = useState(0);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [notificationError, setNotificationError] = useState("");
-  const [showLogout, setShowLogout] = useState(false);
+const appPages = new Set<AppPage>([
+  "home",
+  "dashboard",
+  "applications",
+  "announcements",
+  "programs",
+  "apply",
+  "profile",
+  "admin",
+])
+
+export default function MainApp({
+  user,
+
+  onLogout,
+
+  initialProgramId = null,
+
+  onInitialProgramHandled,
+}: MainAppProps) {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const pageSegment = location.pathname.replace(/^\/app\/?/, "").split("/")[0]
+  const page = appPages.has(pageSegment as AppPage)
+    ? pageSegment as AppPage
+    : "home"
+
+  const [programSelectionPending, setProgramSelectionPending] = useState(
+    Boolean(initialProgramId),
+  )
+
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  const [notifCount, setNotifCount] = useState(0)
+
+  const [notifications, setNotifications] = useState<NotificationItem[]>([])
+
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+
+  const [notificationError, setNotificationError] = useState("")
+
+  const [showLogout, setShowLogout] = useState(false)
 
   useEffect(() => {
-    let active = true;
+    if (
+      !appPages.has(pageSegment as AppPage) ||
+      (page === "admin" && !user.isAdmin)
+    ) {
+      navigate("/app/home", { replace: true })
+    }
+  }, [navigate, page, pageSegment, user.isAdmin])
+
+  useEffect(() => {
+    let active = true
+
     Promise.all([listNotifications(), getUnreadNotificationCount()])
+
       .then(([items, unread]) => {
-        if (!active) return;
-        setNotifications(items);
-        setNotifCount(unread.count);
+        if (!active) return
+
+        setNotifications(items)
+
+        setNotifCount(unread.count)
       })
+
       .catch((error) => {
-        if (active) setNotificationError(error instanceof Error ? error.message : "Unable to load notifications.");
-      });
+        if (active)
+          setNotificationError(
+            error instanceof Error
+              ? error.message
+              : "Unable to load notifications.",
+          )
+      })
+
     return () => {
-      active = false;
-    };
-  }, [user.email]);
+      active = false
+    }
+  }, [user.email])
 
   const openNotification = async (notification: NotificationItem) => {
     try {
-      if (!notification.read) await markNotificationRead(notification.id);
-      setNotifications((current) => current.map((item) => item.id === notification.id ? { ...item, read: true } : item));
-      setNotifCount((count) => Math.max(0, count - (notification.read ? 0 : 1)));
-      setNotificationsOpen(false);
-      if (notification.target_type === "application") goTo("applications");
-      else goTo("announcements");
+      if (!notification.read) await markNotificationRead(notification.id)
+
+      setNotifications((current) =>
+        current.map((item) =>
+          item.id === notification.id ? { ...item, read: true } : item,
+        ),
+      )
+
+      setNotifCount((count) => Math.max(0, count - (notification.read ? 0 : 1)))
+
+      setNotificationsOpen(false)
+
+      if (notification.target_type === "application") goTo("applications")
+      else goTo("announcements")
     } catch (error) {
-      setNotificationError(error instanceof Error ? error.message : "Unable to update notification.");
+      setNotificationError(
+        error instanceof Error
+          ? error.message
+          : "Unable to update notification.",
+      )
     }
-  };
+  }
 
   const readAllNotifications = async () => {
     try {
-      await markAllNotificationsRead();
-      setNotifications((current) => current.map((item) => ({ ...item, read: true })));
-      setNotifCount(0);
+      await markAllNotificationsRead()
+
+      setNotifications((current) =>
+        current.map((item) => ({ ...item, read: true })),
+      )
+
+      setNotifCount(0)
     } catch (error) {
-      setNotificationError(error instanceof Error ? error.message : "Unable to update notifications.");
+      setNotificationError(
+        error instanceof Error
+          ? error.message
+          : "Unable to update notifications.",
+      )
     }
-  };
+  }
 
   const goTo = (p: AppPage) => {
-    setPage(p);
-    setSidebarOpen(false);
-  };
+    navigate(`/app/${p}`)
+
+    setSidebarOpen(false)
+  }
 
   return (
     <div className="min-h-screen bg-cream flex flex-col">
@@ -184,6 +292,7 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
               className="font-bold text-sm leading-none"
               style={{
                 color: "#2D3561",
+
                 fontFamily: "Inter, sans-serif",
               }}
             >
@@ -270,12 +379,17 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
       <aside className="hidden lg:flex fixed top-14 left-0 bottom-0 w-56 bg-white border-r border-border flex-col z-30">
         <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
           {navItems.map((item) => {
-            const active = page === item.id;
+            const active = page === item.id
+
             return (
               <button
                 key={item.id}
                 onClick={() => goTo(item.id as AppPage)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${active ? "text-white shadow-sm" : "text-foreground hover:bg-secondary"}`}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  active
+                    ? "text-white shadow-sm"
+                    : "text-foreground hover:bg-secondary"
+                }`}
                 style={
                   active
                     ? {
@@ -294,12 +408,16 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
                 </svg>
                 {item.label}
               </button>
-            );
+            )
           })}
           {user.isAdmin && (
             <button
               onClick={() => goTo("admin")}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${page === "admin" ? "text-white shadow-sm" : "text-red-600 hover:bg-red-50"}`}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                page === "admin"
+                  ? "text-white shadow-sm"
+                  : "text-red-600 hover:bg-red-50"
+              }`}
               style={
                 page === "admin"
                   ? { background: "linear-gradient(135deg, #dc2626, #b91c1c)" }
@@ -367,6 +485,7 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
                     className="font-bold text-sm"
                     style={{
                       color: "#2D3561",
+
                       fontFamily: "Inter, sans-serif",
                     }}
                   >
@@ -417,12 +536,17 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
 
             <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
               {navItems.map((item) => {
-                const active = page === item.id;
+                const active = page === item.id
+
                 return (
                   <button
                     key={item.id}
                     onClick={() => goTo(item.id as AppPage)}
-                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${active ? "text-white" : "text-foreground hover:bg-secondary"}`}
+                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${
+                      active
+                        ? "text-white"
+                        : "text-foreground hover:bg-secondary"
+                    }`}
                     style={
                       active
                         ? {
@@ -442,12 +566,16 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
                     </svg>
                     {item.label}
                   </button>
-                );
+                )
               })}
               {user.isAdmin && (
                 <button
                   onClick={() => goTo("admin")}
-                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${page === "admin" ? "text-white" : "text-red-600 hover:bg-red-50"}`}
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${
+                    page === "admin"
+                      ? "text-white"
+                      : "text-red-600 hover:bg-red-50"
+                  }`}
                   style={
                     page === "admin"
                       ? {
@@ -512,7 +640,19 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
           )}
           {page === "applications" && <ApplicationsPage email={user.email} />}
           {page === "announcements" && <AnnouncementsPage user={user} />}
-          {page === "programs" && <ProgramsPage setPage={goTo} user={user} />}
+          {page === "programs" && (
+            <ProgramsPage
+              user={user}
+              initialSelectedProgramId={
+                programSelectionPending ? initialProgramId : null
+              }
+              onInitialSelectionHandled={() => {
+                setProgramSelectionPending(false)
+
+                onInitialProgramHandled?.()
+              }}
+            />
+          )}
           {page === "apply" && <ApplyPage user={user} />}
           {page === "profile" && <ProfilePage user={user} />}
           {page === "admin" && user.isAdmin && <AdminPage />}
@@ -555,7 +695,7 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
                   />
                 )}
               </button>
-            );
+            )
           })}
         </div>
       </nav>
@@ -566,5 +706,5 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
         />
       )}
     </div>
-  );
+  )
 }
