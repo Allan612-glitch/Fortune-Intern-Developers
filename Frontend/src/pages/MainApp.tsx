@@ -1,32 +1,52 @@
-import { useEffect, useState } from "react";
-import type { AppUser, AppPage } from "../App";
-import logo from "../assets/attach1.png";
-import HomePage from "./HomePage";
-import DashboardPage from "./DashboardPage";
-import ApplicationsPage from "./ApplicationsPage";
-import AnnouncementsPage from "./AnnouncementsPage";
-import ProgramsPage from "./ProgramsPage";
-import ApplyPage from "./ApplyPage";
-import ProfilePage from "./ProfilePage";
-import AdminPage from "./AdminPage";
-import LogoutConfirmationModal from "../components/LogoutConfirmationModal";
+import { useEffect, useState } from "react"
+import { useLocation, useNavigate } from "react-router-dom"
+
+import type { AppUser, AppPage } from "../App"
+
+import logo from "../assets/attach1.png"
+
+import HomePage from "./HomePage"
+
+import DashboardPage from "./DashboardPage"
+
+import ApplicationsPage from "./ApplicationsPage"
+
+import AnnouncementsPage from "./AnnouncementsPage"
+
+import ProgramsPage from "./ProgramsPage"
+
+import ApplyPage from "./ApplyPage"
+
+import ProfilePage from "./ProfilePage"
+
+import AdminPage from "./AdminPage"
+
+import LogoutConfirmationModal from "../components/LogoutConfirmationModal"
+
 import {
   getUnreadNotificationCount,
   listNotifications,
   markAllNotificationsRead,
   markNotificationRead,
   type NotificationItem,
-} from "../services/platform";
+} from "../services/platform"
 
 interface MainAppProps {
-  user: AppUser;
-  onLogout: () => void;
+  user: AppUser
+
+  onLogout: () => void
+
+  initialProgramId?: string | null
+
+  onInitialProgramHandled?: () => void
 }
 
 const navItems = [
   {
     id: "home",
+
     label: "Home",
+
     icon: (
       <path
         strokeLinecap="round"
@@ -36,9 +56,12 @@ const navItems = [
       />
     ),
   },
+
   {
     id: "dashboard",
+
     label: "Dashboard",
+
     icon: (
       <path
         strokeLinecap="round"
@@ -48,9 +71,12 @@ const navItems = [
       />
     ),
   },
+
   {
     id: "programs",
+
     label: "Programs",
+
     icon: (
       <path
         strokeLinecap="round"
@@ -60,9 +86,12 @@ const navItems = [
       />
     ),
   },
+
   {
     id: "apply",
+
     label: "Apply",
+
     icon: (
       <path
         strokeLinecap="round"
@@ -72,9 +101,12 @@ const navItems = [
       />
     ),
   },
+
   {
     id: "profile",
+
     label: "Profile",
+
     icon: (
       <path
         strokeLinecap="round"
@@ -84,60 +116,135 @@ const navItems = [
       />
     ),
   },
-];
+]
 
-export default function MainApp({ user, onLogout }: MainAppProps) {
-  const [page, setPage] = useState<AppPage>("home");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [notifCount, setNotifCount] = useState(0);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [notificationError, setNotificationError] = useState("");
-  const [showLogout, setShowLogout] = useState(false);
+const appPages = new Set<AppPage>([
+  "home",
+  "dashboard",
+  "applications",
+  "announcements",
+  "programs",
+  "apply",
+  "profile",
+  "admin",
+])
+
+export default function MainApp({
+  user,
+
+  onLogout,
+
+  initialProgramId = null,
+
+  onInitialProgramHandled,
+}: MainAppProps) {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const pageSegment = location.pathname.replace(/^\/app\/?/, "").split("/")[0]
+  const page = appPages.has(pageSegment as AppPage)
+    ? pageSegment as AppPage
+    : "home"
+
+  const [programSelectionPending, setProgramSelectionPending] = useState(
+    Boolean(initialProgramId),
+  )
+
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  const [notifCount, setNotifCount] = useState(0)
+
+  const [notifications, setNotifications] = useState<NotificationItem[]>([])
+
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+
+  const [notificationError, setNotificationError] = useState("")
+
+  const [showLogout, setShowLogout] = useState(false)
 
   useEffect(() => {
-    let active = true;
+    if (
+      !appPages.has(pageSegment as AppPage) ||
+      (page === "admin" && !user.isAdmin)
+    ) {
+      navigate("/app/home", { replace: true })
+    }
+  }, [navigate, page, pageSegment, user.isAdmin])
+
+  useEffect(() => {
+    let active = true
+
     Promise.all([listNotifications(), getUnreadNotificationCount()])
+
       .then(([items, unread]) => {
-        if (!active) return;
-        setNotifications(items);
-        setNotifCount(unread.count);
+        if (!active) return
+
+        setNotifications(items)
+
+        setNotifCount(unread.count)
       })
+
       .catch((error) => {
-        if (active) setNotificationError(error instanceof Error ? error.message : "Unable to load notifications.");
-      });
+        if (active)
+          setNotificationError(
+            error instanceof Error
+              ? error.message
+              : "Unable to load notifications.",
+          )
+      })
+
     return () => {
-      active = false;
-    };
-  }, [user.email]);
+      active = false
+    }
+  }, [user.email])
 
   const openNotification = async (notification: NotificationItem) => {
     try {
-      if (!notification.read) await markNotificationRead(notification.id);
-      setNotifications((current) => current.map((item) => item.id === notification.id ? { ...item, read: true } : item));
-      setNotifCount((count) => Math.max(0, count - (notification.read ? 0 : 1)));
-      setNotificationsOpen(false);
-      if (notification.target_type === "application") goTo("applications");
-      else goTo("announcements");
+      if (!notification.read) await markNotificationRead(notification.id)
+
+      setNotifications((current) =>
+        current.map((item) =>
+          item.id === notification.id ? { ...item, read: true } : item,
+        ),
+      )
+
+      setNotifCount((count) => Math.max(0, count - (notification.read ? 0 : 1)))
+
+      setNotificationsOpen(false)
+
+      if (notification.target_type === "application") goTo("applications")
+      else goTo("announcements")
     } catch (error) {
-      setNotificationError(error instanceof Error ? error.message : "Unable to update notification.");
+      setNotificationError(
+        error instanceof Error
+          ? error.message
+          : "Unable to update notification.",
+      )
     }
-  };
+  }
 
   const readAllNotifications = async () => {
     try {
-      await markAllNotificationsRead();
-      setNotifications((current) => current.map((item) => ({ ...item, read: true })));
-      setNotifCount(0);
+      await markAllNotificationsRead()
+
+      setNotifications((current) =>
+        current.map((item) => ({ ...item, read: true })),
+      )
+
+      setNotifCount(0)
     } catch (error) {
-      setNotificationError(error instanceof Error ? error.message : "Unable to update notifications.");
+      setNotificationError(
+        error instanceof Error
+          ? error.message
+          : "Unable to update notifications.",
+      )
     }
-  };
+  }
 
   const goTo = (p: AppPage) => {
-    setPage(p);
-    setSidebarOpen(false);
-  };
+    navigate(`/app/${p}`)
+
+    setSidebarOpen(false)
+  }
 
   return (
     <div className="min-h-screen bg-cream flex flex-col">
@@ -172,6 +279,7 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
               className="font-bold text-sm leading-none"
               style={{
                 color: "#2D3561",
+
                 fontFamily: "Inter, sans-serif",
               }}
             >
@@ -186,51 +294,78 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
 
         <div className="ml-auto flex items-center gap-3">
           <div className="relative">
-          <button
-            onClick={() => setNotificationsOpen((open) => !open)}
-            className="relative p-2 rounded-lg hover:bg-muted transition-colors"
-            aria-label={`Notifications${notifCount ? `, ${notifCount} unread` : ""}`}
-            aria-expanded={notificationsOpen}
-          >
-            <svg
-              className="w-5 h-5 text-foreground"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+            <button
+              onClick={() => setNotificationsOpen((open) => !open)}
+              className="relative p-2 rounded-lg hover:bg-muted transition-colors"
+              aria-label={`Notifications${
+                notifCount ? `, ${notifCount} unread` : ""
+              }`}
+              aria-expanded={notificationsOpen}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.8}
-                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-              />
-            </svg>
-            {notifCount > 0 && (
-              <span
-                className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full text-white text-[9px] font-bold flex items-center justify-center"
-                style={{ background: "#F5B731", color: "#1a1f3a" }}
+              <svg
+                className="w-5 h-5 text-foreground"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                {notifCount}
-              </span>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.8}
+                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                />
+              </svg>
+              {notifCount > 0 && (
+                <span
+                  className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full text-white text-[9px] font-bold flex items-center justify-center"
+                  style={{ background: "#F5B731", color: "#1a1f3a" }}
+                >
+                  {notifCount}
+                </span>
+              )}
+            </button>
+            {notificationsOpen && (
+              <div className="absolute right-0 top-full mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-border bg-white shadow-xl z-50">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                  <h2 className="text-sm font-semibold">Notifications</h2>
+                  {notifCount > 0 && (
+                    <button
+                      onClick={() => void readAllNotifications()}
+                      className="text-xs font-semibold text-primary"
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+                {notificationError && (
+                  <p className="px-4 py-2 text-xs text-red-600" role="alert">
+                    {notificationError}
+                  </p>
+                )}
+                <div className="max-h-80 overflow-y-auto">
+                  {notifications.length ? (
+                    notifications.slice(0, 8).map((notification) => (
+                      <button
+                        key={notification.id}
+                        onClick={() => void openNotification(notification)}
+                        className={`w-full text-left px-4 py-3 border-b border-border last:border-0 hover:bg-muted/40 ${
+                          notification.read ? "" : "bg-secondary/40"
+                        }`}
+                      >
+                        <p className="text-sm">{notification.message}</p>
+                        <time className="block mt-1 text-[11px] text-muted-foreground">
+                          {new Date(notification.created_at).toLocaleString()}
+                        </time>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="px-4 py-6 text-sm text-muted-foreground">
+                      No notifications yet.
+                    </p>
+                  )}
+                </div>
+              </div>
             )}
-          </button>
-          {notificationsOpen && (
-            <div className="absolute right-0 top-full mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-border bg-white shadow-xl z-50">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-                <h2 className="text-sm font-semibold">Notifications</h2>
-                {notifCount > 0 && <button onClick={() => void readAllNotifications()} className="text-xs font-semibold text-primary">Mark all read</button>}
-              </div>
-              {notificationError && <p className="px-4 py-2 text-xs text-red-600" role="alert">{notificationError}</p>}
-              <div className="max-h-80 overflow-y-auto">
-                {notifications.length ? notifications.slice(0, 8).map((notification) => (
-                  <button key={notification.id} onClick={() => void openNotification(notification)} className={`w-full text-left px-4 py-3 border-b border-border last:border-0 hover:bg-muted/40 ${notification.read ? "" : "bg-secondary/40"}`}>
-                    <p className="text-sm">{notification.message}</p>
-                    <time className="block mt-1 text-[11px] text-muted-foreground">{new Date(notification.created_at).toLocaleString()}</time>
-                  </button>
-                )) : <p className="px-4 py-6 text-sm text-muted-foreground">No notifications yet.</p>}
-              </div>
-            </div>
-          )}
           </div>
           <button
             onClick={() => goTo("profile")}
@@ -246,12 +381,17 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
       <aside className="hidden lg:flex fixed top-14 left-0 bottom-0 w-56 bg-white border-r border-border flex-col z-30">
         <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
           {navItems.map((item) => {
-            const active = page === item.id;
+            const active = page === item.id
+
             return (
               <button
                 key={item.id}
                 onClick={() => goTo(item.id as AppPage)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${active ? "text-white shadow-sm" : "text-foreground hover:bg-secondary"}`}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  active
+                    ? "text-white shadow-sm"
+                    : "text-foreground hover:bg-secondary"
+                }`}
                 style={
                   active
                     ? {
@@ -270,12 +410,16 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
                 </svg>
                 {item.label}
               </button>
-            );
+            )
           })}
           {user.isAdmin && (
             <button
               onClick={() => goTo("admin")}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${page === "admin" ? "text-white shadow-sm" : "text-red-600 hover:bg-red-50"}`}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                page === "admin"
+                  ? "text-white shadow-sm"
+                  : "text-red-600 hover:bg-red-50"
+              }`}
               style={
                 page === "admin"
                   ? { background: "linear-gradient(135deg, #dc2626, #b91c1c)" }
@@ -343,6 +487,7 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
                     className="font-bold text-sm"
                     style={{
                       color: "#2D3561",
+
                       fontFamily: "Inter, sans-serif",
                     }}
                   >
@@ -393,12 +538,17 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
 
             <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
               {navItems.map((item) => {
-                const active = page === item.id;
+                const active = page === item.id
+
                 return (
                   <button
                     key={item.id}
                     onClick={() => goTo(item.id as AppPage)}
-                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${active ? "text-white" : "text-foreground hover:bg-secondary"}`}
+                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${
+                      active
+                        ? "text-white"
+                        : "text-foreground hover:bg-secondary"
+                    }`}
                     style={
                       active
                         ? {
@@ -418,12 +568,16 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
                     </svg>
                     {item.label}
                   </button>
-                );
+                )
               })}
               {user.isAdmin && (
                 <button
                   onClick={() => goTo("admin")}
-                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${page === "admin" ? "text-white" : "text-red-600 hover:bg-red-50"}`}
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${
+                    page === "admin"
+                      ? "text-white"
+                      : "text-red-600 hover:bg-red-50"
+                  }`}
                   style={
                     page === "admin"
                       ? {
@@ -488,7 +642,19 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
           )}
           {page === "applications" && <ApplicationsPage email={user.email} />}
           {page === "announcements" && <AnnouncementsPage user={user} />}
-          {page === "programs" && <ProgramsPage setPage={goTo} user={user} />}
+          {page === "programs" && (
+            <ProgramsPage
+              user={user}
+              initialSelectedProgramId={
+                programSelectionPending ? initialProgramId : null
+              }
+              onInitialSelectionHandled={() => {
+                setProgramSelectionPending(false)
+
+                onInitialProgramHandled?.()
+              }}
+            />
+          )}
           {page === "apply" && <ApplyPage user={user} />}
           {page === "profile" && <ProfilePage user={user} />}
           {page === "admin" && user.isAdmin && <AdminPage />}
@@ -502,7 +668,8 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
       >
         <div className="flex items-center">
           {navItems.map((item) => {
-            const active = page === item.id;
+            const active = page === item.id
+
             return (
               <button
                 key={item.id}
@@ -531,7 +698,7 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
                   />
                 )}
               </button>
-            );
+            )
           })}
         </div>
       </nav>
@@ -542,5 +709,5 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
         />
       )}
     </div>
-  );
+  )
 }

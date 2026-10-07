@@ -1,147 +1,248 @@
-import { useState } from "react";
-import logo from "../assets/attach1.png";
+import { useEffect, useMemo, useRef, useState } from "react"
+
+import logo from "../assets/attach1.png"
+
+import { listPrograms, type Program } from "../services/platform"
 
 interface LandingPageProps {
-  onStudentPortal: (mode?: "login" | "register") => void;
+  onStudentPortal: (mode?: "login" | "register") => void
+
+  onApplyToProgram: (programId: string) => void
 }
 
 const heroImage =
-  "https://images.unsplash.com/photo-1620829813573-7c9e1877706f?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=85&w=1200";
+  "https://images.unsplash.com/photo-1620829813573-7c9e1877706f?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=85&w=1200"
+
 const studentImage =
-  "https://images.unsplash.com/photo-1620829813947-ef4246827355?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=85&w=900";
+  "https://images.unsplash.com/photo-1620829813947-ef4246827355?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=85&w=900"
 
 const navLinks = [
   ["Home", "home"],
-  ["Internships", "internships"],
-  ["How It Works", "how-it-works"],
-  ["About Us", "about"],
-];
 
-const categories = [
-  "Technology",
-  "Business",
-  "Finance",
-  "Marketing",
-  "Engineering",
-  "Healthcare",
-  "Design",
-  "Data",
-];
+  ["Internships", "internships"],
+
+  ["How It Works", "how-it-works"],
+
+  ["About Us", "about"],
+]
 
 const benefits = [
   {
     title: "Discover",
+
     text: "Explore quality internship opportunities from trusted companies and organizations.",
+
     icon: "search",
   },
+
   {
     title: "Apply",
+
     text: "Submit stronger applications through one simple, organized process.",
+
     icon: "send",
   },
+
   {
     title: "Track",
+
     text: "Follow each application and stay updated as your opportunity progresses.",
+
     icon: "chart",
   },
+
   {
     title: "Grow",
+
     text: "Build experience, develop practical skills, and expand your professional network.",
+
     icon: "growth",
   },
-];
+]
 
 const steps = [
   {
     number: "01",
+
     title: "Create Your Profile",
+
     text: "Showcase your skills, education, interests, and the type of career you want to build.",
   },
+
   {
     number: "02",
+
     title: "Discover & Apply",
+
     text: "Find opportunities aligned with your goals and submit a professional application.",
   },
+
   {
     number: "03",
+
     title: "Start Your Journey",
+
     text: "Connect with organizations, gain experience, and take your next confident step.",
   },
-];
-
-const opportunities = [
-  {
-    initials: "TC",
-    title: "Frontend Developer Intern",
-    company: "Technology Company",
-    location: "Accra, Ghana",
-    type: "Hybrid",
-    posted: "Posted 2 days ago",
-    deadline: "Deadline: 28 Oct",
-    color: "bg-indigo-100 text-indigo-700",
-  },
-  {
-    initials: "DM",
-    title: "Marketing Intern",
-    company: "Digital Marketing Agency",
-    location: "Kumasi, Ghana",
-    type: "On-site",
-    posted: "Posted 1 day ago",
-    deadline: "Deadline: 02 Nov",
-    color: "bg-emerald-100 text-emerald-700",
-  },
-  {
-    initials: "FS",
-    title: "Data Analyst Intern",
-    company: "Financial Services Company",
-    location: "Accra, Ghana",
-    type: "Hybrid",
-    posted: "Posted 4 hours ago",
-    deadline: "Deadline: 05 Nov",
-    color: "bg-sky-100 text-sky-700",
-  },
-];
+]
 
 const testimonials = [
   {
     quote:
       "Fortune Intern Network made it easier for me to discover internship opportunities related to my field.",
+
     name: "Ama Mensah",
+
     school: "University of Ghana",
+
     field: "Business Administration",
+
     initials: "AM",
   },
+
   {
     quote:
       "The organized application process helped me feel more confident when reaching out to companies.",
+
     name: "Kwame Owusu",
+
     school: "KNUST",
+
     field: "Computer Engineering",
+
     initials: "KO",
   },
+
   {
     quote:
       "I finally had one place to find relevant roles and understand the progress of every application.",
+
     name: "Naa Adjeley",
+
     school: "Ashesi University",
+
     field: "Management Information Systems",
+
     initials: "NA",
   },
-];
+]
 
-export default function LandingPage({ onStudentPortal }: LandingPageProps) {
-  const [mobileMenu, setMobileMenu] = useState(false);
-  const [search, setSearch] = useState("");
+export default function LandingPage({
+  onStudentPortal,
+
+  onApplyToProgram,
+}: LandingPageProps) {
+  const [mobileMenu, setMobileMenu] = useState(false)
+
+  const [search, setSearch] = useState("")
+
+  const [category, setCategory] = useState("")
+
+  const [location, setLocation] = useState("")
+
+  const [programs, setPrograms] = useState<Program[]>([])
+
+  const [programsLoading, setProgramsLoading] = useState(true)
+
+  const [programsError, setProgramsError] = useState("")
+
+  const [retryCount, setRetryCount] = useState(0)
+
+  const [selectedProgram, setSelectedProgram] = useState<Program | null>(null)
+
+  const detailsTriggerRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    let active = true
+
+    setProgramsLoading(true)
+
+    setProgramsError("")
+
+    listPrograms()
+
+      .then((items) => {
+        if (active) setPrograms(items)
+      })
+
+      .catch((requestError) => {
+        if (active) {
+          setProgramsError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Unable to load internship opportunities.",
+          )
+        }
+      })
+
+      .finally(() => {
+        if (active) setProgramsLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [retryCount])
+
+  const availableCategories = useMemo(
+    () =>
+      [...new Set(programs.map((program) => program.category).filter(Boolean))]
+
+        .sort((a, b) => a.localeCompare(b)),
+
+    [programs],
+  )
+
+  const availableLocations = useMemo(
+    () =>
+      [...new Set(programs.map((program) => program.location).filter(Boolean))]
+
+        .sort((a, b) => a.localeCompare(b)),
+
+    [programs],
+  )
+
+  const visiblePrograms = useMemo(() => {
+    const query = search.trim().toLowerCase()
+
+    return programs.filter((program) => {
+      const matchesSearch =
+        !query ||
+        [
+          program.name,
+
+          program.company,
+
+          program.description,
+
+          program.category,
+
+          program.location,
+
+          program.duration,
+
+          ...program.skills,
+        ].some((value) => value.toLowerCase().includes(query))
+
+      return (
+        matchesSearch &&
+        (!category || program.category === category) &&
+        (!location || program.location === location)
+      )
+    })
+  }, [programs, search, category, location])
 
   const startSearch = (event: React.FormEvent) => {
-    event.preventDefault();
-    onStudentPortal("login");
-  };
+    event.preventDefault()
+
+    goTo("opportunities")
+  }
 
   const goTo = (id: string) => {
-    setMobileMenu(false);
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-  };
+    setMobileMenu(false)
+
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" })
+  }
 
   return (
     <div id="home" className="min-h-screen bg-white text-foreground">
@@ -244,7 +345,7 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
               </p>
               <div className="flex flex-col sm:flex-row gap-3 mt-8">
                 <button
-                  onClick={() => onStudentPortal("login")}
+                  onClick={() => goTo("internships")}
                   className="px-6 py-3.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-all shadow-lg shadow-primary/15 flex items-center justify-center gap-2"
                 >
                   Find an Internship <Icon name="arrow" className="w-4 h-4" />
@@ -317,17 +418,16 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
               <SearchSelect
                 icon="pin"
                 label="Location"
-                options={[
-                  "Accra, Ghana",
-                  "Kumasi, Ghana",
-                  "Remote",
-                  "All locations",
-                ]}
+                value={location}
+                onChange={setLocation}
+                options={availableLocations}
               />
               <SearchSelect
                 icon="briefcase"
-                label="Internship type"
-                options={["Hybrid", "On-site", "Remote", "All types"]}
+                label="Field"
+                value={category}
+                onChange={setCategory}
+                options={availableCategories}
               />
               <button
                 type="submit"
@@ -337,13 +437,19 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
               </button>
             </form>
             <div className="flex flex-wrap justify-center gap-2 mt-5">
-              {categories.map((category) => (
+              {["", ...availableCategories].map((item) => (
                 <button
-                  key={category}
-                  onClick={() => onStudentPortal("login")}
-                  className="px-3.5 py-2 rounded-full bg-secondary text-primary text-xs font-semibold hover:bg-emerald-50 hover:text-emerald-800 transition-colors"
+                  key={item || "all"}
+                  type="button"
+                  onClick={() => setCategory(item)}
+                  aria-pressed={category === item}
+                  className={`min-h-10 px-3.5 py-2 rounded-full text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                    category === item
+                      ? "bg-primary text-white"
+                      : "bg-secondary text-primary hover:bg-emerald-50 hover:text-emerald-800"
+                  }`}
                 >
-                  {category}
+                  {item || "All fields"}
                 </button>
               ))}
             </div>
@@ -404,70 +510,176 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
           </div>
         </section>
 
-        <section className="section-space bg-white">
+        <section id="opportunities" className="section-space bg-white">
           <div className="landing-container">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
               <SectionHeading
                 align="left"
-                eyebrow="Curated for you"
+                eyebrow="Browse as a guest"
                 title="Explore Internship Opportunities"
-                text="Build practical experience with organizations looking for emerging talent."
+                text="Review current opportunities and their available details before deciding to apply."
               />
               <button
-                onClick={() => onStudentPortal("login")}
+                onClick={() => goTo("internships")}
                 className="text-sm font-bold text-primary hover:text-emerald-700 flex items-center gap-2 whitespace-nowrap"
               >
-                View All Internships <Icon name="arrow" className="w-4 h-4" />
+                Search opportunities <Icon name="arrow" className="w-4 h-4" />
               </button>
             </div>
-            <div className="grid md:grid-cols-3 gap-5 mt-10">
-              {opportunities.map((job) => (
-                <article
-                  key={job.title}
-                  className="rounded-2xl border border-border p-5 bg-white hover-lift"
+            <div className="mt-5 flex items-center justify-between gap-4">
+              <p
+                className="text-sm text-muted-foreground"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                {programsLoading
+                  ? "Loading current opportunities..."
+                  : `${visiblePrograms.length} ${
+                      visiblePrograms.length === 1
+                        ? "opportunity"
+                        : "opportunities"
+                    } found`}
+              </p>
+              {(search || category || location) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch("")
+
+                    setCategory("")
+
+                    setLocation("")
+                  }}
+                  className="text-sm font-semibold text-primary underline underline-offset-2"
                 >
-                  <div className="flex items-start justify-between">
-                    <span
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center text-xs font-bold ${job.color}`}
-                    >
-                      {job.initials}
-                    </span>
-                    <button
-                      aria-label="Save opportunity"
-                      className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-primary"
-                    >
-                      <Icon name="bookmark" className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <h3 className="font-semibold text-base text-primary mt-5">
-                    {job.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {job.company}
-                  </p>
-                  <div className="flex flex-wrap gap-2 mt-4">
-                    <span className="job-chip">
-                      <Icon name="pin" className="w-3.5 h-3.5" />
-                      {job.location}
-                    </span>
-                    <span className="job-chip">
-                      <Icon name="briefcase" className="w-3.5 h-3.5" />
-                      {job.type}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-[10px] text-muted-foreground mt-5 pt-4 border-t border-border">
-                    <span>{job.posted}</span>
-                    <span>{job.deadline}</span>
-                  </div>
-                  <button
-                    onClick={() => onStudentPortal("login")}
-                    className="w-full mt-4 py-2.5 rounded-xl bg-secondary text-primary text-xs font-bold hover:bg-primary hover:text-white transition-colors"
-                  >
-                    View Opportunity
-                  </button>
-                </article>
-              ))}
+                  Clear filters
+                </button>
+              )}
             </div>
+            {programsError && (
+              <div
+                className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4"
+                role="alert"
+              >
+                <p className="text-sm text-red-800">{programsError}</p>
+                <button
+                  type="button"
+                  onClick={() => setRetryCount((count) => count + 1)}
+                  className="mt-3 rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-800 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700"
+                >
+                  Retry loading opportunities
+                </button>
+              </div>
+            )}
+            {programsLoading && (
+              <div
+                className="mt-6 grid md:grid-cols-2 xl:grid-cols-3 gap-5"
+                aria-label="Loading opportunities"
+                aria-live="polite"
+              >
+                <OpportunitySkeleton />
+                <OpportunitySkeleton />
+                <OpportunitySkeleton />
+              </div>
+            )}
+            {!programsLoading &&
+              !programsError &&
+              visiblePrograms.length === 0 && (
+                <div className="mt-6 rounded-2xl border border-border bg-surface p-8 text-center">
+                  <h3 className="font-semibold text-primary">
+                    No matching opportunities
+                  </h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Try another search term or clear your filters to see all
+                    current programs.
+                  </p>
+                  {(search || category || location) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearch("")
+
+                        setCategory("")
+
+                        setLocation("")
+                      }}
+                      className="mt-4 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                    >
+                      Show all opportunities
+                    </button>
+                  )}
+                </div>
+              )}
+            {!programsLoading &&
+              !programsError &&
+              visiblePrograms.length > 0 && (
+                <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5 mt-6">
+                  {visiblePrograms.map((program) => (
+                    <article
+                      key={program.id}
+                      className="rounded-2xl border border-border p-5 bg-white hover-lift"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className="w-11 h-11 rounded-xl bg-secondary text-primary flex items-center justify-center text-xs font-bold"
+                          aria-hidden="true"
+                        >
+                          {program.company
+
+                            .split(/\s+/)
+
+                            .map((part) => part[0])
+
+                            .join("")
+
+                            .slice(0, 2)
+
+                            .toUpperCase()}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                            {program.category}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {program.company}
+                          </p>
+                        </div>
+                      </div>
+                      <h3 className="font-semibold text-base text-primary mt-5">
+                        {program.name}
+                      </h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {program.location || "Location not specified"}
+                      </p>
+                      <div className="flex flex-wrap gap-2 mt-4">
+                        {program.duration && (
+                          <span className="job-chip">
+                            <Icon name="briefcase" className="w-3.5 h-3.5" />
+                            {program.duration}
+                          </span>
+                        )}
+                      </div>
+                      {program.deadline && (
+                        <p className="mt-4 text-xs text-muted-foreground">
+                          Apply by{" "}
+                          {new Date(program.deadline).toLocaleDateString()}
+                        </p>
+                      )}
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          detailsTriggerRef.current = event.currentTarget
+
+                          setSelectedProgram(program)
+                        }}
+                        className="w-full mt-4 min-h-11 py-2.5 rounded-xl bg-secondary text-primary text-sm font-bold hover:bg-primary hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                      >
+                        View details
+                      </button>
+                    </article>
+                  ))}
+                </div>
+              )}
           </div>
         </section>
 
@@ -496,16 +708,20 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
                 Your First Opportunity Can Change Your Future.
               </h2>
               <p className="section-copy">
-                Whether you're looking for your first internship, building your
+                Whether you&apos;re looking for your first internship, building your
                 CV, or gaining experience in your field, FIN helps you discover
                 opportunities designed to move your career forward.
               </p>
               <ul className="grid sm:grid-cols-2 gap-3 mt-6">
                 {[
                   "Discover relevant internships",
+
                   "Build your professional profile",
+
                   "Track your applications",
+
                   "Gain real-world experience",
+
                   "Connect with organizations",
                 ].map((item) => (
                   <li
@@ -533,8 +749,11 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
           <div className="landing-container py-9 grid grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               ["500+", "Internship Opportunities"],
+
               ["1,000+", "Students Connected"],
+
               ["100+", "Companies"],
+
               ["20+", "Career Fields"],
             ].map(([value, label]) => (
               <div
@@ -598,7 +817,7 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-3 mt-8">
               <button
-                onClick={() => onStudentPortal("login")}
+                onClick={() => goTo("internships")}
                 className="px-6 py-3.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors"
               >
                 Find an Internship
@@ -638,8 +857,11 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
             title="Platform"
             links={[
               "Find Internships",
+
               "How It Works",
+
               "Application Tracking",
+
               "Student Dashboard",
             ]}
           />
@@ -648,8 +870,11 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
               title="Company"
               links={[
                 "About Us",
+
                 "Contact",
+
                 "Privacy Policy",
+
                 "Terms of Service",
               ]}
             />
@@ -703,20 +928,43 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
           </div>
         </div>
       </footer>
+      {selectedProgram && (
+        <OpportunityDetailsDialog
+          program={selectedProgram}
+          onClose={() => {
+            setSelectedProgram(null)
+
+            window.requestAnimationFrame(() =>
+              detailsTriggerRef.current?.focus(),
+            )
+          }}
+          onApply={(programId) => {
+            setSelectedProgram(null)
+
+            onApplyToProgram(programId)
+          }}
+        />
+      )}
     </div>
-  );
+  )
 }
 
 function SectionHeading({
   eyebrow,
+
   title,
+
   text,
+
   align = "center",
 }: {
-  eyebrow: string;
-  title: string;
-  text: string;
-  align?: "left" | "center";
+  eyebrow: string
+
+  title: string
+
+  text: string
+
+  align?: "left" | "center"
 }) {
   return (
     <div
@@ -728,19 +976,25 @@ function SectionHeading({
       <h2 className="section-title">{title}</h2>
       <p className="section-copy">{text}</p>
     </div>
-  );
+  )
 }
 
 function FloatingRole({
   className,
+
   title,
+
   company,
+
   icon,
 }: {
-  className: string;
-  title: string;
-  company: string;
-  icon: string;
+  className: string
+
+  title: string
+
+  company: string
+
+  icon: string
 }) {
   return (
     <div
@@ -754,41 +1008,60 @@ function FloatingRole({
         <p className="text-[10px] text-muted-foreground mt-0.5">{company}</p>
       </div>
     </div>
-  );
+  )
 }
 
 function SearchField({
   icon,
+
   value,
+
   onChange,
+
   placeholder,
 }: {
-  icon: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
+  icon: string
+
+  value: string
+
+  onChange: (value: string) => void
+
+  placeholder: string
 }) {
   return (
     <label className="flex items-center gap-3 bg-white rounded-xl px-4 py-3">
       <Icon name={icon} className="w-4 h-4 text-muted-foreground" />
       <input
+        aria-label="Search internship opportunities"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="w-full text-sm outline-none bg-transparent"
+        className="w-full text-sm outline-none bg-transparent focus-visible:ring-2 focus-visible:ring-primary"
       />
     </label>
-  );
+  )
 }
 
 function SearchSelect({
   icon,
+
   label,
+
+  value,
+
+  onChange,
+
   options,
 }: {
-  icon: string;
-  label: string;
-  options: string[];
+  icon: string
+
+  label: string
+
+  value: string
+
+  onChange: (value: string) => void
+
+  options: string[]
 }) {
   return (
     <label className="flex items-center gap-2 bg-white rounded-xl px-3">
@@ -798,21 +1071,202 @@ function SearchSelect({
       />
       <select
         aria-label={label}
-        defaultValue=""
-        className="w-full py-3 text-sm bg-transparent outline-none text-muted-foreground"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full py-3 text-sm bg-transparent outline-none text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary"
       >
-        <option value="" disabled>
-          {label}
+        <option value="">
+          {label === "Location" ? "All locations" : "All fields"}
         </option>
         {options.map((option) => (
           <option key={option}>{option}</option>
         ))}
       </select>
     </label>
-  );
+  )
 }
 
-function FooterColumn({ title, links }: { title: string; links: string[] }) {
+function OpportunitySkeleton() {
+  return (
+    <div className="rounded-2xl border border-border p-5" aria-hidden="true">
+      <div className="motion-safe:animate-pulse">
+        <div className="flex items-center gap-3">
+          <div className="h-11 w-11 rounded-xl bg-muted" />
+          <div className="flex-1 space-y-2">
+            <div className="h-3 w-1/3 rounded bg-muted" />
+            <div className="h-3 w-1/2 rounded bg-muted" />
+          </div>
+        </div>
+        <div className="mt-5 h-4 w-4/5 rounded bg-muted" />
+        <div className="mt-3 h-3 w-2/3 rounded bg-muted" />
+        <div className="mt-5 h-11 w-full rounded-xl bg-muted" />
+      </div>
+    </div>
+  )
+}
+
+function OpportunityDetailsDialog({
+  program,
+
+  onClose,
+
+  onApply,
+}: {
+  program: Program
+
+  onClose: () => void
+
+  onApply: (programId: string) => void
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null)
+
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+
+  const suppressedCloseEventsRef = useRef(0)
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+
+    if (!dialog) return
+
+    if (!dialog.open) dialog.showModal()
+
+    closeButtonRef.current?.focus()
+
+    return () => {
+      if (dialog.open) {
+        suppressedCloseEventsRef.current += 1
+
+        dialog.close()
+      }
+    }
+  }, [])
+
+  return (
+    <dialog
+      ref={dialogRef}
+      aria-labelledby="opportunity-dialog-title"
+      onClose={() => {
+        if (suppressedCloseEventsRef.current > 0) {
+          suppressedCloseEventsRef.current -= 1
+
+          return
+        }
+
+        onClose()
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) dialogRef.current?.close()
+      }}
+      className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-2xl border-0 bg-white p-0 text-foreground shadow-2xl backdrop:bg-black/60"
+    >
+      <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-border bg-white p-5 sm:p-6">
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">
+            {program.category}
+          </p>
+          <h2
+            id="opportunity-dialog-title"
+            className="mt-2 text-xl font-bold text-primary sm:text-2xl"
+          >
+            {program.name}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {program.company} · {program.location || "Location not specified"}
+          </p>
+        </div>
+        <button
+          ref={closeButtonRef}
+          type="button"
+          onClick={() => dialogRef.current?.close()}
+          aria-label="Close opportunity details"
+          className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-xl text-muted-foreground hover:bg-secondary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          ×
+        </button>
+      </div>
+      <div className="space-y-5 p-5 sm:p-6">
+        <div className="grid grid-cols-2 gap-3">
+          <ProgramFact
+            label="Duration"
+            value={program.duration || "Not specified"}
+          />
+          <ProgramFact
+            label="Deadline"
+            value={
+              program.deadline
+                ? new Date(program.deadline).toLocaleDateString()
+                : "Not specified"
+            }
+          />
+        </div>
+        {program.skills.length > 0 && (
+          <section aria-labelledby="opportunity-skills-title">
+            <h3 id="opportunity-skills-title" className="font-semibold">
+              Skills
+            </h3>
+            <ul className="mt-2 flex flex-wrap gap-2">
+              {program.skills.map((skill) => (
+                <li
+                  key={skill}
+                  className="rounded-full bg-secondary px-3 py-1.5 text-xs font-medium text-primary"
+                >
+                  {skill}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        <section aria-labelledby="opportunity-description-title">
+          <h3 id="opportunity-description-title" className="font-semibold">
+            About this opportunity
+          </h3>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+            {program.description ||
+              "No description has been provided for this opportunity."}
+          </p>
+        </section>
+        <div className="flex flex-col-reverse gap-3 border-t border-border pt-5 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={() => dialogRef.current?.close()}
+            className="min-h-11 rounded-xl border border-border px-5 py-3 text-sm font-semibold text-foreground hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            Keep browsing
+          </button>
+          <button
+            type="button"
+            onClick={() => onApply(program.id)}
+            className="min-h-11 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          >
+            Apply for this opportunity
+          </button>
+        </div>
+      </div>
+    </dialog>
+  )
+}
+
+interface ProgramFactProps {
+  label: string
+  value: string
+}
+
+function ProgramFact({ label, value }: ProgramFactProps) {
+  return (
+    <div className="rounded-xl bg-surface p-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-foreground">{value}</p>
+    </div>
+  )
+}
+
+interface FooterColumnProps {
+  title: string
+  links: string[]
+}
+
+function FooterColumn({ title, links }: FooterColumnProps) {
   return (
     <div>
       <p className="text-sm font-bold">{title}</p>
@@ -827,10 +1281,15 @@ function FooterColumn({ title, links }: { title: string; links: string[] }) {
         ))}
       </div>
     </div>
-  );
+  )
 }
 
-function Icon({ name, className }: { name: string; className: string }) {
+interface IconProps {
+  name: string
+  className: string
+}
+
+function Icon({ name, className }: IconProps) {
   const paths: Record<string, React.ReactNode> = {
     menu: (
       <path
@@ -840,6 +1299,7 @@ function Icon({ name, className }: { name: string; className: string }) {
         d="M4 7h16M4 12h16M4 17h16"
       />
     ),
+
     close: (
       <path
         strokeLinecap="round"
@@ -848,6 +1308,7 @@ function Icon({ name, className }: { name: string; className: string }) {
         d="M6 6l12 12M18 6L6 18"
       />
     ),
+
     arrow: (
       <path
         strokeLinecap="round"
@@ -856,6 +1317,7 @@ function Icon({ name, className }: { name: string; className: string }) {
         d="M5 12h14m-5-5l5 5-5 5"
       />
     ),
+
     check: (
       <path
         strokeLinecap="round"
@@ -864,6 +1326,7 @@ function Icon({ name, className }: { name: string; className: string }) {
         d="M5 13l4 4L19 7"
       />
     ),
+
     search: (
       <path
         strokeLinecap="round"
@@ -872,6 +1335,7 @@ function Icon({ name, className }: { name: string; className: string }) {
         d="M21 21l-4.35-4.35m2.35-5.65a8 8 0 11-16 0 8 8 0 0116 0z"
       />
     ),
+
     send: (
       <path
         strokeLinecap="round"
@@ -880,6 +1344,7 @@ function Icon({ name, className }: { name: string; className: string }) {
         d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"
       />
     ),
+
     chart: (
       <path
         strokeLinecap="round"
@@ -888,6 +1353,7 @@ function Icon({ name, className }: { name: string; className: string }) {
         d="M4 19V9m6 10V5m6 14v-7m4 7H2"
       />
     ),
+
     growth: (
       <path
         strokeLinecap="round"
@@ -896,6 +1362,7 @@ function Icon({ name, className }: { name: string; className: string }) {
         d="M3 17l6-6 4 4 8-9m-5 0h5v5"
       />
     ),
+
     pin: (
       <path
         strokeLinecap="round"
@@ -904,6 +1371,7 @@ function Icon({ name, className }: { name: string; className: string }) {
         d="M12 21s7-6.2 7-12a7 7 0 10-14 0c0 5.8 7 12 7 12zM12 11.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"
       />
     ),
+
     briefcase: (
       <path
         strokeLinecap="round"
@@ -912,6 +1380,7 @@ function Icon({ name, className }: { name: string; className: string }) {
         d="M9 6V4h6v2m-12 5h18m-16-5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z"
       />
     ),
+
     code: (
       <path
         strokeLinecap="round"
@@ -920,6 +1389,7 @@ function Icon({ name, className }: { name: string; className: string }) {
         d="M8 9l-3 3 3 3m8-6l3 3-3 3m-2-9l-4 12"
       />
     ),
+
     bookmark: (
       <path
         strokeLinecap="round"
@@ -928,6 +1398,7 @@ function Icon({ name, className }: { name: string; className: string }) {
         d="M6 4a2 2 0 012-2h8a2 2 0 012 2v18l-6-4-6 4V4z"
       />
     ),
+
     linkedin: (
       <path
         strokeLinecap="round"
@@ -936,6 +1407,7 @@ function Icon({ name, className }: { name: string; className: string }) {
         d="M6 9v9m0-13v.01M10 18v-5a3 3 0 016 0v5m-6-5a3 3 0 016 0m0 0v5M3 3h18v18H3V3z"
       />
     ),
+
     whatsapp: (
       <path
         strokeLinecap="round"
@@ -944,6 +1416,7 @@ function Icon({ name, className }: { name: string; className: string }) {
         d="M20 11.5a8 8 0 01-11.8 7L4 20l1.5-4.1A8 8 0 1120 11.5zm-5.2 2.2c-.2.5-.8.8-1.3.6-2.2-.8-3.7-2.1-4.6-4.2-.2-.5 0-1.1.5-1.4l.6-.3.8 1.4-.5.5c.5.9 1.1 1.5 2 2l.5-.5 1.5.7.5.6z"
       />
     ),
+
     x: (
       <path
         strokeLinecap="round"
@@ -952,7 +1425,8 @@ function Icon({ name, className }: { name: string; className: string }) {
         d="M5 4l14 16M19 4L5 20"
       />
     ),
-  };
+  }
+
   return (
     <svg
       className={className}
@@ -963,5 +1437,5 @@ function Icon({ name, className }: { name: string; className: string }) {
     >
       {paths[name]}
     </svg>
-  );
+  )
 }

@@ -33,7 +33,7 @@ export default function ApplyPage({ user }: { user: AppUser }) {
           Apply for an Internship
         </h1>
         <p className="text-sm text-muted-foreground">
-          Fill out one form — we'll contact the company on your behalf.
+          Fill out one form — we&apos;ll contact the company on your behalf.
         </p>
       </div>
 
