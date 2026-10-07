@@ -1,7 +1,8 @@
 export default function Terms() {
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p>Terms &amp; Conditions — coming soon.</p>
-    </div>
+   
+            <div className="text-center text-lg font-semibold min-h-screen flex items-center justify-center">
+               Terms & Conditions - Coming Soon!
+            </div>
   );
 }

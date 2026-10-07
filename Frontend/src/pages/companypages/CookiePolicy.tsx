@@ -1,7 +1,8 @@
 export default function CookiePolicy() {
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p>Cookie Policy — coming soon.</p>
-    </div>
+    
+            <div className="text-center text-lg font-semibold min-h-screen flex items-center justify-center">
+               Cookie Policy - Coming Soon!
+            </div>
   );
 }

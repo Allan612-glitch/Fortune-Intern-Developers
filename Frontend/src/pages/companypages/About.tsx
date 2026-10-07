@@ -1,7 +1,9 @@
 export default function About() {
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p>About Us — coming soon.</p>
-    </div>
+
+            <div className="text-center text-lg font-semibold min-h-screen flex items-center justify-center">
+               About Page - Coming Soon!
+            </div>
+
   );
 }
