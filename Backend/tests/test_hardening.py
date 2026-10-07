@@ -1,11 +1,13 @@
 import asyncio
 import unittest
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, Mock, patch
 
-from fastapi import HTTPException
+from fastapi import BackgroundTasks, HTTPException
 from sqlalchemy import create_engine
 from sqlmodel import Session
 
+from Backend.api.routes.applications import create_application
 from Backend.core.rate_limit import enforce_rate_limit
 from Backend.core.uploads import read_validated_document
 from Database.models import rate_limit_bucket
@@ -78,6 +80,33 @@ class TestPersistentRateLimit(unittest.TestCase):
                 )
             self.assertEqual(raised.exception.status_code, 429)
             self.assertIn("Retry-After", raised.exception.headers)
+
+
+class TestApplicationProgramSelection(unittest.TestCase):
+    def test_unknown_program_name_does_not_create_public_catalog_entry(self):
+        account = SimpleNamespace(
+            id="6ee34857-1454-4905-8fa9-fc99e866923d",
+            name="Test Student",
+            email="student@example.test",
+        )
+        session = Mock()
+        session.exec.return_value.first.return_value = None
+        request = SimpleNamespace(
+            headers={"content-type": "application/json"},
+            client=SimpleNamespace(host="127.0.0.1"),
+            json=AsyncMock(return_value={"program_name": "Unapproved opportunity"}),
+        )
+
+        with (
+            patch("Backend.api.routes.applications.enforce_rate_limit"),
+            self.assertRaises(HTTPException) as raised,
+        ):
+            asyncio.run(create_application(request, BackgroundTasks(), account, session))
+
+        self.assertEqual(raised.exception.status_code, 404)
+        self.assertEqual(raised.exception.detail, "Program not found")
+        session.add.assert_not_called()
+        session.commit.assert_not_called()
 
 
 if __name__ == "__main__":

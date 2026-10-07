@@ -259,18 +259,7 @@ async def create_application(
 
     program_record = program_record or session.exec(select(program).where(program.name == program_name)).first()
     if not program_record:
-        program_record = program(
-            name=program_name,
-            description=f"Submitted by {account.name}",
-            company="Fortune Intern Network",
-            category="Internship",
-            status="open",
-            location="Remote",
-            duration="3 months",
-        )
-        session.add(program_record)
-        session.commit()
-        session.refresh(program_record)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Program not found")
     duplicate_identity = application.applicant_name == applicant_name_value
     if student_index_value:
         duplicate_identity = or_(
