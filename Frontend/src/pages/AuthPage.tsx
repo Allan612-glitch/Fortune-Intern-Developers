@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
 import type { AppUser } from "../App";
 import { requestForgotPassword } from "../services/authNotifications";
@@ -25,10 +26,11 @@ const isValidPassword = (pw: string) => pw.length >= 8;
 interface AuthPageProps {
   initialMode?: "login" | "register";
   onBack?: () => void;
-  onLogin: (user: AppUser) => void;
+  onModeChange?: (mode: "login" | "register") => void;
+  onLogin: (user: AppUser, programId?: string | null) => void;
   onRegister: (user: AppUser) => void;
   showOTP: boolean;
-  onOTPVerified: () => void;
+  onOTPVerified: (programId?: string | null) => void;
   pendingEmail: string;
   onForgotPassword?: () => void;
 }
@@ -36,6 +38,7 @@ interface AuthPageProps {
 export default function AuthPage({
   initialMode = "login",
   onBack,
+  onModeChange,
   onLogin,
   onRegister,
   showOTP,
@@ -43,6 +46,7 @@ export default function AuthPage({
   pendingEmail,
   onForgotPassword,
 }: AuthPageProps) {
+  const location = useLocation();
   const [mode, setMode] = useState<"login" | "register">(initialMode);
   const [form, setForm] = useState({
     name: "",
@@ -124,21 +128,24 @@ export default function AuthPage({
     try {
       const account = await login(form.email.trim(), form.password);
       const profile = await getProfile();
-      onLogin({
-        name: account.name,
-        email: account.email,
-        school: profile.university || "",
-        major: profile.major || profile.course || "",
-        avatar: account.name
-          .split(" ")
-          .map((part) => part[0])
-          .join("")
-          .toUpperCase()
-          .slice(0, 2),
-        isAdmin: account.is_admin,
-        verified: true,
-        role: "student",
-      });
+      onLogin(
+        {
+          name: account.name,
+          email: account.email,
+          school: profile.university || "",
+          major: profile.major || profile.course || "",
+          avatar: account.name
+            .split(" ")
+            .map((part) => part[0])
+            .join("")
+            .toUpperCase()
+            .slice(0, 2),
+          isAdmin: account.is_admin,
+          verified: true,
+          role: "student",
+        },
+        new URLSearchParams(location.search).get("program"),
+      );
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "Unable to sign in.");
     } finally {
@@ -235,7 +242,6 @@ export default function AuthPage({
   };
 
   const switchMode = (m: "login" | "register") => {
-    setMode(m);
     setTouched({});
     setSubmitError("");
     setForm({
@@ -248,6 +254,11 @@ export default function AuthPage({
       industry: "",
       userType: "student",
     });
+    if (onModeChange) {
+      onModeChange(m);
+      return;
+    }
+    setMode(m);
   };
 
   return (
@@ -597,7 +608,9 @@ export default function AuthPage({
           email={pendingEmail}
           university={form.school}
           major={form.major}
-          onVerified={onOTPVerified}
+          onVerified={() =>
+            onOTPVerified(new URLSearchParams(location.search).get("program"))
+          }
         />
       )}
       {recoveryOpen && (
