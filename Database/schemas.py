@@ -69,6 +69,8 @@ class ProfileResponse(BaseModel):
     user_id: str
     bio: str | None = None
     profile_picture: str | None = None
+    student_index_number: str | None = None
+    qualification_type: str | None = None
     major: str | None = None
     graduation_year: int | None = None
     university: str | None = None
@@ -88,6 +90,8 @@ class ProfileResponse(BaseModel):
 class ProfileUpdateRequest(BaseModel):
     bio: str | None = None
     profile_picture: str | None = None
+    student_index_number: str | None = Field(default=None, max_length=100)
+    qualification_type: str | None = Field(default=None, max_length=100)
     major: str | None = None
     graduation_year: int | None = None
     university: str | None = None
@@ -102,6 +106,45 @@ class ProfileUpdateRequest(BaseModel):
     email_notifications: bool = True
     sms_notifications: bool = False
     opportunity_alerts: bool = True
+
+
+class EducationRecordCreateRequest(BaseModel):
+    institution: str = Field(min_length=1, max_length=255)
+    qualification: str = Field(min_length=1, max_length=100)
+    programme: str = Field(min_length=1, max_length=255)
+    start_year: int | None = Field(default=None, ge=1900, le=2100)
+    end_year: int | None = Field(default=None, ge=1900, le=2100)
+    is_current: bool = False
+    cgpa: float | None = Field(default=None, ge=0)
+    cgpa_scale: float | None = Field(default=None, gt=0)
+    student_index_number: str | None = Field(default=None, max_length=100)
+
+
+class EducationRecordUpdateRequest(BaseModel):
+    institution: str | None = Field(default=None, min_length=1, max_length=255)
+    qualification: str | None = Field(default=None, min_length=1, max_length=100)
+    programme: str | None = Field(default=None, min_length=1, max_length=255)
+    start_year: int | None = Field(default=None, ge=1900, le=2100)
+    end_year: int | None = Field(default=None, ge=1900, le=2100)
+    is_current: bool | None = None
+    cgpa: float | None = Field(default=None, ge=0)
+    cgpa_scale: float | None = Field(default=None, gt=0)
+    student_index_number: str | None = Field(default=None, max_length=100)
+
+
+class EducationRecordResponse(BaseModel):
+    id: str
+    institution: str
+    qualification: str
+    programme: str
+    start_year: int | None = None
+    end_year: int | None = None
+    is_current: bool
+    cgpa: float | None = None
+    cgpa_scale: float | None = None
+    student_index_number: str | None = None
+    created_at: str
+    updated_at: str
 
 
 class ProfileDocumentResponse(BaseModel):
@@ -162,6 +205,12 @@ class ApplicationResponse(BaseModel):
     applicant_contact: str | None = None
     host_company_name: str | None = None
     host_company_address: str | None = None
+    created_at: str
+
+
+class ApplicationStatusHistoryResponse(BaseModel):
+    previous_status: str | None = None
+    new_status: str
     created_at: str
 
 

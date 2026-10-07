@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta, timezone
+import logging
 from secrets import randbelow, token_urlsafe
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 import resend
@@ -10,6 +11,7 @@ from sqlmodel import Session, select
 from Backend.api.deps import get_current_user
 from Backend.core.config import settings
 from Backend.core.security import create_access_token, hash_password, verify_password
+from Backend.core.rate_limit import enforce_rate_limit
 from Backend.database import get_session
 from Database.models import password_reset, registration_verification, user
 from Database.schemas import (
@@ -27,6 +29,7 @@ from Database.schemas import (
 )
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
+logger = logging.getLogger(__name__)
 
 
 def send_verification_email(email: str, code: str) -> None:
@@ -85,24 +88,56 @@ def validate_email(email: str) -> str:
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(credentials: LoginRequest, session: Session = Depends(get_session)):
+def login(
+    credentials: LoginRequest,
+    request: Request,
+    session: Session = Depends(get_session),
+):
     email = validate_email(credentials.email)
+    enforce_rate_limit(
+        session, request, "login", email,
+        ip_limit=40, identity_limit=10, window_seconds=900,
+    )
     account = session.exec(select(user).where(user.email == email)).first()
     if not account or not account.password_hash or not verify_password(credentials.password, account.password_hash):
+        logger.warning(
+            "login rejected",
+            extra={
+                "auth_action": "login",
+                "source_ip": request.client.host if request.client else None,
+            },
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
+    if account.is_suspended:
+        logger.warning(
+            "suspended account login rejected",
+            extra={
+                "auth_action": "login",
+                "source_ip": request.client.host if request.client else None,
+            },
+        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended")
 
     return TokenResponse(
-        access_token=create_access_token(account.id),
+        access_token=create_access_token(account.id, account.token_version),
         token_type="bearer",
         user=serialize_user(account),
     )
 
 
 @router.post("/google", response_model=TokenResponse)
-def google_login(payload: GoogleLoginRequest, session: Session = Depends(get_session)):
+def google_login(
+    payload: GoogleLoginRequest,
+    request: Request,
+    session: Session = Depends(get_session),
+):
+    enforce_rate_limit(
+        session, request, "google-login", "google-login",
+        ip_limit=30, identity_limit=30, window_seconds=900,
+    )
     if not settings.google_client_id:
         raise HTTPException(status_code=503, detail="Google sign-in is not configured")
 
@@ -125,6 +160,10 @@ def google_login(payload: GoogleLoginRequest, session: Session = Depends(get_ses
         raise HTTPException(status_code=401, detail="Google account has no verified email")
 
     email = validate_email(email_claim)
+    enforce_rate_limit(
+        session, request, "google-login-email", email,
+        ip_limit=60, identity_limit=10, window_seconds=900,
+    )
     account = session.exec(select(user).where(user.google_sub == subject)).first()
     if not account:
         account = session.exec(select(user).where(user.email == email)).first()
@@ -147,16 +186,26 @@ def google_login(payload: GoogleLoginRequest, session: Session = Depends(get_ses
     session.add(account)
     session.commit()
     session.refresh(account)
+    if account.is_suspended:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended")
     return TokenResponse(
-        access_token=create_access_token(account.id),
+        access_token=create_access_token(account.id, account.token_version),
         token_type="bearer",
         user=serialize_user(account),
     )
 
 
 @router.post("/register", response_model=VerificationStartResponse, status_code=status.HTTP_202_ACCEPTED)
-def register(credentials: RegisterRequest, session: Session = Depends(get_session)):
+def register(
+    credentials: RegisterRequest,
+    request: Request,
+    session: Session = Depends(get_session),
+):
     email = validate_email(credentials.email)
+    enforce_rate_limit(
+        session, request, "register", email,
+        ip_limit=10, identity_limit=5, window_seconds=3600,
+    )
     name = credentials.name.strip()
     if len(name) < 2:
         raise HTTPException(status_code=422, detail="Your name is required")
@@ -166,9 +215,9 @@ def register(credentials: RegisterRequest, session: Session = Depends(get_sessio
             detail="Password must be at least 8 characters",
         )
     if session.exec(select(user).where(user.email == email)).first():
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="An account with this email already exists",
+        return VerificationStartResponse(
+            message="If this address can be registered, a verification code will be sent",
+            email=email,
         )
 
     code = f"{randbelow(1_000_000):06d}"
@@ -200,8 +249,16 @@ def register(credentials: RegisterRequest, session: Session = Depends(get_sessio
 
 
 @router.post("/resend-verification", response_model=MessageResponse, status_code=status.HTTP_202_ACCEPTED)
-def resend_verification(payload: ResendVerificationRequest, session: Session = Depends(get_session)):
+def resend_verification(
+    payload: ResendVerificationRequest,
+    request: Request,
+    session: Session = Depends(get_session),
+):
     email = validate_email(payload.email)
+    enforce_rate_limit(
+        session, request, "resend-verification", email,
+        ip_limit=20, identity_limit=3, window_seconds=3600,
+    )
     response = MessageResponse(message="If a pending registration exists, a new code has been sent")
     pending_registration = session.exec(
         select(registration_verification).where(registration_verification.email == email)
@@ -225,8 +282,16 @@ def resend_verification(payload: ResendVerificationRequest, session: Session = D
 
 
 @router.post("/verify-email", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-def verify_email(payload: VerifyEmailRequest, session: Session = Depends(get_session)):
+def verify_email(
+    payload: VerifyEmailRequest,
+    request: Request,
+    session: Session = Depends(get_session),
+):
     email = validate_email(payload.email)
+    enforce_rate_limit(
+        session, request, "verify-email", email,
+        ip_limit=30, identity_limit=10, window_seconds=900,
+    )
     pending_registration = session.exec(
         select(registration_verification).where(registration_verification.email == email)
     ).first()
@@ -255,12 +320,24 @@ def verify_email(payload: VerifyEmailRequest, session: Session = Depends(get_ses
     session.delete(pending_registration)
     session.commit()
     session.refresh(account)
-    return TokenResponse(access_token=create_access_token(account.id), token_type="bearer", user=serialize_user(account))
+    return TokenResponse(
+        access_token=create_access_token(account.id, account.token_version),
+        token_type="bearer",
+        user=serialize_user(account),
+    )
 
 
 @router.post("/forgot-password", response_model=MessageResponse)
-def forgot_password(payload: ForgotPasswordRequest, session: Session = Depends(get_session)):
+def forgot_password(
+    payload: ForgotPasswordRequest,
+    request: Request,
+    session: Session = Depends(get_session),
+):
     email = validate_email(payload.email)
+    enforce_rate_limit(
+        session, request, "forgot-password", email,
+        ip_limit=20, identity_limit=5, window_seconds=3600,
+    )
     generic_response = MessageResponse(
         message="If an account with that email exists, a password reset link has been sent"
     )
@@ -289,8 +366,16 @@ def forgot_password(payload: ForgotPasswordRequest, session: Session = Depends(g
 
 
 @router.post("/reset-password", response_model=MessageResponse)
-def reset_password(payload: ResetPasswordRequest, session: Session = Depends(get_session)):
+def reset_password(
+    payload: ResetPasswordRequest,
+    request: Request,
+    session: Session = Depends(get_session),
+):
     email = validate_email(payload.email)
+    enforce_rate_limit(
+        session, request, "reset-password", email,
+        ip_limit=30, identity_limit=10, window_seconds=900,
+    )
     if len(payload.new_password) < 8:
         raise HTTPException(status_code=422, detail="Password must be at least 8 characters")
 
@@ -312,6 +397,7 @@ def reset_password(payload: ResetPasswordRequest, session: Session = Depends(get
 
     account.password_hash = hash_password(payload.new_password)
     account.updated_at = datetime.now(timezone.utc)
+    account.token_version += 1
     matching_reset.used = True
     session.add(account)
     session.add(matching_reset)

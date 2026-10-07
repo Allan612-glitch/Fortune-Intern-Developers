@@ -19,15 +19,17 @@ def verify_password(password: str, password_hash_value: str) -> bool:
     return password_hash.verify(password, password_hash_value)
 
 
-def create_access_token(user_id: UUID) -> str:
+def create_access_token(user_id: UUID, token_version: int = 0) -> str:
     expires_at = datetime.now(timezone.utc) + timedelta(
         minutes=settings.access_token_expire_minutes
     )
-    payload = {"sub": str(user_id), "exp": expires_at}
+    payload = {"sub": str(user_id), "ver": token_version, "exp": expires_at}
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
-def get_user_id_from_token(credentials: HTTPAuthorizationCredentials | None) -> UUID:
+def get_user_id_from_token(
+    credentials: HTTPAuthorizationCredentials | None,
+) -> tuple[UUID, int]:
     if not credentials or credentials.scheme.lower() != "bearer":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -40,7 +42,10 @@ def get_user_id_from_token(credentials: HTTPAuthorizationCredentials | None) -> 
             settings.jwt_secret,
             algorithms=[settings.jwt_algorithm],
         )
-        return UUID(payload["sub"])
+        token_version = payload.get("ver", 0)
+        if not isinstance(token_version, int) or token_version < 0:
+            raise ValueError("Invalid token version")
+        return UUID(payload["sub"]), token_version
     except (jwt.InvalidTokenError, KeyError, ValueError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
