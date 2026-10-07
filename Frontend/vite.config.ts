@@ -1,4 +1,9 @@
-import { defineConfig, type HtmlTagDescriptor, type Plugin } from "vite";
+import {
+  defineConfig,
+  type HMRPayload,
+  type HtmlTagDescriptor,
+  type Plugin,
+} from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
@@ -21,7 +26,13 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(),
-      figmaSiteConfiguration(siteConfiguration),
+      figmaSiteConfiguration({
+        ...siteConfiguration,
+        robots:
+          process.env.VERCEL_ENV === "preview"
+            ? { ...siteConfiguration.robots, index: false }
+            : siteConfiguration.robots,
+      }),
       figmaErrorOverlayReplay(),
       figmaReactRefreshBoundaryFallback(),
       figmaMakeKitPlugin({ storiesGlob: "/src/**/*.stories.{ts,tsx,js,jsx}" }),
@@ -355,10 +366,13 @@ function figmaErrorOverlayReplay(): Plugin {
     configureServer(server) {
       let lastError: object | null = null;
 
+      type WebSocketSendArgs =
+        | [payload: HMRPayload]
+        | [event: string, payload?: unknown];
       const origSend = server.ws.send.bind(server.ws) as (
-        ...args: any[]
+        ...args: WebSocketSendArgs
       ) => void;
-      server.ws.send = ((...args: any[]) => {
+      server.ws.send = ((...args: WebSocketSendArgs) => {
         const payload = args[0];
         if (payload && typeof payload === "object" && !Array.isArray(payload)) {
           const type = (payload as { type?: string }).type;
