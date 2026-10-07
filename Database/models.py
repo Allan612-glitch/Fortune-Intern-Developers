@@ -13,6 +13,7 @@ class user(SQLModel, table=True):
     google_sub: str | None = Field(default=None, sa_column=Column("google_sub", String, nullable=True, unique=True, index=True))
     is_admin: bool = Field(default=False, sa_column=Column("is_admin", Boolean, nullable=False, default=False))
     is_suspended: bool = Field(default=False, sa_column=Column("is_suspended", Boolean, nullable=False, default=False))
+    token_version: int = Field(default=0, sa_column=Column("token_version", Integer, nullable=False, default=0))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
 
@@ -22,6 +23,8 @@ class user_profile(SQLModel, table=True):
     user_id: UUID = Field(sa_column=Column("user_id", Uuid, ForeignKey("users.id"), nullable=False))
     bio: str | None = Field(default=None, sa_column=Column("bio", String))
     profile_picture: str | None = Field(default=None, sa_column=Column("profile_picture", String))
+    student_index_number: str | None = Field(default=None, sa_column=Column("student_index_number", String))
+    qualification_type: str | None = Field(default=None, sa_column=Column("qualification_type", String))
     major: str | None = Field(default=None, sa_column=Column("major", String))
     graduation_year: int | None = Field(default=None, sa_column=Column("graduation_year", Integer))
     university: str | None = Field(default=None, sa_column=Column("university", String))
@@ -85,6 +88,48 @@ class application(SQLModel, table=True):
     documents_sent: bool = Field(default=False, sa_column=Column("documents_sent", Boolean, nullable=False, default=False))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
+
+class education_record(SQLModel, table=True):
+    __tablename__ = "education_records"
+    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+    user_id: UUID = Field(sa_column=Column("user_id", Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True))
+    institution: str = Field(sa_column=Column("institution", String, nullable=False))
+    qualification: str = Field(sa_column=Column("qualification", String, nullable=False))
+    programme: str = Field(sa_column=Column("programme", String, nullable=False))
+    start_year: int | None = Field(default=None, sa_column=Column("start_year", Integer))
+    end_year: int | None = Field(default=None, sa_column=Column("end_year", Integer))
+    is_current: bool = Field(default=False, sa_column=Column("is_current", Boolean, nullable=False, default=False))
+    cgpa: float | None = Field(default=None, sa_column=Column("cgpa", Float))
+    cgpa_scale: float | None = Field(default=None, sa_column=Column("cgpa_scale", Float))
+    student_index_number: str | None = Field(default=None, sa_column=Column("student_index_number", String))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
+
+class application_status_history(SQLModel, table=True):
+    __tablename__ = "application_status_history"
+    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+    application_id: UUID = Field(sa_column=Column("application_id", Uuid, ForeignKey("applications.id", ondelete="CASCADE"), nullable=False, index=True))
+    actor_id: UUID | None = Field(default=None, sa_column=Column("actor_id", Uuid, ForeignKey("users.id", ondelete="SET NULL"), nullable=True))
+    previous_status: str | None = Field(default=None, sa_column=Column("previous_status", String))
+    new_status: str = Field(sa_column=Column("new_status", String, nullable=False))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
+
+class audit_event(SQLModel, table=True):
+    __tablename__ = "audit_events"
+    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+    actor_id: UUID | None = Field(default=None, sa_column=Column("actor_id", Uuid, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True))
+    action: str = Field(sa_column=Column("action", String, nullable=False))
+    object_type: str = Field(sa_column=Column("object_type", String, nullable=False))
+    object_id: str | None = Field(default=None, sa_column=Column("object_id", String))
+    source_ip: str | None = Field(default=None, sa_column=Column("source_ip", String))
+    result: str = Field(default="success", sa_column=Column("result", String, nullable=False, default="success"))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False, index=True))
+
+class rate_limit_bucket(SQLModel, table=True):
+    __tablename__ = "rate_limit_buckets"
+    key: str = Field(primary_key=True)
+    window_started_at: datetime = Field(sa_column=Column("window_started_at", DateTime(timezone=True), nullable=False))
+    count: int = Field(sa_column=Column("count", Integer, nullable=False))
 
 class announcement(SQLModel, table=True):
     __tablename__ = "announcements"

@@ -14,7 +14,7 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     session: Session = Depends(get_session),
 ) -> user:
-    user_id = get_user_id_from_token(credentials)
+    user_id, token_version = get_user_id_from_token(credentials)
     account = session.get(user, user_id)
     if not account:
         from fastapi import HTTPException, status
@@ -27,6 +27,13 @@ def get_current_user(
         from fastapi import HTTPException, status
 
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended")
+    if account.token_version != token_version:
+        from fastapi import HTTPException, status
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session has expired",
+        )
     return account
 
 

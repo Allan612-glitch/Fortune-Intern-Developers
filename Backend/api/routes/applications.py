@@ -1,19 +1,32 @@
 from pathlib import Path
 from uuid import UUID, uuid4
 
+from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.responses import Response
-from sqlmodel import Session, select
+from sqlmodel import Session, or_, select
 
 from Backend.api.deps import get_current_user
 from Backend.core import storage
+from Backend.core.audit import record_audit_event
 from Backend.core.mailer import send_application_received_email
+from Backend.core.rate_limit import enforce_rate_limit
+from Backend.core.uploads import read_validated_document
 from Backend.database import get_session
-from Database.models import application, notification, program, user
-from Database.schemas import ApplicationCreateRequest, ApplicationResponse
+from Database.models import (
+    application,
+    application_status_history,
+    notification,
+    program,
+    user,
+    user_profile,
+)
+from Database.schemas import (
+    ApplicationResponse,
+    ApplicationStatusHistoryResponse,
+)
 
 router = APIRouter(prefix="/api/applications", tags=["applications"])
-ALLOWED_RESUME_EXTENSIONS = {".pdf", ".doc", ".docx"}
 
 
 def serialize_application(row: application, program_name: str) -> ApplicationResponse:
@@ -72,9 +85,40 @@ def get_application(
     return serialize_application(row, program_record.name if program_record else "Program")
 
 
+@router.get(
+    "/{application_id}/history",
+    response_model=list[ApplicationStatusHistoryResponse],
+)
+def get_application_status_history(
+    application_id: str,
+    account: user = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    try:
+        row = session.get(application, UUID(application_id))
+    except ValueError:
+        row = None
+    if not row or row.user_id != account.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
+    entries = session.exec(
+        select(application_status_history)
+        .where(application_status_history.application_id == row.id)
+        .order_by(application_status_history.created_at.asc())
+    ).all()
+    return [
+        ApplicationStatusHistoryResponse(
+            previous_status=entry.previous_status,
+            new_status=entry.new_status,
+            created_at=entry.created_at.isoformat(),
+        )
+        for entry in entries
+    ]
+
+
 @router.get("/{application_id}/resume")
 def download_resume(
     application_id: str,
+    request: Request,
     account: user = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -84,7 +128,20 @@ def download_resume(
         row = None
     if not row or row.user_id != account.id or not row.resume_path:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found")
-    content, content_type = storage.download_resume(row.resume_path)
+    try:
+        content, content_type = storage.download_resume(row.resume_path)
+    except (BotoCoreError, ClientError, RuntimeError) as error:
+        record_audit_event(
+            session, request, actor_id=account.id, action="resume.download",
+            object_type="application", object_id=application_id, result="failure",
+        )
+        session.commit()
+        raise HTTPException(status_code=503, detail="Resume storage is unavailable") from error
+    record_audit_event(
+        session, request, actor_id=account.id, action="resume.download",
+        object_type="application", object_id=application_id,
+    )
+    session.commit()
     filename = row.resume_filename or "resume"
     return Response(
         content=content,
@@ -96,6 +153,7 @@ def download_resume(
 @router.get("/{application_id}/resume-url")
 def get_resume_download_url(
     application_id: str,
+    request: Request,
     account: user = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
@@ -106,7 +164,21 @@ def get_resume_download_url(
     if not row or row.user_id != account.id or not row.resume_path:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found")
     filename = row.resume_filename or "resume"
-    return {"url": storage.get_resume_download_url(row.resume_path, filename)}
+    try:
+        url = storage.get_resume_download_url(row.resume_path, filename)
+    except (BotoCoreError, ClientError, RuntimeError) as error:
+        record_audit_event(
+            session, request, actor_id=account.id, action="resume.signed_url",
+            object_type="application", object_id=application_id, result="failure",
+        )
+        session.commit()
+        raise HTTPException(status_code=503, detail="Resume storage is unavailable") from error
+    record_audit_event(
+        session, request, actor_id=account.id, action="resume.signed_url",
+        object_type="application", object_id=application_id,
+    )
+    session.commit()
+    return {"url": url}
 
 
 @router.post("", response_model=ApplicationResponse, status_code=status.HTTP_201_CREATED)
@@ -116,6 +188,10 @@ async def create_application(
     account: user = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
+    enforce_rate_limit(
+        session, request, "application-create", str(account.id),
+        ip_limit=20, identity_limit=10, window_seconds=3600,
+    )
     content_type = request.headers.get("content-type", "")
     resume = None
     if content_type.startswith("multipart/form-data"):
@@ -148,6 +224,23 @@ async def create_application(
         year_of_study_value = str(payload.get("year_of_study") or "").strip()
         suggested_company_value = str(payload.get("suggested_company") or "").strip()
 
+    applying_for_self = (
+        not applicant_name_value
+        or applicant_name_value.casefold() == account.name.casefold()
+    )
+    if applying_for_self:
+        profile = session.exec(
+            select(user_profile).where(user_profile.user_id == account.id)
+        ).first()
+        applicant_name_value = applicant_name_value or account.name
+        if profile:
+            institution_value = institution_value or profile.university or ""
+            course_value = course_value or profile.course or profile.major or ""
+            contact_value = contact_value or profile.phone_number or ""
+            student_index_value = student_index_value or profile.student_index_number or ""
+            if not year_of_study_value and profile.year_of_study is not None:
+                year_of_study_value = str(profile.year_of_study)
+
     program_record = None
     if program_id_value:
         try:
@@ -178,22 +271,42 @@ async def create_application(
         session.add(program_record)
         session.commit()
         session.refresh(program_record)
+    duplicate_identity = application.applicant_name == applicant_name_value
+    if student_index_value:
+        duplicate_identity = or_(
+            duplicate_identity,
+            application.student_index_number == student_index_value,
+        )
+    if applying_for_self:
+        duplicate_identity = or_(
+            duplicate_identity,
+            application.applicant_name.is_(None),
+        )
+    existing_application = session.exec(
+        select(application).where(
+            application.user_id == account.id,
+            application.program_id == program_record.id,
+            application.status != "withdrawn",
+            duplicate_identity,
+        )
+    ).first()
+    if existing_application:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="You already have an active application for this program",
+        )
 
     resume_filename = None
     resume_path = None
     if resume is not None and getattr(resume, "filename", None):
-        extension = Path(resume.filename).suffix.lower()
-        if extension not in ALLOWED_RESUME_EXTENSIONS:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Resume must be a PDF, DOC, or DOCX file")
-        content = await resume.read()
-        if len(content) > 10 * 1024 * 1024:
-            raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Resume must be 10 MB or smaller")
+        content, original_filename, verified_content_type = await read_validated_document(resume, "Resume")
+        extension = Path(original_filename).suffix.lower()
         stored_key = f"resumes/{account.id}/{uuid4()}{extension}"
         try:
-            storage.upload_resume(stored_key, content, content_type=resume.content_type)
-        except RuntimeError as error:
+            storage.upload_resume(stored_key, content, content_type=verified_content_type)
+        except (BotoCoreError, ClientError, RuntimeError) as error:
             raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Resume storage is not configured") from error
-        resume_filename = Path(resume.filename).name
+        resume_filename = original_filename
         resume_path = stored_key
 
     new_application = application(
@@ -221,6 +334,18 @@ async def create_application(
         target_id=str(new_application.id),
         read="false",
     ))
+    session.add(
+        application_status_history(
+            application_id=new_application.id,
+            actor_id=account.id,
+            previous_status=None,
+            new_status=new_application.status,
+        )
+    )
+    record_audit_event(
+        session, request, actor_id=account.id, action="application.create",
+        object_type="application", object_id=str(new_application.id),
+    )
     session.commit()
     session.refresh(new_application)
     background_tasks.add_task(
