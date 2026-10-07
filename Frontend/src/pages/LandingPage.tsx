@@ -637,20 +637,20 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
           <FooterColumn
             title="Platform"
             links={[
-              "Find Internships",
-              "How It Works",
-              "Application Tracking",
-              "Student Dashboard",
+              {name: "Find Internships", href:"../companypages/"},
+              {name: "How It Works", href:""},
+              {name: "Application Tracking", href:""},
+              {name: "Student Dashboard", href:""},
             ]}
           />
           <div>
             <FooterColumn
               title="Company"
               links={[
-                "About Us",
-                "Contact",
-                "Privacy Policy",
-                "Terms of Service",
+                {name: "About Us", href: ""},
+                {name: "Contact", href: ""},
+                {name: "Privacy Policy", href: ""},
+                {name: "Terms of Service", href: ""},
               ]}
               
             />
@@ -813,18 +813,19 @@ function SearchSelect({
   );
 }
 
-function FooterColumn({ title, links }: { title: string; links: string[] }) {
+function FooterColumn({ title, links }: { title: string; links:{name: string; href: string;}[] }) {
   return (
     <div>
       <p className="text-sm font-bold">{title}</p>
       <div className="flex flex-col items-start gap-3 mt-4">
         {links.map((link) => (
-          <button
-            key={link}
+          <a
+            key={link.name}
+            href={link.href}
             className="text-xs text-white/55 hover:text-white transition-colors"
           >
-            {link}
-          </button>
+            {link.name}
+          </a>
         ))}
       </div>
     </div>
