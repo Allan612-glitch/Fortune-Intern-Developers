@@ -1,4 +1,4 @@
-import { apiBlob, apiRequest } from "./api";
+import { apiRequest } from "./api";
 
 export interface Program {
   id: string;
@@ -80,12 +80,20 @@ export interface NotificationPreferences {
   opportunity_alerts: boolean;
 }
 
-export function listPrograms(search = "", category = "All") {
+export function listPrograms(search = "", category = "All", status = "open") {
   const params = new URLSearchParams();
   if (search.trim()) params.set("search", search.trim());
   if (category !== "All") params.set("category", category);
+  if (status !== "open") params.set("status", status);
   const query = params.size ? `?${params}` : "";
   return apiRequest<Program[]>(`/api/programs${query}`);
+}
+
+export function createAdminProgram(payload: Omit<Program, "id">) {
+  return apiRequest<Program>("/api/admin/programs", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export function submitApplication(form: FormData) {
@@ -130,21 +138,16 @@ export function setApplicationStatus(id: string, status: string) {
 }
 
 export function downloadResume(id: string, admin = false) {
-  return apiBlob(
+  return apiRequest<{ url: string }>(
     admin
-      ? `/api/admin/applications/${id}/resume`
-      : `/api/applications/${id}/resume`,
-  );
+      ? `/api/admin/applications/${id}/resume-url`
+      : `/api/applications/${id}/resume-url`,
+  ).then((result) => result.url);
 }
 
 export async function saveResumeDownload(id: string, admin = false) {
-  const blob = await downloadResume(id, admin);
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "resume";
-  link.click();
-  URL.revokeObjectURL(url);
+  const url = await downloadResume(id, admin);
+  window.location.assign(url);
 }
 
 export function listNotifications() {

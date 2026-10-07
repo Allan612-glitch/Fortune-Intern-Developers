@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import {
+  createAdminProgram,
   listAdminApplications,
   listAdminUsers,
   listAnnouncements,
+  listPrograms,
   publishAnnouncement,
   saveResumeDownload,
   setApplicationStatus,
@@ -10,6 +12,7 @@ import {
   type AdminUser,
   type Announcement,
   type BackendApplication,
+  type Program,
 } from "../services/platform";
 
 const statusBadge: Record<string, string> = {
@@ -20,24 +23,39 @@ const statusBadge: Record<string, string> = {
   rejected: "status-rejected",
 };
 
+const emptyProgramForm = {
+  name: "",
+  description: "",
+  company: "Fortune Intern Network",
+  category: "Internship",
+  status: "open",
+  location: "Remote",
+  duration: "3 months",
+  skills: "",
+  deadline: "",
+};
+
 export default function AdminPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [applications, setApplications] = useState<BackendApplication[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [tab, setTab] = useState<"users" | "announcements" | "applications">(
-    "users",
-  );
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [tab, setTab] = useState<"users" | "announcements" | "applications" | "programs">("users");
+  const [programForm, setProgramForm] = useState(emptyProgramForm);
+  const [programSubmitting, setProgramSubmitting] = useState(false);
+  const [programPublished, setProgramPublished] = useState(false);
   const [annTitle, setAnnTitle] = useState("");
   const [annContent, setAnnContent] = useState("");
   const [published, setPublished] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    Promise.all([listAdminUsers(), listAdminApplications(), listAnnouncements()])
-      .then(([loadedUsers, loadedApplications, loadedAnnouncements]) => {
+    Promise.all([listAdminUsers(), listAdminApplications(), listAnnouncements(), listPrograms("", "All", "all")])
+      .then(([loadedUsers, loadedApplications, loadedAnnouncements, loadedPrograms]) => {
         setUsers(loadedUsers);
         setApplications(loadedApplications);
         setAnnouncements(loadedAnnouncements);
+        setPrograms(loadedPrograms);
       })
       .catch((requestError) => setError(requestError instanceof Error ? requestError.message : "Unable to load admin data."));
   }, []);
@@ -73,6 +91,33 @@ export default function AdminPage() {
     }
   };
 
+  const submitProgram = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setProgramSubmitting(true);
+    setProgramPublished(false);
+    try {
+      const created = await createAdminProgram({
+        name: programForm.name.trim(),
+        description: programForm.description.trim(),
+        company: programForm.company.trim(),
+        category: programForm.category.trim(),
+        status: programForm.status,
+        location: programForm.location.trim(),
+        duration: programForm.duration.trim(),
+        skills: programForm.skills.split(",").map((skill) => skill.trim()).filter(Boolean),
+        deadline: programForm.deadline ? new Date(programForm.deadline).toISOString() : null,
+      });
+      setPrograms((current) => [created, ...current]);
+      setProgramForm(emptyProgramForm);
+      setProgramPublished(true);
+      setError("");
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to post program.");
+    } finally {
+      setProgramSubmitting(false);
+    }
+  };
+
   return (
     <div className="p-4 lg:p-6 max-w-4xl">
       <div className="flex items-center gap-3 mb-6">
@@ -102,7 +147,7 @@ export default function AdminPage() {
             Admin Dashboard
           </h1>
           <p className="text-xs text-muted-foreground">
-            Manage student users, announcements and applications
+            Manage users, programs, announcements and applications
           </p>
         </div>
         <div
@@ -119,6 +164,7 @@ export default function AdminPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {[
           { label: "Total Users", value: users.length, icon: "👥" },
+          { label: "Programs", value: programs.length, icon: "💼" },
           { label: "Announcements", value: announcements.length, icon: "📢" },
           { label: "Applications", value: applications.length, icon: "📋" },
         ].map((s) => (
@@ -140,7 +186,7 @@ export default function AdminPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 bg-muted rounded-xl p-1 mb-5 overflow-x-auto">
-        {(["users", "applications", "announcements"] as const).map((t) => (
+        {(["users", "applications", "programs", "announcements"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -241,16 +287,170 @@ export default function AdminPage() {
                     {app.status}
                   </span>
                   {app.resume_filename && <button onClick={() => void saveResumeDownload(app.id, true).catch((requestError) => setError(requestError instanceof Error ? requestError.message : "Unable to download resume."))} className="text-xs font-semibold text-primary underline">Resume</button>}
-                  <button onClick={() => void updateStatus(app, "accepted")} className="text-xs px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors font-semibold">
-                    Accept
-                  </button>
-                  <button onClick={() => void updateStatus(app, "rejected")} className="text-xs px-3 py-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors font-semibold">
-                    Reject
-                  </button>
+                  {!(["accepted", "rejected"] as string[]).includes(app.status.toLowerCase()) && (
+                    <>
+                      <button onClick={() => void updateStatus(app, "accepted")} className="text-xs px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors font-semibold">
+                        Accept
+                      </button>
+                      <button onClick={() => void updateStatus(app, "rejected")} className="text-xs px-3 py-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors font-semibold">
+                        Reject
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Programs */}
+      {tab === "programs" && (
+        <div className="space-y-5">
+          <section className="bg-white border border-border rounded-xl p-5 shadow-sm">
+            <div className="mb-5">
+              <h3 className="font-semibold">Post a Program</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                New open programs will appear in the student Programs section.
+              </p>
+            </div>
+            {programPublished && (
+              <p className="mb-4 text-sm text-emerald-700" role="status">
+                Program posted successfully.
+              </p>
+            )}
+            <form onSubmit={(event) => void submitProgram(event)} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <label className="block text-xs font-semibold text-muted-foreground">
+                Program title
+                <input
+                  required
+                  value={programForm.name}
+                  onChange={(event) => setProgramForm((current) => ({ ...current, name: event.target.value }))}
+                  placeholder="e.g. Software Engineering Internship"
+                  className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
+                />
+              </label>
+              <label className="block text-xs font-semibold text-muted-foreground">
+                Company
+                <input
+                  required
+                  value={programForm.company}
+                  onChange={(event) => setProgramForm((current) => ({ ...current, company: event.target.value }))}
+                  className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
+                />
+              </label>
+              <label className="block text-xs font-semibold text-muted-foreground sm:col-span-2">
+                Description
+                <textarea
+                  value={programForm.description}
+                  onChange={(event) => setProgramForm((current) => ({ ...current, description: event.target.value }))}
+                  rows={4}
+                  placeholder="Describe the internship and responsibilities"
+                  className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white resize-y"
+                />
+              </label>
+              <label className="block text-xs font-semibold text-muted-foreground">
+                Category
+                <input
+                  required
+                  value={programForm.category}
+                  onChange={(event) => setProgramForm((current) => ({ ...current, category: event.target.value }))}
+                  placeholder="e.g. Technology"
+                  className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
+                />
+              </label>
+              <label className="block text-xs font-semibold text-muted-foreground">
+                Status
+                <select
+                  value={programForm.status}
+                  onChange={(event) => setProgramForm((current) => ({ ...current, status: event.target.value }))}
+                  className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
+                >
+                  <option value="open">Open</option>
+                  <option value="closed">Closed</option>
+                </select>
+              </label>
+              <label className="block text-xs font-semibold text-muted-foreground">
+                Location
+                <input
+                  required
+                  value={programForm.location}
+                  onChange={(event) => setProgramForm((current) => ({ ...current, location: event.target.value }))}
+                  className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
+                />
+              </label>
+              <label className="block text-xs font-semibold text-muted-foreground">
+                Duration
+                <input
+                  required
+                  value={programForm.duration}
+                  onChange={(event) => setProgramForm((current) => ({ ...current, duration: event.target.value }))}
+                  placeholder="e.g. 3 months"
+                  className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
+                />
+              </label>
+              <label className="block text-xs font-semibold text-muted-foreground">
+                Skills
+                <input
+                  value={programForm.skills}
+                  onChange={(event) => setProgramForm((current) => ({ ...current, skills: event.target.value }))}
+                  placeholder="Comma-separated, e.g. Python, SQL"
+                  className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
+                />
+              </label>
+              <label className="block text-xs font-semibold text-muted-foreground">
+                Application deadline
+                <input
+                  type="datetime-local"
+                  value={programForm.deadline}
+                  onChange={(event) => setProgramForm((current) => ({ ...current, deadline: event.target.value }))}
+                  className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
+                />
+              </label>
+              <div className="sm:col-span-2 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={programSubmitting}
+                  className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-60"
+                  style={{ background: "linear-gradient(135deg, #2D3561, #3d4a8a)" }}
+                >
+                  {programSubmitting ? "Posting..." : "Post Program"}
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold">Programs ({programs.length})</h3>
+            </div>
+            {programs.length ? (
+              <div className="bg-white border border-border rounded-xl divide-y divide-border shadow-sm">
+                {programs.map((program) => (
+                  <article key={program.id} className="flex items-start justify-between gap-4 p-4">
+                    <div className="min-w-0">
+                      <h4 className="font-semibold text-sm">{program.name}</h4>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {program.company} · {program.category} · {program.location} · {program.duration}
+                      </p>
+                      {program.description && <p className="text-sm text-muted-foreground mt-2">{program.description}</p>}
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {program.skills.length ? `Skills: ${program.skills.join(", ")}` : "No skills listed"}
+                        {program.deadline && ` · Deadline: ${new Date(program.deadline).toLocaleString()}`}
+                      </p>
+                    </div>
+                    <span className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${program.status === "open" ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
+                      {program.status}
+                    </span>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground bg-white border border-border rounded-xl p-5">
+                No programs have been posted yet.
+              </p>
+            )}
+          </section>
         </div>
       )}
 

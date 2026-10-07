@@ -5,6 +5,10 @@ const apiBase =
     : "");
 const tokenStorageKey = "fortune-intern-access-token";
 
+function apiUrl(path: string) {
+  return `${apiBase}/${path.replace(/^\/+/, "")}`;
+}
+
 export function getAccessToken() {
   return localStorage.getItem(tokenStorageKey);
 }
@@ -22,7 +26,7 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(`${apiBase}${path}`, { ...init, headers });
+  const response = await fetch(apiUrl(path), { ...init, headers });
   if (!response.ok) {
     let message = `Request failed (${response.status})`;
     try {
@@ -43,7 +47,17 @@ export async function apiBlob(path: string) {
   const headers = new Headers();
   const token = getAccessToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  const response = await fetch(`${apiBase}${path}`, { headers });
-  if (!response.ok) throw new Error(`Download failed (${response.status})`);
+  const response = await fetch(apiUrl(path), { headers });
+  if (!response.ok) {
+    let message = `Download failed (${response.status})`;
+    try {
+      const body = await response.json();
+      if (typeof body.detail === "string") message = body.detail;
+      else if (typeof body.message === "string") message = body.message;
+    } catch {
+      // Keep the HTTP status when the response has no JSON error body.
+    }
+    throw new Error(message);
+  }
   return response.blob();
 }

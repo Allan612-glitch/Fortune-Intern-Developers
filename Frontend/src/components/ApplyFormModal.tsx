@@ -234,7 +234,7 @@ export default function ApplyFormModal({
   if (step === "success")
     return (
       <div className="fixed inset-0 z-50 bg-black/60 p-4 flex items-center justify-center">
-        <div className="bg-[#f8fafc] rounded-2xl shadow-2xl w-full max-w-lg p-8 text-center">
+        <div className="bg-[#f8fafc] rounded-2xl shadow-2xl w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto p-5 sm:p-8 text-center">
           <div className="w-20 h-16 mx-auto mb-4 rounded-xl bg-white border border-border flex items-center justify-center">
             <img
               src={logo}

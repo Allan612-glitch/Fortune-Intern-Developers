@@ -71,7 +71,20 @@ const navItems = [
       />
     ),
   },
+  {
+    id: "announcements",
 
+    label: "Announcements",
+
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.8}
+        d="M3 11v2a1 1 0 001 1h2l4 4V6l-4 4H4a1 1 0 00-1 1zm7-2 9-4v14l-9-4m3 2 1.5 4H18l-2-5"
+      />
+    ),
+  },
   {
     id: "programs",
 
@@ -294,78 +307,63 @@ export default function MainApp({
 
         <div className="ml-auto flex items-center gap-3">
           <div className="relative">
-            <button
-              onClick={() => setNotificationsOpen((open) => !open)}
-              className="relative p-2 rounded-lg hover:bg-muted transition-colors"
-              aria-label={`Notifications${
-                notifCount ? `, ${notifCount} unread` : ""
-              }`}
-              aria-expanded={notificationsOpen}
+          <button
+            onClick={() => {
+              const shouldOpen = !notificationsOpen;
+              setNotificationsOpen(shouldOpen);
+              if (shouldOpen) {
+                Promise.all([listNotifications(), getUnreadNotificationCount()])
+                  .then(([items, unread]) => {
+                    setNotifications(items);
+                    setNotifCount(unread.count);
+                    setNotificationError("");
+                  })
+                  .catch((error) => setNotificationError(error instanceof Error ? error.message : "Unable to load notifications."));
+              }
+            }}
+            className="relative p-2 rounded-lg hover:bg-muted transition-colors"
+            aria-label={`Notifications${notifCount ? `, ${notifCount} unread` : ""}`}
+            aria-expanded={notificationsOpen}
+          >
+            <svg
+              className="w-5 h-5 text-foreground"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              <svg
-                className="w-5 h-5 text-foreground"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.8}
+                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+              />
+            </svg>
+            {notifCount > 0 && (
+              <span
+                className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full text-white text-[9px] font-bold flex items-center justify-center"
+                style={{ background: "#F5B731", color: "#1a1f3a" }}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.8}
-                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                />
-              </svg>
-              {notifCount > 0 && (
-                <span
-                  className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full text-white text-[9px] font-bold flex items-center justify-center"
-                  style={{ background: "#F5B731", color: "#1a1f3a" }}
-                >
-                  {notifCount}
-                </span>
-              )}
-            </button>
-            {notificationsOpen && (
-              <div className="absolute right-0 top-full mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-border bg-white shadow-xl z-50">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-                  <h2 className="text-sm font-semibold">Notifications</h2>
-                  {notifCount > 0 && (
-                    <button
-                      onClick={() => void readAllNotifications()}
-                      className="text-xs font-semibold text-primary"
-                    >
-                      Mark all read
-                    </button>
-                  )}
-                </div>
-                {notificationError && (
-                  <p className="px-4 py-2 text-xs text-red-600" role="alert">
-                    {notificationError}
-                  </p>
-                )}
-                <div className="max-h-80 overflow-y-auto">
-                  {notifications.length ? (
-                    notifications.slice(0, 8).map((notification) => (
-                      <button
-                        key={notification.id}
-                        onClick={() => void openNotification(notification)}
-                        className={`w-full text-left px-4 py-3 border-b border-border last:border-0 hover:bg-muted/40 ${
-                          notification.read ? "" : "bg-secondary/40"
-                        }`}
-                      >
-                        <p className="text-sm">{notification.message}</p>
-                        <time className="block mt-1 text-[11px] text-muted-foreground">
-                          {new Date(notification.created_at).toLocaleString()}
-                        </time>
-                      </button>
-                    ))
-                  ) : (
-                    <p className="px-4 py-6 text-sm text-muted-foreground">
-                      No notifications yet.
-                    </p>
-                  )}
-                </div>
-              </div>
+                {notifCount}
+              </span>
             )}
+          </button>
+          {notificationsOpen && (
+            <div className="fixed left-2 right-2 top-16 z-50 mx-auto max-w-md rounded-xl border border-border bg-white shadow-xl sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[min(22rem,calc(100vw-2rem))]">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                <h2 className="text-sm font-semibold">Notifications</h2>
+                {notifCount > 0 && <button onClick={() => void readAllNotifications()} className="text-xs font-semibold text-primary">Mark all read</button>}
+              </div>
+              {notificationError && <p className="px-4 py-2 text-xs text-red-600" role="alert">{notificationError}</p>}
+              <div className="max-h-80 overflow-y-auto">
+                {notifications.length ? notifications.slice(0, 8).map((notification) => (
+                  <button key={notification.id} onClick={() => void openNotification(notification)} className={`w-full text-left px-4 py-3 border-b border-border last:border-0 hover:bg-muted/40 ${notification.read ? "" : "bg-secondary/40"}`}>
+                    <p className="text-sm">{notification.message}</p>
+                    <time className="block mt-1 text-[11px] text-muted-foreground">{new Date(notification.created_at).toLocaleString()}</time>
+                  </button>
+                )) : <p className="px-4 py-6 text-sm text-muted-foreground">No notifications yet.</p>}
+              </div>
+            </div>
+          )}
           </div>
           <button
             onClick={() => goTo("profile")}
@@ -666,15 +664,14 @@ export default function MainApp({
         className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-border"
         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
-        <div className="flex items-center">
-          {navItems.map((item) => {
-            const active = page === item.id
-
+        <div className="flex w-full items-center">
+          {navItems.filter((item) => item.id !== "announcements").map((item) => {
+            const active = page === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => goTo(item.id as AppPage)}
-                className="flex-1 flex flex-col items-center py-2.5 gap-1 transition-colors"
+                className="relative flex flex-1 flex-col items-center gap-1 px-1 py-2.5 transition-colors"
                 style={{ color: active ? "#2D3561" : "#9ca3af" }}
               >
                 <svg
@@ -686,7 +683,7 @@ export default function MainApp({
                   {item.icon}
                 </svg>
                 <span
-                  className="nav-label"
+                  className="nav-label w-full break-words text-center leading-tight"
                   style={{ color: active ? "#F5B731" : "#9ca3af" }}
                 >
                   {item.label}

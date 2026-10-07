@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google";
 import type { AppUser } from "../App";
 import { requestForgotPassword } from "../services/authNotifications";
-import { getProfile, login, register, resendVerification, updateProfile, verifyEmail } from "../services/auth";
+import { getProfile, login, loginWithGoogle, register, resendVerification, updateProfile, verifyEmail } from "../services/auth";
 
 const ghanaUniversities = [
   "University of Ghana",
@@ -61,6 +62,18 @@ export default function AuthPage({
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const [googleButtonWidth, setGoogleButtonWidth] = useState(384);
+  const googleClientConfigured = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim());
+
+  useEffect(() => {
+    const updateGoogleButtonWidth = () => {
+      setGoogleButtonWidth(Math.min(384, Math.max(200, window.innerWidth - 96)));
+    };
+
+    updateGoogleButtonWidth();
+    window.addEventListener("resize", updateGoogleButtonWidth);
+    return () => window.removeEventListener("resize", updateGoogleButtonWidth);
+  }, []);
 
   const set = (k: keyof typeof form, v: string) => {
     setForm((p) => ({ ...p, [k]: v }));
@@ -135,6 +148,49 @@ export default function AuthPage({
       );
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "Unable to sign in.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (response: { credential?: string }) => {
+    if (!response.credential) {
+      setSubmitError("Google sign-in did not return a credential.");
+      return;
+    }
+    if (mode === "register" && !form.school) {
+      touch("school");
+      setSubmitError("Select your university before signing up with Google.");
+      return;
+    }
+
+    setLoading(true);
+    setSubmitError("");
+    try {
+      const account = await loginWithGoogle(response.credential);
+      const profile = await getProfile();
+      if (mode === "register") {
+        await updateProfile({ university: form.school, major: form.major });
+        profile.university = form.school;
+        profile.major = form.major;
+      }
+      onLogin({
+        name: account.name,
+        email: account.email,
+        school: profile.university || "",
+        major: profile.major || profile.course || "",
+        avatar: account.name
+          .split(" ")
+          .map((part) => part[0])
+          .join("")
+          .toUpperCase()
+          .slice(0, 2),
+        isAdmin: account.is_admin,
+        verified: true,
+        role: "student",
+      });
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Unable to sign in with Google.");
     } finally {
       setLoading(false);
     }
@@ -349,6 +405,24 @@ export default function AuthPage({
                   <div className="flex-1 h-px bg-border" />
                 </div>
 
+                {googleClientConfigured ? (
+                  <div className="flex justify-center">
+                    <GoogleLogin
+                      onSuccess={handleGoogleSuccess}
+                      onError={() => setSubmitError("Google sign-in failed. Please try again.")}
+                      text="signin_with"
+                      theme="filled_blue"
+                      shape="rectangular"
+                      size="large"
+                      width={String(googleButtonWidth)}
+                    />
+                  </div>
+                ) : (
+                  <p className="text-center text-xs text-muted-foreground">
+                    Google sign-in is not configured for this deployment.
+                  </p>
+                )}
+
                 <button
                   type="button"
                   onClick={() => switchMode("register")}
@@ -491,6 +565,34 @@ export default function AuthPage({
                 <p className="text-[11px] text-muted-foreground text-center">
                   A 6-digit verification code will be sent to your email.
                 </p>
+
+                {submitError && (
+                  <p className="text-red-500 text-xs">{submitError}</p>
+                )}
+
+                <div className="relative flex items-center gap-3">
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="text-xs text-muted-foreground">or</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+
+                {googleClientConfigured ? (
+                  <div className="flex justify-center">
+                    <GoogleLogin
+                      onSuccess={handleGoogleSuccess}
+                      onError={() => setSubmitError("Google sign-up failed. Please try again.")}
+                      text="signup_with"
+                      theme="filled_blue"
+                      shape="rectangular"
+                      size="large"
+                      width={String(googleButtonWidth)}
+                    />
+                  </div>
+                ) : (
+                  <p className="text-center text-xs text-muted-foreground">
+                    Google sign-in is not configured for this deployment.
+                  </p>
+                )}
               </form>
             )}
           </div>
