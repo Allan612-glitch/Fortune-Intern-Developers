@@ -1,10 +1,17 @@
 import { useEffect, useState } from "react";
+import { Routes, Route } from "react-router-dom";
 import AuthPage from "./pages/AuthPage";
 import MainApp from "./pages/MainApp";
 import AIChatWidget from "./components/AIChatWidget";
 import LandingPage from "./pages/LandingPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import About from "./pages/companypages/About";
+import Contact from "./pages/companypages/ContactUs";
+import CookiePolicy from "./pages/companypages/CookiePolicy";
+import PrivacyPolicy from "./pages/companypages/PrivacyPolicy";
+import RefundPolicy from "./pages/companypages/RefundPolicy";
+import Terms from "./pages/companypages/TAC";
 import { getCurrentUser, getProfile } from "./services/auth";
 import { getAccessToken, setAccessToken } from "./services/api";
 
@@ -109,37 +116,53 @@ export default function App() {
   if (!user) {
     if (authScreen === "forgot")
       return (
-        <ForgotPasswordPage
-          onBack={() => navigateAuth("login")}
-          onReset={() => navigateAuth("reset")}
-        />
+        <Routes>
+          <Route path="*" element={
+            <ForgotPasswordPage
+              onBack={() => navigateAuth("login")}
+              onReset={() => navigateAuth("reset")}
+            />
+          } />
+        </Routes>
       );
     if (authScreen === "reset")
       return (
-        <ResetPasswordPage
-          onLogin={() => navigateAuth("login")}
-          onForgot={() => navigateAuth("forgot")}
-        />
+        <Routes>
+          <Route path="*" element={
+            <ResetPasswordPage
+              onLogin={() => navigateAuth("login")}
+              onForgot={() => navigateAuth("forgot")}
+            />
+          } />
+        </Routes>
       );
-    if (authScreen === "landing") {
-      return (
-        <LandingPage
-          onStudentPortal={(mode = "login") => setAuthScreen(mode)}
-        />
-      );
-    }
+
     return (
-      <AuthPage
-        key={authScreen}
-        initialMode={authScreen}
-        onBack={() => setAuthScreen("landing")}
-        onLogin={handleLogin}
-        onRegister={handleRegister}
-        showOTP={showOTP}
-        onOTPVerified={handleOTPVerified}
-        pendingEmail={pendingUser?.email || ""}
-        onForgotPassword={() => navigateAuth("forgot")}
-      />
+      <Routes>
+        <Route path="/about" element={<About />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/cookie-policy" element={<CookiePolicy />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/refund-policy" element={<RefundPolicy />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="*" element={
+          authScreen === "landing" ? (
+            <LandingPage onStudentPortal={(mode = "login") => setAuthScreen(mode)} />
+          ) : (
+            <AuthPage
+              key={authScreen}
+              initialMode={authScreen}
+              onBack={() => setAuthScreen("landing")}
+              onLogin={handleLogin}
+              onRegister={handleRegister}
+              showOTP={showOTP}
+              onOTPVerified={handleOTPVerified}
+              pendingEmail={pendingUser?.email || ""}
+              onForgotPassword={() => navigateAuth("forgot")}
+            />
+          )
+        } />
+      </Routes>
     );
   }
 

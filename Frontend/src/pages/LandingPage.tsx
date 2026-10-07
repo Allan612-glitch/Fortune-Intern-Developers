@@ -1,6 +1,8 @@
 import { useState } from "react";
 import logo from "../assets/attach1.png";
 
+
+
 interface LandingPageProps {
   onStudentPortal: (mode?: "login" | "register") => void;
 }
@@ -143,7 +145,8 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   };
 
-  return (
+      return (
+        <>
     <div id="home" className="min-h-screen bg-white text-foreground">
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-border/70">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-18 flex items-center">
@@ -647,10 +650,10 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
             <FooterColumn
               title="Company"
               links={[
-                {name: "About Us", href: ""},
-                {name: "Contact", href: ""},
-                {name: "Privacy Policy", href: ""},
-                {name: "Terms of Service", href: ""},
+                {name: "About Us", href: "/about"},
+                {name: "Contact", href: "/contact"},
+                {name: "Privacy Policy", href: "/privacy-policy"},
+                {name: "Terms of Service", href: "/terms"},
               ]}
               
             />
@@ -705,8 +708,11 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
         </div>
       </footer>
     </div>
+
+    </>
   );
 }
+
 
 function SectionHeading({
   eyebrow,
@@ -718,7 +724,9 @@ function SectionHeading({
   title: string;
   text: string;
   align?: "left" | "center";
-}) {
+})
+
+ {
   return (
     <div
       className={
@@ -729,6 +737,8 @@ function SectionHeading({
       <h2 className="section-title">{title}</h2>
       <p className="section-copy">{text}</p>
     </div>
+
+
   );
 }
 
