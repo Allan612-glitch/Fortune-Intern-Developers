@@ -415,7 +415,7 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
               />
               <button
                 onClick={() => onStudentPortal("login")}
-                className="text-sm font-bold text-primary hover:text-emerald-700 flex items-center gap-2 whitespace-nowrap"
+                className="text-sm hover:cursor-pointer transition-all duration-300 ease-in-out hover:scale-110 font-bold text-primary hover:text-emerald-700 flex items-center gap-2 whitespace-nowrap"
               >
                 View All Internships <Icon name="arrow" className="w-4 h-4" />
               </button>
