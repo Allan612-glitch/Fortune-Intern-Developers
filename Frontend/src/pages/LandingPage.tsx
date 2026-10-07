@@ -345,13 +345,8 @@ export default function LandingPage({
               </p>
               <div className="flex flex-col sm:flex-row gap-3 mt-8">
                 <button
-<<<<<<< HEAD
                   onClick={() => goTo("internships")}
-                  className="px-6 py-3.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-all shadow-lg shadow-primary/15 flex items-center justify-center gap-2"
-=======
-                  onClick={() => onStudentPortal("login")}
                   className="px-6 py-3.5 rounded-xl bg-primary text-white text-sm hover:cursor-pointer font-bold hover:bg-primary-hover transition-all shadow-lg shadow-primary/15 flex items-center justify-center gap-2"
->>>>>>> origin/main
                 >
                   Find an Internship <Icon name="arrow" className="w-4 h-4" />
                 </button>
@@ -525,13 +520,8 @@ export default function LandingPage({
                 text="Review current opportunities and their available details before deciding to apply."
               />
               <button
-<<<<<<< HEAD
                 onClick={() => goTo("internships")}
-                className="text-sm font-bold text-primary hover:text-emerald-700 flex items-center gap-2 whitespace-nowrap"
-=======
-                onClick={() => onStudentPortal("login")}
                 className="text-sm hover:cursor-pointer transition-all duration-300 ease-in-out hover:scale-110 font-bold text-primary hover:text-emerald-700 flex items-center gap-2 whitespace-nowrap"
->>>>>>> origin/main
               >
                 Search opportunities <Icon name="arrow" className="w-4 h-4" />
               </button>
@@ -562,53 +552,9 @@ export default function LandingPage({
                   }}
                   className="text-sm font-semibold text-primary underline underline-offset-2"
                 >
-<<<<<<< HEAD
                   Clear filters
                 </button>
               )}
-=======
-                  <div className="flex items-start justify-between">
-                    <span
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center text-xs font-bold ${job.color}`}
-                    >
-                      {job.initials}
-                    </span>
-                    <button
-                      aria-label="Save opportunity"
-                      className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-primary"
-                    >
-                      <Icon name="bookmark" className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <h3 className="font-semibold text-base text-primary mt-5">
-                    {job.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {job.company}
-                  </p>
-                  <div className="flex flex-wrap gap-2 mt-4">
-                    <span className="job-chip">
-                      <Icon name="pin" className="w-3.5 h-3.5" />
-                      {job.location}
-                    </span>
-                    <span className="job-chip">
-                      <Icon name="briefcase" className="w-3.5 h-3.5" />
-                      {job.type}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-[10px] text-muted-foreground mt-5 pt-4 border-t border-border">
-                    <span>{job.posted}</span>
-                    <span>{job.deadline}</span>
-                  </div>
-                  <button
-                    onClick={() => onStudentPortal("login")}
-                    className="w-full mt-4 py-2.5 hover:cursor-pointer rounded-xl bg-secondary text-primary text-xs font-bold hover:bg-primary hover:text-white transition-colors"
-                  >
-                    View Opportunity
-                  </button> 
-                </article>
-              ))}
->>>>>>> origin/main
             </div>
             {programsError && (
               <div
@@ -871,13 +817,8 @@ export default function LandingPage({
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-3 mt-8">
               <button
-<<<<<<< HEAD
                 onClick={() => goTo("internships")}
-                className="px-6 py-3.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors"
-=======
-                onClick={() => onStudentPortal("login")}
                 className="px-6 py-3.5 hover:cursor-pointer rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors"
->>>>>>> origin/main
               >
                 Find an Internship
               </button>
