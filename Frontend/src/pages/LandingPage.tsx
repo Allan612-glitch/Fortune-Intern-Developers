@@ -652,6 +652,7 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
                 "Privacy Policy",
                 "Terms of Service",
               ]}
+              
             />
           </div>
           <div>
