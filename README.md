@@ -161,6 +161,10 @@ npm run dev
 
 Vite proxies `/api` requests to `http://127.0.0.1:8000` by default. Set `API_PROXY_TARGET` to change the development backend address. When the frontend and backend are hosted separately, set the frontend build variable `VITE_API_URL` to the backend origin and include the frontend origin in backend `CORS_ORIGINS`.
 
+The frontend uses React Router for browser history and direct links. Public routes include `/`, `/login`, `/register`, `/forgot-password`, and `/reset-password`; authenticated pages use `/app/:page`. The Vercel rewrite serves the SPA entry point for direct route visits and page refreshes.
+
+The production frontend uses `https://fortune-intern-developers-backend.vercel.app` as its API origin unless `VITE_API_URL` is set at build time. When deploying the frontend and backend on separate origins, configure the backend's `CORS_ORIGINS` with the exact frontend origins (including preview origins only if they are needed). Never use a wildcard origin for authenticated requests.
+
 ## Admin Access
 
 Admin access is controlled by the `users.is_admin` database field.
@@ -183,11 +187,16 @@ Admins can manage users, mentors, programs, applications, resumes, and announcem
 
 - Passwords are hashed with Argon2 through `pwdlib`.
 - JWT bearer tokens are used for protected endpoints.
+- Interim frontend limitation: the browser stores the bearer access token in `localStorage` under `fortune-intern-access-token`, where any script running on the site can read it. The frontend CSP reduces script-injection risk but does not make this storage safe from XSS. A complete fix requires coordinated backend support for `Secure`, `HttpOnly`, `SameSite` cookies, exact credentialed CORS origins, CSRF protection, and server-side token expiry/revocation; do not move the token to a JavaScript-readable cookie as a substitute.
 - Suspended users are blocked from protected API access.
 - Admin routes require the persisted admin role or the configured `ADMIN_EMAIL`.
 - Resume downloads are ownership-checked for users and admin-authorized for administrators.
 - Uploaded resumes are stored under `Backend/uploads/`, which is excluded from Git.
 - Never commit `.env`, Resend API keys, JWT secrets, or uploaded documents.
+- The frontend Vercel configuration enforces a Content Security Policy, denies framing, and sets `X-Content-Type-Options: nosniff`. The policy allows only the configured API and the Paystack, Google Fonts, and Unsplash origins used by the frontend; it does not allow inline scripts or `eval`. Inline styles are currently permitted because the app uses React style attributes and generated print styles.
+- Vercel Preview builds emit `noindex, nofollow` metadata and a disallow-all `robots.txt`; production builds retain the production indexing configuration. The shared static Vercel configuration does not set `X-Robots-Tag` on previews because a global response header would also de-index production. If preview deployments require that header, configure it in a preview-only deployment setting.
+- The bearer token is currently stored in browser `localStorage` as `fortune-intern-access-token`. This remains readable to JavaScript and is an interim risk; the CSP is defense in depth, not a replacement for secure token storage. A full migration requires backend-issued `Secure`, `HttpOnly`, `SameSite` cookies, credentialed CORS restricted to approved origins, CSRF protection, and server-side session expiry/revocation. Do not move the token to a JavaScript-readable cookie.
+- Vercel response-header rules take effect only when deployed. Verify the deployed frontend's response with `curl -I https://<frontend-origin>/`; local builds cannot confirm deployed headers or HSTS.
 
 ## Important API Groups
 
@@ -233,5 +242,3 @@ node -e "const fs=require('fs'); const html=fs.readFileSync('Frontend/index.html
 - Profile experience, skills, CGPA, documents, and the application applicant/academic details are persisted by the backend. Profile name/username editing and payment verification are not supported.
 - Profile and resume documents use the configured Cloudflare R2 bucket. Document uploads require the R2 settings in `.env`.
 - Email verification codes can be resent for pending registrations, with a 60-second cooldown.
-
-
