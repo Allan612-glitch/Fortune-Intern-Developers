@@ -652,10 +652,12 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
             <FooterColumn
               title="Company"
               links={[
-                {name: "About Us", href: "/about"},
+                {name: "About FIN", href: "/about"},
                 {name: "Contact", href: "/contact"},
                 {name: "Privacy Policy", href: "/privacy-policy"},
-                {name: "Terms of Service", href: "/terms"},
+                {name: "Terms & Conditions", href: "/terms"},
+                {name: "Cookie Policy", href: "/cookie-policy"},
+                {name: "Refund Policy", href: "/refund-policy"}
               ]}
               
             />
@@ -692,7 +694,7 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
               </a>
             </div>
           </div>
-          <div>
+          <div className=""> 
             <p className="text-sm font-bold">Customer Service</p>
             <a
               href="tel:0200313672"
@@ -700,6 +702,13 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
               className="inline-flex mt-4 text-sm text-white/70 hover:text-white transition-colors"
             >
               0200313672
+            </a><br/>
+            <a
+              href="tel:0257038948"
+              aria-label="Call Fortune Intern Customer Service"
+              className="inline-flex text-sm text-white/70 hover:text-white transition-colors"
+            >
+              0257038948
             </a>
           </div>
         </div>
