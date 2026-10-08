@@ -179,7 +179,6 @@ export default function App() {
       <Navigate to={authenticatedPath} replace />
     ) : (
       <AuthPage
-        key={mode}
         initialMode={mode}
         onBack={() => {
           pendingProgramIdRef.current = null

@@ -47,7 +47,8 @@ export default function AuthPage({
   onForgotPassword,
 }: AuthPageProps) {
   const location = useLocation();
-  const [mode, setMode] = useState<"login" | "register">(initialMode);
+  const [localMode, setLocalMode] = useState<"login" | "register">(initialMode);
+  const mode = onModeChange ? initialMode : localMode;
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -62,7 +63,9 @@ export default function AuthPage({
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [recoveryOpen, setRecoveryOpen] = useState(false);
-  const [googleButtonWidth, setGoogleButtonWidth] = useState(384);
+  const [googleButtonWidth, setGoogleButtonWidth] = useState(() =>
+    Math.min(384, Math.max(200, window.innerWidth - 96)),
+  );
   const googleClientConfigured = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim());
 
   useEffect(() => {
@@ -70,10 +73,26 @@ export default function AuthPage({
       setGoogleButtonWidth(Math.min(384, Math.max(200, window.innerWidth - 96)));
     };
 
-    updateGoogleButtonWidth();
     window.addEventListener("resize", updateGoogleButtonWidth);
     return () => window.removeEventListener("resize", updateGoogleButtonWidth);
   }, []);
+
+  useEffect(() => {
+    setForm({
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      school: "",
+      major: "",
+      industry: "",
+      userType: "student",
+    });
+    setTouched({});
+    setLoading(false);
+    setSubmitError("");
+    setRecoveryOpen(false);
+  }, [initialMode]);
 
   const set = (k: keyof typeof form, v: string) => {
     setForm((p) => ({ ...p, [k]: v }));
@@ -258,7 +277,7 @@ export default function AuthPage({
       onModeChange(m);
       return;
     }
-    setMode(m);
+    setLocalMode(m);
   };
 
   return (
@@ -397,38 +416,6 @@ export default function AuthPage({
                   ) : (
                     "Sign In"
                   )}
-                </button>
-
-                <div className="relative flex items-center gap-3">
-                  <div className="flex-1 h-px bg-border" />
-                  <span className="text-xs text-muted-foreground">or</span>
-                  <div className="flex-1 h-px bg-border" />
-                </div>
-
-                {googleClientConfigured ? (
-                  <div className="flex justify-center">
-                    <GoogleLogin
-                      onSuccess={handleGoogleSuccess}
-                      onError={() => setSubmitError("Google sign-in failed. Please try again.")}
-                      text="signin_with"
-                      theme="filled_blue"
-                      shape="rectangular"
-                      size="large"
-                      width={String(googleButtonWidth)}
-                    />
-                  </div>
-                ) : (
-                  <p className="text-center text-xs text-muted-foreground">
-                    Google sign-in is not configured for this deployment.
-                  </p>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => switchMode("register")}
-                  className="w-full py-3 rounded-xl border-2 border-border text-sm font-semibold text-foreground hover:border-primary hover:bg-secondary transition-all"
-                >
-                  Sign Up
                 </button>
               </form>
             ) : (
@@ -569,32 +556,44 @@ export default function AuthPage({
                 {submitError && (
                   <p className="text-red-500 text-xs">{submitError}</p>
                 )}
-
-                <div className="relative flex items-center gap-3">
-                  <div className="flex-1 h-px bg-border" />
-                  <span className="text-xs text-muted-foreground">or</span>
-                  <div className="flex-1 h-px bg-border" />
-                </div>
-
-                {googleClientConfigured ? (
-                  <div className="flex justify-center">
-                    <GoogleLogin
-                      onSuccess={handleGoogleSuccess}
-                      onError={() => setSubmitError("Google sign-up failed. Please try again.")}
-                      text="signup_with"
-                      theme="filled_blue"
-                      shape="rectangular"
-                      size="large"
-                      width={String(googleButtonWidth)}
-                    />
-                  </div>
-                ) : (
-                  <p className="text-center text-xs text-muted-foreground">
-                    Google sign-in is not configured for this deployment.
-                  </p>
-                )}
               </form>
             )}
+
+            <div className="mt-5 space-y-4">
+              <div className="relative flex items-center gap-3">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs text-muted-foreground">or</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+
+              {googleClientConfigured ? (
+                <div className="flex justify-center">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={() => setSubmitError("Google sign-in failed. Please try again.")}
+                    text="continue_with"
+                    theme="filled_blue"
+                    shape="rectangular"
+                    size="large"
+                    width={String(googleButtonWidth)}
+                  />
+                </div>
+              ) : (
+                <p className="text-center text-xs text-muted-foreground">
+                  Google sign-in is not configured for this deployment.
+                </p>
+              )}
+
+              {mode === "login" && (
+                <button
+                  type="button"
+                  onClick={() => switchMode("register")}
+                  className="w-full py-3 rounded-xl border-2 border-border text-sm font-semibold text-foreground hover:border-primary hover:bg-secondary transition-all"
+                >
+                  Sign Up
+                </button>
+              )}
+            </div>
           </div>
 
           <p className="text-center text-xs text-muted-foreground mt-6">
