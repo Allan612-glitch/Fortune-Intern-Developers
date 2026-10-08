@@ -378,19 +378,6 @@ export default function LandingPage({
                 company="Finance · Accra"
                 icon="chart"
               />
-              <div className="absolute bottom-0 left-5 sm:-left-2 bg-white rounded-2xl shadow-xl border border-border p-3.5 flex items-center gap-3">
-                <span className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                  <Icon name="check" className="w-5 h-5" />
-                </span>
-                <div>
-                  <p className="text-xs font-bold text-primary">
-                    Application Submitted
-                  </p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    You are one step closer
-                  </p>
-                </div>
-              </div>
             </div>
           </div>
         </section>

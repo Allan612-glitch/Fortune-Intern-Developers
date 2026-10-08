@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Poppins:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
 @theme inline {
@@ -21,7 +21,7 @@
   --color-surface-soft: var(--surface-soft);
   --color-footer: var(--footer);
   --font-sans: "Poppins", sans-serif;
-  --font-display: "Poppins", sans-serif;
+  --font-display: "Inter", "Poppins", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 }
 
@@ -60,7 +60,7 @@
 }
 
 body {
-  font-family: "Poppins", sans-serif;
+  font-family:"Inter", "Poppins", sans-serif, ;
   background-color: var(--cream);
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
