@@ -12,6 +12,8 @@ import CookiePolicy from "./pages/companypages/CookiePolicy";
 import PrivacyPolicy from "./pages/companypages/PrivacyPolicy";
 import RefundPolicy from "./pages/companypages/RefundPolicy";
 import Terms from "./pages/companypages/TAC";
+import BottomNav from "./components/layout/BottomNav";
+import Footer from "./components/layout/Footer";
 import { getCurrentUser, getProfile } from "./services/auth";
 import { getAccessToken, setAccessToken } from "./services/api";
 
@@ -138,31 +140,35 @@ export default function App() {
       );
 
     return (
-      <Routes>
-        <Route path="/about" element={<About />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/cookie-policy" element={<CookiePolicy />} />
-        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-        <Route path="/refund-policy" element={<RefundPolicy />} />
-        <Route path="/terms" element={<Terms />} />
-        <Route path="*" element={
-          authScreen === "landing" ? (
-            <LandingPage onStudentPortal={(mode = "login") => setAuthScreen(mode)} />
-          ) : (
-            <AuthPage
-              key={authScreen}
-              initialMode={authScreen}
-              onBack={() => setAuthScreen("landing")}
-              onLogin={handleLogin}
-              onRegister={handleRegister}
-              showOTP={showOTP}
-              onOTPVerified={handleOTPVerified}
-              pendingEmail={pendingUser?.email || ""}
-              onForgotPassword={() => navigateAuth("forgot")}
-            />
-          )
-        } />
-      </Routes>
+      <>
+        <Routes>
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/cookie-policy" element={<CookiePolicy />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/refund-policy" element={<RefundPolicy />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="*" element={
+            authScreen === "landing" ? (
+              <LandingPage onStudentPortal={(mode = "login") => setAuthScreen(mode)} />
+            ) : (
+              <AuthPage
+                key={authScreen}
+                initialMode={authScreen}
+                onBack={() => setAuthScreen("landing")}
+                onLogin={handleLogin}
+                onRegister={handleRegister}
+                showOTP={showOTP}
+                onOTPVerified={handleOTPVerified}
+                pendingEmail={pendingUser?.email || ""}
+                onForgotPassword={() => navigateAuth("forgot")}
+              />
+            )
+          } />
+        </Routes>
+        <BottomNav />
+        <Footer />
+      </>
     );
   }
 
@@ -170,6 +176,7 @@ export default function App() {
     <>
       <MainApp user={user} onLogout={handleLogout} />
       <AIChatWidget user={user} />
+      <Footer />
     </>
   );
 }
