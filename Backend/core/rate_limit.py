@@ -1,6 +1,7 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from hashlib import sha256
 import logging
+from collections.abc import Callable
 
 from fastapi import HTTPException, Request, status
 from sqlalchemy import case
@@ -22,12 +23,10 @@ def enforce_rate_limit(
     ip_limit: int,
     identity_limit: int,
     window_seconds: int,
+    identity_window_seconds: int | None = None,
+    on_ip_limit: Callable[[], None] | None = None,
 ) -> None:
     now = datetime.now(timezone.utc)
-    window_start = datetime.fromtimestamp(
-        int(now.timestamp()) // window_seconds * window_seconds,
-        tz=timezone.utc,
-    )
     client_ip = request.client.host if request.client else "unknown"
     subjects = (
         ("ip", client_ip, ip_limit),
@@ -41,8 +40,18 @@ def enforce_rate_limit(
     if insert is None:
         raise RuntimeError(f"Rate limiting is not supported for database dialect {dialect!r}")
 
-    allowed = True
+    ip_limited = False
+    identity_limited = False
     for subject_type, subject, limit in subjects:
+        subject_window_seconds = (
+            window_seconds
+            if subject_type == "ip" or identity_window_seconds is None
+            else identity_window_seconds
+        )
+        window_start = datetime.fromtimestamp(
+            int(now.timestamp()) // subject_window_seconds * subject_window_seconds,
+            tz=timezone.utc,
+        )
         digest = sha256(f"{action}\0{subject_type}\0{subject}".encode()).hexdigest()
         bucket_key = f"{action}:{digest}"
         statement = insert(rate_limit_bucket).values(
@@ -67,19 +76,55 @@ def enforce_rate_limit(
             },
         ).returning(table.c.count)
         count = session.exec(statement).scalar_one()
-        allowed = allowed and count <= limit
+        if count > limit:
+            if subject_type == "ip":
+                ip_limited = True
+            else:
+                identity_limited = True
 
     session.commit()
-    if not allowed:
+    if identity_limited:
+        subject_window_seconds = identity_window_seconds or window_seconds
+        window_end = datetime.fromtimestamp(
+            (int(now.timestamp()) // subject_window_seconds + 1) * subject_window_seconds,
+            tz=timezone.utc,
+        )
         retry_after = max(
             1,
-            int((window_start + timedelta(seconds=window_seconds) - now).total_seconds()),
+            int((window_end - now).total_seconds()),
         )
         logger.warning(
             "request rate limit exceeded",
             extra={
                 "rate_limit_action": action,
                 "source_ip": client_ip,
+                "rate_limit_subject": "identity",
+                "retry_after": retry_after,
+            },
+        )
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many requests. Please try again later.",
+            headers={"Retry-After": str(retry_after)},
+        )
+    if ip_limited:
+        if on_ip_limit is not None:
+            on_ip_limit()
+            return
+        window_end = datetime.fromtimestamp(
+            (int(now.timestamp()) // window_seconds + 1) * window_seconds,
+            tz=timezone.utc,
+        )
+        retry_after = max(
+            1,
+            int((window_end - now).total_seconds()),
+        )
+        logger.warning(
+            "request rate limit exceeded",
+            extra={
+                "rate_limit_action": action,
+                "source_ip": client_ip,
+                "rate_limit_subject": "ip",
                 "retry_after": retry_after,
             },
         )

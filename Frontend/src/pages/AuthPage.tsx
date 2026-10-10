@@ -2,8 +2,10 @@ import { useState, useRef, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
 import type { AppUser } from "../App";
+import { ApiError } from "../services/api";
 import { requestForgotPassword } from "../services/authNotifications";
 import { getProfile, login, loginWithGoogle, register, resendVerification, updateProfile, verifyEmail } from "../services/auth";
+import TurnstileChallenge from "../components/TurnstileChallenge";
 
 const ghanaUniversities = [
   "University of Ghana",
@@ -63,10 +65,14 @@ export default function AuthPage({
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const [captchaRequired, setCaptchaRequired] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaWidgetKey, setCaptchaWidgetKey] = useState(0);
   const [googleButtonWidth, setGoogleButtonWidth] = useState(() =>
     Math.min(384, Math.max(200, window.innerWidth - 96)),
   );
   const googleClientConfigured = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim());
+  const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim() ?? "";
 
   useEffect(() => {
     const updateGoogleButtonWidth = () => {
@@ -92,6 +98,9 @@ export default function AuthPage({
     setLoading(false);
     setSubmitError("");
     setRecoveryOpen(false);
+    setCaptchaRequired(false);
+    setCaptchaToken("");
+    setCaptchaWidgetKey(0);
   }, [initialMode]);
 
   const set = (k: keyof typeof form, v: string) => {
@@ -237,7 +246,12 @@ export default function AuthPage({
       return;
     setLoading(true);
     try {
-      await register(form.name.trim(), form.email.trim(), form.password);
+      await register(
+        form.name.trim(),
+        form.email.trim(),
+        form.password,
+        captchaToken || undefined,
+      );
       onRegister({
       name: form.name,
       email: form.email,
@@ -254,8 +268,19 @@ export default function AuthPage({
       role: "student",
       });
     } catch (error) {
+      if (error instanceof ApiError && (error.code === "captcha_required" || error.code === "captcha_invalid")) {
+        setCaptchaRequired(true);
+        setCaptchaToken("");
+        setCaptchaWidgetKey((key) => key + 1);
+        setSubmitError(error.code === "captcha_invalid" ? error.message : "");
+        return;
+      }
       setSubmitError(error instanceof Error ? error.message : "Unable to create your account.");
     } finally {
+      if (captchaToken) {
+        setCaptchaToken("");
+        setCaptchaWidgetKey((key) => key + 1);
+      }
       setLoading(false);
     }
   };
@@ -531,9 +556,33 @@ export default function AuthPage({
                   }
                 />
 
+                {captchaRequired && (
+                  <div className="space-y-2">
+                    {turnstileSiteKey ? (
+                      <>
+                        <p className="text-xs text-muted-foreground">
+                          Please complete this security check to continue signing up.
+                        </p>
+                        <TurnstileChallenge
+                          key={captchaWidgetKey}
+                          siteKey={turnstileSiteKey}
+                          onToken={(token) => {
+                            setCaptchaToken(token);
+                            if (token) setSubmitError("");
+                          }}
+                        />
+                      </>
+                    ) : (
+                      <p className="text-red-500 text-xs" role="alert">
+                        Signup security verification is not configured. Please contact support.
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || (captchaRequired && !captchaToken)}
                   className="w-full py-3.5 rounded-xl text-white font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-60 shadow-md mt-2"
                   style={{
                     background: "linear-gradient(135deg, #2D3561, #3d4a8a)",

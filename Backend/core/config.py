@@ -15,7 +15,9 @@ class Settings:
     admin_email: str | None = os.getenv("ADMIN_EMAIL")
     resend_api_key: str | None = os.getenv("RESEND_API_KEY")
     resend_from_email: str | None = os.getenv("RESEND_FROM_EMAIL")
+    turnstile_secret_key: str | None = os.getenv("TURNSTILE_SECRET_KEY")
     verification_code_expire_minutes: int = 10
+    verification_code_max_attempts: int = 5
     access_token_expire_minutes: int = 60
     password_reset_token_expire_minutes: int = 30
     frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:5500")

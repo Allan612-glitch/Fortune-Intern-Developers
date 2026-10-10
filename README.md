@@ -119,11 +119,13 @@ ADMIN_EMAIL=admin@example.com
 CORS_ORIGINS=http://localhost:5500,http://127.0.0.1:5500
 RESEND_API_KEY=re_your_resend_api_key
 RESEND_FROM_EMAIL=noreply@your-verified-domain.com
+TURNSTILE_SECRET_KEY=your_cloudflare_turnstile_secret_key
 ```
 
 `JWT_SECRET` must be at least 32 characters. The backend will refuse to start with the example placeholder or an insecure short value.
+Set `TURNSTILE_SECRET_KEY` in the backend environment and `VITE_TURNSTILE_SITE_KEY` in the frontend build environment. Signup presents a Cloudflare Turnstile challenge when an IP exceeds 500 signup requests per minute; without these keys, that fallback cannot be completed.
 
-Verify the sender domain in Resend before registering accounts. Registration emails contain a six-digit OTP that expires after 10 minutes. `POST /api/auth/register` sends the OTP and `POST /api/auth/verify-email` accepts the email and OTP before the account is created.
+Verify the sender domain in Resend before registering accounts. Registration emails contain a six-digit OTP that expires after 10 minutes and is locked after five incorrect guesses; the user can request a new code. `POST /api/auth/register` sends the OTP and `POST /api/auth/verify-email` accepts the email and OTP before the account is created.
 
 ## Database Setup
 
@@ -159,7 +161,7 @@ npm ci
 npm run dev
 ```
 
-Vite proxies `/api` requests to `http://127.0.0.1:8000` by default. Set `API_PROXY_TARGET` to change the development backend address. When the frontend and backend are hosted separately, set the frontend build variable `VITE_API_URL` to the backend origin and include the frontend origin in backend `CORS_ORIGINS`.
+Set `VITE_TURNSTILE_SITE_KEY` in `Frontend/.env.local` for the signup fallback challenge. Vite proxies `/api` requests to `http://127.0.0.1:8000` by default. Set `API_PROXY_TARGET` to change the development backend address. When the frontend and backend are hosted separately, set the frontend build variable `VITE_API_URL` to the backend origin and include the frontend origin in backend `CORS_ORIGINS`.
 
 ## Admin Access
 
@@ -233,5 +235,3 @@ node -e "const fs=require('fs'); const html=fs.readFileSync('Frontend/index.html
 - Profile experience, skills, CGPA, documents, and the application applicant/academic details are persisted by the backend. Profile name/username editing and payment verification are not supported.
 - Profile and resume documents use the configured Cloudflare R2 bucket. Document uploads require the R2 settings in `.env`.
 - Email verification codes can be resent for pending registrations, with a 60-second cooldown.
-
-

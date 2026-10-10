@@ -18,6 +18,17 @@ export function setAccessToken(token: string | null) {
   else localStorage.removeItem(tokenStorageKey);
 }
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code?: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   const token = getAccessToken();
@@ -29,14 +40,19 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
   const response = await fetch(apiUrl(path), { ...init, headers });
   if (!response.ok) {
     let message = `Request failed (${response.status})`;
+    let code: string | undefined;
     try {
       const body = await response.json();
       if (typeof body.detail === "string") message = body.detail;
+      else if (body.detail && typeof body.detail === "object") {
+        if (typeof body.detail.message === "string") message = body.detail.message;
+        if (typeof body.detail.code === "string") code = body.detail.code;
+      }
       else if (typeof body.message === "string") message = body.message;
     } catch {
       // Keep the HTTP status when the response has no JSON error body.
     }
-    throw new Error(message);
+    throw new ApiError(message, response.status, code);
   }
 
   if (response.status === 204) return undefined as T;
@@ -50,14 +66,19 @@ export async function apiBlob(path: string) {
   const response = await fetch(apiUrl(path), { headers });
   if (!response.ok) {
     let message = `Download failed (${response.status})`;
+    let code: string | undefined;
     try {
       const body = await response.json();
       if (typeof body.detail === "string") message = body.detail;
+      else if (body.detail && typeof body.detail === "object") {
+        if (typeof body.detail.message === "string") message = body.detail.message;
+        if (typeof body.detail.code === "string") code = body.detail.code;
+      }
       else if (typeof body.message === "string") message = body.message;
     } catch {
       // Keep the HTTP status when the response has no JSON error body.
     }
-    throw new Error(message);
+    throw new ApiError(message, response.status, code);
   }
   return response.blob();
 }

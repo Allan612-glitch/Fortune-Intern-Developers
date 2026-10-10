@@ -9,6 +9,7 @@ import resend
 from sqlmodel import Session, select
 
 from Backend.api.deps import get_current_user
+from Backend.core.captcha import verify_turnstile
 from Backend.core.config import settings
 from Backend.core.security import create_access_token, hash_password, verify_password
 from Backend.core.rate_limit import enforce_rate_limit
@@ -30,6 +31,10 @@ from Database.schemas import (
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 logger = logging.getLogger(__name__)
+
+
+def _as_utc(value: datetime) -> datetime:
+    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
 
 
 def send_verification_email(email: str, code: str) -> None:
@@ -96,7 +101,10 @@ def login(
     email = validate_email(credentials.email)
     enforce_rate_limit(
         session, request, "login", email,
-        ip_limit=40, identity_limit=10, window_seconds=900,
+        ip_limit=500,
+        identity_limit=10,
+        window_seconds=60,
+        identity_window_seconds=900,
     )
     account = session.exec(select(user).where(user.email == email)).first()
     if not account or not account.password_hash or not verify_password(credentials.password, account.password_hash):
@@ -134,9 +142,12 @@ def google_login(
     request: Request,
     session: Session = Depends(get_session),
 ):
+    client_ip = request.client.host if request.client else "unknown"
     enforce_rate_limit(
-        session, request, "google-login", "google-login",
-        ip_limit=30, identity_limit=30, window_seconds=900,
+        session, request, "google-login", client_ip,
+        ip_limit=500,
+        identity_limit=500,
+        window_seconds=60,
     )
     if not settings.google_client_id:
         raise HTTPException(status_code=503, detail="Google sign-in is not configured")
@@ -162,7 +173,10 @@ def google_login(
     email = validate_email(email_claim)
     enforce_rate_limit(
         session, request, "google-login-email", email,
-        ip_limit=60, identity_limit=10, window_seconds=900,
+        ip_limit=500,
+        identity_limit=10,
+        window_seconds=60,
+        identity_window_seconds=900,
     )
     account = session.exec(select(user).where(user.google_sub == subject)).first()
     if not account:
@@ -202,9 +216,14 @@ def register(
     session: Session = Depends(get_session),
 ):
     email = validate_email(credentials.email)
+    client_ip = request.client.host if request.client else None
     enforce_rate_limit(
         session, request, "register", email,
-        ip_limit=10, identity_limit=5, window_seconds=3600,
+        ip_limit=500,
+        identity_limit=5,
+        window_seconds=60,
+        identity_window_seconds=3600,
+        on_ip_limit=lambda: verify_turnstile(credentials.captcha_token, client_ip),
     )
     name = credentials.name.strip()
     if len(name) < 2:
@@ -230,12 +249,14 @@ def register(
             email=email,
             password_hash=hash_password(credentials.password),
             code_hash=hash_password(code),
+            failed_attempts=0,
             expires_at=datetime.now(timezone.utc) + timedelta(minutes=settings.verification_code_expire_minutes),
         )
     else:
         pending_registration.name = name
         pending_registration.password_hash = hash_password(credentials.password)
         pending_registration.code_hash = hash_password(code)
+        pending_registration.failed_attempts = 0
         pending_registration.expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.verification_code_expire_minutes)
         pending_registration.created_at = datetime.now(timezone.utc)
 
@@ -257,7 +278,10 @@ def resend_verification(
     email = validate_email(payload.email)
     enforce_rate_limit(
         session, request, "resend-verification", email,
-        ip_limit=20, identity_limit=3, window_seconds=3600,
+        ip_limit=500,
+        identity_limit=3,
+        window_seconds=60,
+        identity_window_seconds=3600,
     )
     response = MessageResponse(message="If a pending registration exists, a new code has been sent")
     pending_registration = session.exec(
@@ -267,12 +291,13 @@ def resend_verification(
         return response
 
     now = datetime.now(timezone.utc)
-    cooldown_ends = pending_registration.created_at + timedelta(seconds=60)
+    cooldown_ends = _as_utc(pending_registration.created_at) + timedelta(seconds=60)
     if cooldown_ends > now:
         return response
 
     code = f"{randbelow(1_000_000):06d}"
     pending_registration.code_hash = hash_password(code)
+    pending_registration.failed_attempts = 0
     pending_registration.expires_at = now + timedelta(minutes=settings.verification_code_expire_minutes)
     pending_registration.created_at = now
     send_verification_email(email, code)
@@ -290,7 +315,10 @@ def verify_email(
     email = validate_email(payload.email)
     enforce_rate_limit(
         session, request, "verify-email", email,
-        ip_limit=30, identity_limit=10, window_seconds=900,
+        ip_limit=500,
+        identity_limit=10,
+        window_seconds=60,
+        identity_window_seconds=900,
     )
     pending_registration = session.exec(
         select(registration_verification).where(registration_verification.email == email)
@@ -298,12 +326,26 @@ def verify_email(
     if not pending_registration:
         raise HTTPException(status_code=400, detail="No pending registration was found for this email")
 
-    if pending_registration.expires_at <= datetime.now(timezone.utc):
+    if _as_utc(pending_registration.expires_at) <= datetime.now(timezone.utc):
         session.delete(pending_registration)
         session.commit()
         raise HTTPException(status_code=400, detail="Verification code has expired")
 
+    if pending_registration.failed_attempts >= settings.verification_code_max_attempts:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many incorrect codes. Request a new verification code.",
+        )
+
     if not verify_password(payload.code.strip(), pending_registration.code_hash):
+        pending_registration.failed_attempts += 1
+        session.add(pending_registration)
+        session.commit()
+        if pending_registration.failed_attempts >= settings.verification_code_max_attempts:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many incorrect codes. Request a new verification code.",
+            )
         raise HTTPException(status_code=400, detail="Invalid verification code")
 
     if session.exec(select(user).where(user.email == email)).first():
@@ -336,7 +378,10 @@ def forgot_password(
     email = validate_email(payload.email)
     enforce_rate_limit(
         session, request, "forgot-password", email,
-        ip_limit=20, identity_limit=5, window_seconds=3600,
+        ip_limit=500,
+        identity_limit=5,
+        window_seconds=60,
+        identity_window_seconds=3600,
     )
     generic_response = MessageResponse(
         message="If an account with that email exists, a password reset link has been sent"
@@ -374,7 +419,10 @@ def reset_password(
     email = validate_email(payload.email)
     enforce_rate_limit(
         session, request, "reset-password", email,
-        ip_limit=30, identity_limit=10, window_seconds=900,
+        ip_limit=500,
+        identity_limit=10,
+        window_seconds=60,
+        identity_window_seconds=900,
     )
     if len(payload.new_password) < 8:
         raise HTTPException(status_code=422, detail="Password must be at least 8 characters")
