@@ -342,12 +342,12 @@ export default function AuthPage({
             {mode === "login" ? (
               <form onSubmit={handleLogin} className="space-y-5" noValidate>
                 <Field
-                  label="Student email"
+                  label=" Email"
                   type="email"
                   value={form.email}
                   onChange={(v) => set("email", v)}
                   onBlur={() => touch("email")}
-                  placeholder="you@university.edu.gh"
+                  placeholder="you@email.com"
                   error={errors.email}
                   icon={
                     <path
