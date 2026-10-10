@@ -51,6 +51,8 @@ export default function About() {
           </ul>
         </div>
 
+            <span className="text-gray-500">Last Updated: September 2026 </span>
+      
       </div>
     </div>
   );
