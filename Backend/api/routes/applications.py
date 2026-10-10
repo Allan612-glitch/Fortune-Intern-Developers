@@ -190,7 +190,10 @@ async def create_application(
 ):
     enforce_rate_limit(
         session, request, "application-create", str(account.id),
-        ip_limit=20, identity_limit=10, window_seconds=3600,
+        ip_limit=500,
+        identity_limit=10,
+        window_seconds=60,
+        identity_window_seconds=3600,
     )
     content_type = request.headers.get("content-type", "")
     resume = None

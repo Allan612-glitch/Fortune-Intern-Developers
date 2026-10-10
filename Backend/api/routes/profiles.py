@@ -228,7 +228,10 @@ async def upload_profile_document(
 ):
     enforce_rate_limit(
         session, request, "profile-document-upload", str(account.id),
-        ip_limit=30, identity_limit=20, window_seconds=3600,
+        ip_limit=500,
+        identity_limit=20,
+        window_seconds=60,
+        identity_window_seconds=3600,
     )
     content, filename, content_type = await read_validated_document(file, "Document")
     extension = Path(filename).suffix.lower()
