@@ -12,7 +12,7 @@ export default function About() {
     <div className="min-h-screen bg-[#f8f9fa] flex flex-col pt-12 pb-24 px-4 sm:px-8 md:px-16 lg:px-32">
       <div className="max-w-4xl w-full mx-auto text-slate-700">
         
-     
+        
         <div className="mb-8">
           <h1 className="text-4xl font-extrabold text-[#0B172A] mb-4">
             About Fortune Intern Network
