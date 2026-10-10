@@ -146,7 +146,7 @@ class notification(SQLModel, table=True):
     message: str = Field(sa_column=Column("message", String, nullable=False))
     target_type: str | None = Field(default=None, sa_column=Column("target_type", String))
     target_id: str | None = Field(default=None, sa_column=Column("target_id", String))
-    read: bool = Field(default=False, sa_column=Column("read", String, nullable=False, default="false"))
+    read: bool = Field(default=False, sa_column=Column("read", Boolean, nullable=False, default=False))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
 
