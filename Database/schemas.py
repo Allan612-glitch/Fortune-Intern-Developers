@@ -15,6 +15,7 @@ class RegisterRequest(BaseModel):
     name: str
     email: str
     password: str
+    captcha_token: str | None = Field(default=None, max_length=8192)
 
 
 class VerificationStartResponse(BaseModel):
