@@ -935,6 +935,18 @@ function OTPModal({
     if (e.key === "Backspace" && !otp[i] && i > 0) refs.current[i - 1]?.focus();
   };
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const digits = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (!digits) return;
+    const next = ["", "", "", "", "", ""];
+    digits.split("").forEach((digit, index) => {
+      next[index] = digit;
+    });
+    setOtp(next);
+    refs.current[Math.min(digits.length, 5)]?.focus();
+  };
+
   const handleVerify = async () => {
     const code = otp.join("");
     if (code.length !== 6) {
@@ -1018,6 +1030,7 @@ function OTPModal({
               value={v}
               onChange={(e) => handleInput(i, e.target.value)}
               onKeyDown={(e) => handleKeyDown(i, e)}
+              onPaste={handlePaste}
               className="otp-input"
               maxLength={1}
               inputMode="numeric"
