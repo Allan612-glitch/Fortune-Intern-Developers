@@ -239,6 +239,7 @@ class registration_verification(SQLModel, table=True):
     email: str = Field(sa_column=Column("email", String, unique=True, index=True, nullable=False))
     password_hash: str = Field(sa_column=Column("password_hash", String, nullable=False))
     code_hash: str = Field(sa_column=Column("code_hash", String, nullable=False))
+    failed_attempts: int = Field(default=0, sa_column=Column("failed_attempts", Integer, nullable=False, default=0, server_default="0"))
     expires_at: datetime = Field(sa_column=Column("expires_at", DateTime(timezone=True), nullable=False))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
 
