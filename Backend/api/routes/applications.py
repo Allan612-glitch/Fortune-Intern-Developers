@@ -324,7 +324,7 @@ async def create_application(
         message=f"Your application for {program_name} was submitted successfully.",
         target_type="application",
         target_id=str(new_application.id),
-        read="false",
+        read=False,
     ))
     session.add(
         application_status_history(

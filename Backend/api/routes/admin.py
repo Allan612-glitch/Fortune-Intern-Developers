@@ -219,7 +219,7 @@ def update_application_status(application_id: str, payload: AdminApplicationStat
 			message=f"Your application was {decision} by the Fortune Intern Network team.",
 			target_type="application",
 			target_id=str(row.id),
-			read="false",
+			read=False,
 		))
 	session.commit()
 	program_record = session.get(program, row.program_id)
@@ -320,7 +320,7 @@ def create_announcement(payload: AnnouncementCreateRequest, request: Request, ad
 			message=f"New announcement: {row.title}",
 			target_type="announcement",
 			target_id=str(row.id),
-			read="false",
+			read=False,
 		))
 	record_audit_event(session, request, actor_id=admin.id, action="announcement.create", object_type="announcement", object_id=str(row.id))
 	session.commit()
