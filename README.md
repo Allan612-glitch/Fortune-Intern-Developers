@@ -227,7 +227,7 @@ node -e "const fs=require('fs'); const html=fs.readFileSync('Frontend/index.html
 
 ## Current Development Notes
 
-- Payment is currently a frontend-only GHS 3 display. No payment provider or backend payment processing is connected.
+- Payment is currently a frontend-only GHS 4 display. No payment provider or backend payment processing is connected.
 - Registration requires an email OTP sent through Resend before the account is created.
 - Mentor approval is required before a mentor appears in the public mentor directory.
 - Application status changes are controlled by admins.
