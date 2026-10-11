@@ -12,7 +12,7 @@ The project includes a FastAPI backend, PostgreSQL database, Alembic migrations,
 - Internship program catalog with search and filtering
 - Application submission with resume upload
 - Application history and status tracking
-- Frontend-only GHS 3 application fee display
+- Frontend-only GHS 4 application fee display
 - Personalized user dashboard
 - In-app notifications with unread counts and targeted navigation
 - Mentor registration and mentor discovery
