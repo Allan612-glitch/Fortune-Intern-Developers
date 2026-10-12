@@ -8,40 +8,41 @@ import {
 } from "react-router-dom"
 
 import AuthPage from "./pages/AuthPage"
-
 import MainApp from "./pages/MainApp"
-
 import AIChatWidget from "./components/AIChatWidget"
-
 import LandingPage from "./pages/LandingPage"
-
 import ForgotPasswordPage from "./pages/ForgotPasswordPage"
-
 import ResetPasswordPage from "./pages/ResetPasswordPage"
-
+import About from "./pages/companypages/About"
+import Contact from "./pages/companypages/ContactUs"
+import CookiePolicy from "./pages/companypages/CookiePolicy"
+import PrivacyPolicy from "./pages/companypages/PrivacyPolicy"
+import RefundPolicy from "./pages/companypages/RefundPolicy"
+import Terms from "./pages/companypages/TAC"
+import Footer from "./components/layout/Footer"
 import { getCurrentUser, getProfile } from "./services/auth"
-
 import { getAccessToken, setAccessToken } from "./services/api"
 
 export type AppUser = {
   name: string
-
   email: string
-
   school: string
-
   major: string
-
   avatar: string
-
   isAdmin: boolean
-
   verified: boolean
-
   role: "student"
 }
 
-export type AppPage = "home" | "dashboard" | "applications" | "announcements" | "programs" | "apply" | "profile" | "admin"
+export type AppPage =
+  | "home"
+  | "dashboard"
+  | "applications"
+  | "announcements"
+  | "programs"
+  | "apply"
+  | "profile"
+  | "admin"
 
 export default function App() {
   const navigate = useNavigate()
@@ -113,7 +114,6 @@ export default function App() {
             role: "student",
           })
         })
-
         .catch(() => setAccessToken(null))
         .finally(() => {
           if (active) setAuthLoading(false)
@@ -123,14 +123,13 @@ export default function App() {
         active = false
       }
     }
+    setAuthLoading(false)
   }, [])
 
   const handleRegister = (userData: AppUser) => {
     setPendingUser(userData)
-
     setShowOTP(true)
   }
-
   const handleOTPVerified = (programId?: string | null) => {
     if (pendingUser) {
       const selectedProgram = programId || selectedProgramId
@@ -139,15 +138,11 @@ export default function App() {
         setPendingProgramId(selectedProgram)
       }
       setUser({ ...pendingUser, verified: true })
-
       setPendingUser(null)
-
       setShowOTP(false)
-
       navigate(selectedProgram ? "/app/programs" : "/app/home")
     }
   }
-
   const handleLogin = (userData: AppUser, programId?: string | null) => {
     const selectedProgram = programId || selectedProgramId
     if (selectedProgram) {
@@ -155,22 +150,16 @@ export default function App() {
       setPendingProgramId(selectedProgram)
     }
     setUser(userData)
-
     navigate(selectedProgram ? "/app/programs" : "/app/home")
   }
 
   const handleLogout = () => {
     setAccessToken(null)
-
     setUser(null)
-
     setPendingUser(null)
-
     setShowOTP(false)
-
     pendingProgramIdRef.current = null
     setPendingProgramId(null)
-
     navigate("/login")
   }
 
@@ -235,9 +224,7 @@ export default function App() {
             user ? (
               <Navigate to={authenticatedPath} replace />
             ) : (
-              <ForgotPasswordPage
-                onBack={() => navigateAuth("/login")}
-              />
+              <ForgotPasswordPage onBack={() => navigateAuth("/login")} />
             )
           }
         />
@@ -256,8 +243,60 @@ export default function App() {
         />
         <Route
           path="/reset-password.html"
+          element={<Navigate to={`/reset-password${location.search}`} replace />}
+        />
+        <Route
+          path="/about"
           element={
-            <Navigate to={`/reset-password${location.search}`} replace />
+            <>
+              <About />
+              <Footer />
+            </>
+          }
+        />
+        <Route
+          path="/contact"
+          element={
+            <>
+              <Contact />
+              <Footer />
+            </>
+          }
+        />
+        <Route
+          path="/cookie-policy"
+          element={
+            <>
+              <CookiePolicy />
+              <Footer />
+            </>
+          }
+        />
+        <Route
+          path="/privacy-policy"
+          element={
+            <>
+              <PrivacyPolicy />
+              <Footer />
+            </>
+          }
+        />
+        <Route
+          path="/refund-policy"
+          element={
+            <>
+              <RefundPolicy />
+              <Footer />
+            </>
+          }
+        />
+        <Route
+          path="/terms"
+          element={
+            <>
+              <Terms />
+              <Footer />
+            </>
           }
         />
         <Route

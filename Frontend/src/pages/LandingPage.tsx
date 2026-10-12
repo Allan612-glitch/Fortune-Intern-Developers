@@ -864,7 +864,7 @@ export default function LandingPage({
 
                 "Terms of Service",
               ]}
-              
+
             />
           </div>
           <div>
