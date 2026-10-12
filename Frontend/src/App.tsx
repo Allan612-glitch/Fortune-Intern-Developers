@@ -1,5 +1,12 @@
-import { useEffect, useState } from "react";
-import { Routes, Route } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import {
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
+
 import AuthPage from "./pages/AuthPage";
 import MainApp from "./pages/MainApp";
 import AIChatWidget from "./components/AIChatWidget";
@@ -38,34 +45,46 @@ export type AppPage =
   | "admin";
 
 export default function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState<AppUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(Boolean(getAccessToken()));
   const [showOTP, setShowOTP] = useState(false);
   const [pendingUser, setPendingUser] = useState<AppUser | null>(null);
-  const [authScreen, setAuthScreen] = useState<
-    "landing" | "login" | "register" | "forgot" | "reset"
-  >("landing");
+  const [pendingProgramId, setPendingProgramId] = useState<string | null>(null);
+  const pendingProgramIdRef = useRef<string | null>(null);
 
-  const navigateAuth = (screen: typeof authScreen) => {
-    const path =
-      screen === "forgot"
-        ? "/forgot-password"
-        : screen === "reset"
-          ? "/reset-password"
-          : "/";
-    window.history.pushState({}, "", path);
-    setAuthScreen(screen);
-  };
+  const selectedProgramId =
+    pendingProgramIdRef.current ||
+    pendingProgramId ||
+    new URLSearchParams(location.search).get("program");
+  const authenticatedPath = selectedProgramId ? "/app/programs" : "/app/home";
+  const programIdFromUrl = new URLSearchParams(location.search).get("program");
 
   useEffect(() => {
-    const path = window.location.pathname;
-    if (path === "/forgot-password") setAuthScreen("forgot");
-    if (path === "/reset-password" || path.endsWith("/reset-password.html"))
-      setAuthScreen("reset");
+    if (!programIdFromUrl) return;
+    pendingProgramIdRef.current = programIdFromUrl;
+    setPendingProgramId(programIdFromUrl);
+  }, [programIdFromUrl]);
+
+  const navigateAuth = (
+    path: "/login" | "/register" | "/forgot-password" | "/reset-password",
+  ) =>
+    navigate({
+      pathname: path,
+      search: selectedProgramId
+        ? `?program=${encodeURIComponent(selectedProgramId)}`
+        : "",
+    });
+
+  useEffect(() => {
     if (getAccessToken()) {
       let active = true;
+
       Promise.all([getCurrentUser(), getProfile()])
         .then(([account, profile]) => {
           if (!active) return;
+
           setUser({
             name: account.name,
             email: account.email,
@@ -82,11 +101,17 @@ export default function App() {
             role: "student",
           });
         })
-        .catch(() => setAccessToken(null));
+        .catch(() => setAccessToken(null))
+        .finally(() => {
+          if (active) setAuthLoading(false);
+        });
+
       return () => {
         active = false;
       };
     }
+
+    setAuthLoading(false);
   }, []);
 
   const handleRegister = (userData: AppUser) => {
@@ -94,16 +119,28 @@ export default function App() {
     setShowOTP(true);
   };
 
-  const handleOTPVerified = () => {
+  const handleOTPVerified = (programId?: string | null) => {
     if (pendingUser) {
+      const selectedProgram = programId || selectedProgramId;
+      if (selectedProgram) {
+        pendingProgramIdRef.current = selectedProgram;
+        setPendingProgramId(selectedProgram);
+      }
       setUser({ ...pendingUser, verified: true });
       setPendingUser(null);
       setShowOTP(false);
+      navigate(selectedProgram ? "/app/programs" : "/app/home");
     }
   };
 
-  const handleLogin = (userData: AppUser) => {
+  const handleLogin = (userData: AppUser, programId?: string | null) => {
+    const selectedProgram = programId || selectedProgramId;
+    if (selectedProgram) {
+      pendingProgramIdRef.current = selectedProgram;
+      setPendingProgramId(selectedProgram);
+    }
     setUser(userData);
+    navigate(selectedProgram ? "/app/programs" : "/app/home");
   };
 
   const handleLogout = () => {
@@ -111,70 +148,173 @@ export default function App() {
     setUser(null);
     setPendingUser(null);
     setShowOTP(false);
-    setAuthScreen("login");
+    pendingProgramIdRef.current = null;
+    setPendingProgramId(null);
+    navigate("/login");
   };
 
-  if (!user) {
-    if (authScreen === "forgot")
-      return (
-        <Routes>
-          <Route path="*" element={
-            <ForgotPasswordPage
-              onBack={() => navigateAuth("login")}
-              onReset={() => navigateAuth("reset")}
-            />
-          } />
-        </Routes>
-      );
-    if (authScreen === "reset")
-      return (
-        <Routes>
-          <Route path="*" element={
-            <ResetPasswordPage
-              onLogin={() => navigateAuth("login")}
-              onForgot={() => navigateAuth("forgot")}
-            />
-          } />
-        </Routes>
-      );
+  const authPage = (mode: "login" | "register") =>
+    user ? (
+      <Navigate to={authenticatedPath} replace />
+    ) : (
+      <AuthPage
+        initialMode={mode}
+        onBack={() => {
+          pendingProgramIdRef.current = null;
+          setPendingProgramId(null);
+          navigate("/");
+        }}
+        onModeChange={(nextMode) => navigateAuth(`/${nextMode}`)}
+        onLogin={handleLogin}
+        onRegister={handleRegister}
+        showOTP={showOTP}
+        onOTPVerified={handleOTPVerified}
+        pendingEmail={pendingUser?.email || ""}
+        onForgotPassword={() => navigateAuth("/forgot-password")}
+      />
+    );
 
+  if (authLoading) {
     return (
-      <>
-        <Routes>
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/cookie-policy" element={<CookiePolicy />} />
-          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-          <Route path="/refund-policy" element={<RefundPolicy />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="*" element={
-            authScreen === "landing" ? (
-              <LandingPage onStudentPortal={(mode = "login") => setAuthScreen(mode)} />
-            ) : (
-              <AuthPage
-                key={authScreen}
-                initialMode={authScreen}
-                onBack={() => setAuthScreen("landing")}
-                onLogin={handleLogin}
-                onRegister={handleRegister}
-                showOTP={showOTP}
-                onOTPVerified={handleOTPVerified}
-                pendingEmail={pendingUser?.email || ""}
-                onForgotPassword={() => navigateAuth("forgot")}
-              />
-            )
-          } />
-        </Routes>
-        <Footer />
-      </>
+      <div
+        className="flex min-h-screen items-center justify-center bg-cream text-sm text-muted-foreground"
+        role="status"
+        aria-live="polite"
+      >
+        Checking your session...
+      </div>
     );
   }
 
   return (
     <>
-      <MainApp user={user} onLogout={handleLogout} />
-      <AIChatWidget user={user} />
-      <Footer />
+      <Routes>
+        <Route
+          path="/"
+          element={
+            user ? (
+              <Navigate to={authenticatedPath} replace />
+            ) : (
+              <LandingPage
+                onStudentPortal={(mode = "login") => navigateAuth(`/${mode}`)}
+                onApplyToProgram={(programId) => {
+                  setPendingProgramId(programId);
+                  pendingProgramIdRef.current = programId;
+                  navigate(`/login?program=${encodeURIComponent(programId)}`);
+                }}
+              />
+            )
+          }
+        />
+        <Route path="/login" element={authPage("login")} />
+        <Route path="/register" element={authPage("register")} />
+        <Route
+          path="/forgot-password"
+          element={
+            user ? (
+              <Navigate to={authenticatedPath} replace />
+            ) : (
+              <ForgotPasswordPage onBack={() => navigateAuth("/login")} />
+            )
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            user ? (
+              <Navigate to={authenticatedPath} replace />
+            ) : (
+              <ResetPasswordPage
+                onLogin={() => navigateAuth("/login")}
+                onForgot={() => navigateAuth("/forgot-password")}
+              />
+            )
+          }
+        />
+        <Route
+          path="/reset-password.html"
+          element={<Navigate to={`/reset-password${location.search}`} replace />}
+        />
+        <Route
+          path="/about"
+          element={
+            <>
+              <About />
+              <Footer />
+            </>
+          }
+        />
+        <Route
+          path="/contact"
+          element={
+            <>
+              <Contact />
+              <Footer />
+            </>
+          }
+        />
+        <Route
+          path="/cookie-policy"
+          element={
+            <>
+              <CookiePolicy />
+              <Footer />
+            </>
+          }
+        />
+        <Route
+          path="/privacy-policy"
+          element={
+            <>
+              <PrivacyPolicy />
+              <Footer />
+            </>
+          }
+        />
+        <Route
+          path="/refund-policy"
+          element={
+            <>
+              <RefundPolicy />
+              <Footer />
+            </>
+          }
+        />
+        <Route
+          path="/terms"
+          element={
+            <>
+              <Terms />
+              <Footer />
+            </>
+          }
+        />
+        <Route
+          path="/app/*"
+          element={
+            user ? (
+              <>
+                <MainApp
+                  user={user}
+                  onLogout={handleLogout}
+                  initialProgramId={selectedProgramId}
+                  onInitialProgramHandled={() => {
+                    pendingProgramIdRef.current = null;
+                    setPendingProgramId(null);
+                  }}
+                />
+                <AIChatWidget user={user} />
+              </>
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="*"
+          element={<Navigate to={user ? authenticatedPath : "/"} replace />}
+        />
+      </Routes>
     </>
   );
 }
