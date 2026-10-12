@@ -46,10 +46,10 @@ export default function Footer() {
         <FooterColumn
           title="Platform"
           links={[
-            { name: "Find Internships", href: "../companypages/" },
-            { name: "How It Works", href: "" },
-            { name: "Application Tracking", href: "" },
-            { name: "Student Dashboard", href: "" },
+            { name: "Find Internships", href: "/#internships" },
+            { name: "How It Works", href: "/#how-it-works" },
+            { name: "Application Tracking", href: "/app/applications" },
+            { name: "Student Dashboard", href: "/app/dashboard" },
           ]}
         />
 

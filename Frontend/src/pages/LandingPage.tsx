@@ -864,8 +864,11 @@ export default function LandingPage({
                 "Privacy Policy",
 
                 "Terms of Service",
-              ]}
 
+                "Cookie Policy",
+
+                "Refund Policy",
+              ]}
             />
           </div>
           <div>
@@ -1257,10 +1260,16 @@ interface FooterColumnProps {
 
 function FooterColumn({ title, links }: FooterColumnProps) {
   const routes: Record<string, string> = {
+    "Find Internships": "#internships",
+    "How It Works": "#how-it-works",
+    "Application Tracking": "/app/applications",
+    "Student Dashboard": "/app/dashboard",
     "About Us": "/about",
     Contact: "/contact",
     "Privacy Policy": "/privacy-policy",
     "Terms of Service": "/terms",
+    "Cookie Policy": "/cookie-policy",
+    "Refund Policy": "/refund-policy",
   }
 
   return (
@@ -1272,14 +1281,22 @@ function FooterColumn({ title, links }: FooterColumnProps) {
           const className =
             "text-xs text-white/55 hover:text-white transition-colors"
 
-          return to ? (
+          if (!to) {
+            return null
+          }
+
+          if (to.startsWith("#")) {
+            return (
+              <a key={label} href={to} className={className}>
+                {label}
+              </a>
+            )
+          }
+
+          return (
             <Link key={label} to={to} className={className}>
               {label}
             </Link>
-          ) : (
-            <button key={label} className={className}>
-              {label}
-            </button>
           )
         })}
       </div>
