@@ -2,7 +2,6 @@ import { useState } from "react";
 import logo from "../assets/attach1.png";
 import Icon from "../components/ui/Icon";
 import SectionHeading from "../components/ui/SectionHeading";
-import Footer from "../components/layout/Footer";
 
 
 
@@ -620,7 +619,6 @@ export default function LandingPage({ onStudentPortal }: LandingPageProps) {
         </section>
       </main>
 
-      <Footer />
     </div>
 
     </>
