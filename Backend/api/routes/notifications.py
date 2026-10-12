@@ -15,17 +15,13 @@ from Database.schemas import (
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
 
-def read_value(value: bool | str) -> bool:
-	return value is True or str(value).lower() in {"true", "1", "yes"}
-
-
 def serialize_notification(row: notification) -> NotificationResponse:
 	return NotificationResponse(
 		id=str(row.id),
 		message=row.message,
 		target_type=row.target_type,
 		target_id=row.target_id,
-		read=read_value(row.read),
+		read=row.read,
 		created_at=row.created_at.isoformat(),
 	)
 
@@ -41,7 +37,7 @@ def list_notifications(account: user = Depends(get_current_user), session: Sessi
 @router.get("/unread-count")
 def unread_count(account: user = Depends(get_current_user), session: Session = Depends(get_session)):
 	rows = session.exec(select(notification).where(notification.user_id == account.id)).all()
-	return {"count": sum(not read_value(row.read) for row in rows)}
+	return {"count": sum(not row.read for row in rows)}
 
 
 @router.put("/{notification_id}/read", response_model=NotificationResponse)
@@ -52,7 +48,7 @@ def mark_notification_read(notification_id: str, account: user = Depends(get_cur
 		row = None
 	if not row or row.user_id != account.id:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found")
-	row.read = "true"
+	row.read = True
 	session.add(row)
 	session.commit()
 	session.refresh(row)
@@ -63,7 +59,7 @@ def mark_notification_read(notification_id: str, account: user = Depends(get_cur
 def mark_all_notifications_read(account: user = Depends(get_current_user), session: Session = Depends(get_session)):
 	rows = session.exec(select(notification).where(notification.user_id == account.id)).all()
 	for row in rows:
-		row.read = "true"
+		row.read = True
 		session.add(row)
 	session.commit()
 	return {"updated": len(rows)}

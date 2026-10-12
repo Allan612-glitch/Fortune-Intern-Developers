@@ -1,10 +1,13 @@
 import { useState, useRef, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
 import type { AppUser } from "../App";
+import { ApiError } from "../services/api";
 import { requestForgotPassword } from "../services/authNotifications";
 import { getProfile, login, loginWithGoogle, register, resendVerification, updateProfile, verifyEmail } from "../services/auth";
 import Field, { ErrorMsg } from "../components/ui/Field";
 import Spinner from "../components/ui/Spinner";
+import TurnstileChallenge from "../components/TurnstileChallenge";
 
 const ghanaUniversities = [
   "University of Ghana",
@@ -27,10 +30,11 @@ const isValidPassword = (pw: string) => pw.length >= 8;
 interface AuthPageProps {
   initialMode?: "login" | "register";
   onBack?: () => void;
-  onLogin: (user: AppUser) => void;
+  onModeChange?: (mode: "login" | "register") => void;
+  onLogin: (user: AppUser, programId?: string | null) => void;
   onRegister: (user: AppUser) => void;
   showOTP: boolean;
-  onOTPVerified: () => void;
+  onOTPVerified: (programId?: string | null) => void;
   pendingEmail: string;
   onForgotPassword?: () => void;
 }
@@ -38,6 +42,7 @@ interface AuthPageProps {
 export default function AuthPage({
   initialMode = "login",
   onBack,
+  onModeChange,
   onLogin,
   onRegister,
   showOTP,
@@ -45,7 +50,9 @@ export default function AuthPage({
   pendingEmail,
   onForgotPassword,
 }: AuthPageProps) {
-  const [mode, setMode] = useState<"login" | "register">(initialMode);
+  const location = useLocation();
+  const [localMode, setLocalMode] = useState<"login" | "register">(initialMode);
+  const mode = onModeChange ? initialMode : localMode;
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -60,18 +67,43 @@ export default function AuthPage({
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [recoveryOpen, setRecoveryOpen] = useState(false);
-  const [googleButtonWidth, setGoogleButtonWidth] = useState(384);
+  const [captchaRequired, setCaptchaRequired] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaWidgetKey, setCaptchaWidgetKey] = useState(0);
+  const [googleButtonWidth, setGoogleButtonWidth] = useState(() =>
+    Math.min(384, Math.max(200, window.innerWidth - 96)),
+  );
   const googleClientConfigured = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim());
+  const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim() ?? "";
 
   useEffect(() => {
     const updateGoogleButtonWidth = () => {
       setGoogleButtonWidth(Math.min(384, Math.max(200, window.innerWidth - 96)));
     };
 
-    updateGoogleButtonWidth();
     window.addEventListener("resize", updateGoogleButtonWidth);
     return () => window.removeEventListener("resize", updateGoogleButtonWidth);
   }, []);
+
+  useEffect(() => {
+    setForm({
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      school: "",
+      major: "",
+      industry: "",
+      userType: "student",
+    });
+    setTouched({});
+    setLoading(false);
+    setSubmitError("");
+    setRecoveryOpen(false);
+    setCaptchaRequired(false);
+    setCaptchaToken("");
+    setCaptchaWidgetKey(0);
+  }, [initialMode]);
 
   const set = (k: keyof typeof form, v: string) => {
     setForm((p) => ({ ...p, [k]: v }));
@@ -126,21 +158,24 @@ export default function AuthPage({
     try {
       const account = await login(form.email.trim(), form.password);
       const profile = await getProfile();
-      onLogin({
-        name: account.name,
-        email: account.email,
-        school: profile.university || "",
-        major: profile.major || profile.course || "",
-        avatar: account.name
-          .split(" ")
-          .map((part) => part[0])
-          .join("")
-          .toUpperCase()
-          .slice(0, 2),
-        isAdmin: account.is_admin,
-        verified: true,
-        role: "student",
-      });
+      onLogin(
+        {
+          name: account.name,
+          email: account.email,
+          school: profile.university || "",
+          major: profile.major || profile.course || "",
+          avatar: account.name
+            .split(" ")
+            .map((part) => part[0])
+            .join("")
+            .toUpperCase()
+            .slice(0, 2),
+          isAdmin: account.is_admin,
+          verified: true,
+          role: "student",
+        },
+        new URLSearchParams(location.search).get("program"),
+      );
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "Unable to sign in.");
     } finally {
@@ -213,7 +248,12 @@ export default function AuthPage({
       return;
     setLoading(true);
     try {
-      await register(form.name.trim(), form.email.trim(), form.password);
+      await register(
+        form.name.trim(),
+        form.email.trim(),
+        form.password,
+        captchaToken || undefined,
+      );
       onRegister({
       name: form.name,
       email: form.email,
@@ -230,14 +270,24 @@ export default function AuthPage({
       role: "student",
       });
     } catch (error) {
+      if (error instanceof ApiError && (error.code === "captcha_required" || error.code === "captcha_invalid")) {
+        setCaptchaRequired(true);
+        setCaptchaToken("");
+        setCaptchaWidgetKey((key) => key + 1);
+        setSubmitError(error.code === "captcha_invalid" ? error.message : "");
+        return;
+      }
       setSubmitError(error instanceof Error ? error.message : "Unable to create your account.");
     } finally {
+      if (captchaToken) {
+        setCaptchaToken("");
+        setCaptchaWidgetKey((key) => key + 1);
+      }
       setLoading(false);
     }
   };
 
   const switchMode = (m: "login" | "register") => {
-    setMode(m);
     setTouched({});
     setSubmitError("");
     setForm({
@@ -250,6 +300,11 @@ export default function AuthPage({
       industry: "",
       userType: "student",
     });
+    if (onModeChange) {
+      onModeChange(m);
+      return;
+    }
+    setLocalMode(m);
   };
 
   return (
@@ -314,12 +369,12 @@ export default function AuthPage({
             {mode === "login" ? (
               <form onSubmit={handleLogin} className="space-y-5" noValidate>
                 <Field
-                  label="Student email"
+                  label=" Email"
                   type="email"
                   value={form.email}
                   onChange={(v) => set("email", v)}
                   onBlur={() => touch("email")}
-                  placeholder="you@university.edu.gh"
+                  placeholder="you@email.com"
                   error={errors.email}
                   icon={
                     <path
@@ -388,38 +443,6 @@ export default function AuthPage({
                   ) : (
                     "Sign In"
                   )}
-                </button>
-
-                <div className="relative flex items-center gap-3">
-                  <div className="flex-1 h-px bg-border" />
-                  <span className="text-xs text-muted-foreground">or</span>
-                  <div className="flex-1 h-px bg-border" />
-                </div>
-
-                {googleClientConfigured ? (
-                  <div className="flex justify-center">
-                    <GoogleLogin
-                      onSuccess={handleGoogleSuccess}
-                      onError={() => setSubmitError("Google sign-in failed. Please try again.")}
-                      text="signin_with"
-                      theme="filled_blue"
-                      shape="rectangular"
-                      size="large"
-                      width={String(googleButtonWidth)}
-                    />
-                  </div>
-                ) : (
-                  <p className="text-center text-xs text-muted-foreground">
-                    Google sign-in is not configured for this deployment.
-                  </p>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => switchMode("register")}
-                  className="w-full py-3 rounded-xl border-2 border-border text-sm font-semibold text-foreground hover:border-primary hover:bg-secondary transition-all"
-                >
-                  Sign Up
                 </button>
               </form>
             ) : (
@@ -535,9 +558,33 @@ export default function AuthPage({
                   }
                 />
 
+                {captchaRequired && (
+                  <div className="space-y-2">
+                    {turnstileSiteKey ? (
+                      <>
+                        <p className="text-xs text-muted-foreground">
+                          Please complete this security check to continue signing up.
+                        </p>
+                        <TurnstileChallenge
+                          key={captchaWidgetKey}
+                          siteKey={turnstileSiteKey}
+                          onToken={(token) => {
+                            setCaptchaToken(token);
+                            if (token) setSubmitError("");
+                          }}
+                        />
+                      </>
+                    ) : (
+                      <p className="text-red-500 text-xs" role="alert">
+                        Signup security verification is not configured. Please contact support.
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || (captchaRequired && !captchaToken)}
                   className="w-full py-3.5 rounded-xl text-white font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-60 shadow-md mt-2"
                   style={{
                     background: "linear-gradient(135deg, #2D3561, #3d4a8a)",
@@ -560,32 +607,44 @@ export default function AuthPage({
                 {submitError && (
                   <p className="text-red-500 text-xs">{submitError}</p>
                 )}
-
-                <div className="relative flex items-center gap-3">
-                  <div className="flex-1 h-px bg-border" />
-                  <span className="text-xs text-muted-foreground">or</span>
-                  <div className="flex-1 h-px bg-border" />
-                </div>
-
-                {googleClientConfigured ? (
-                  <div className="flex justify-center">
-                    <GoogleLogin
-                      onSuccess={handleGoogleSuccess}
-                      onError={() => setSubmitError("Google sign-up failed. Please try again.")}
-                      text="signup_with"
-                      theme="filled_blue"
-                      shape="rectangular"
-                      size="large"
-                      width={String(googleButtonWidth)}
-                    />
-                  </div>
-                ) : (
-                  <p className="text-center text-xs text-muted-foreground">
-                    Google sign-in is not configured for this deployment.
-                  </p>
-                )}
               </form>
             )}
+
+            <div className="mt-5 space-y-4">
+              <div className="relative flex items-center gap-3">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs text-muted-foreground">or</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+
+              {googleClientConfigured ? (
+                <div className="flex justify-center">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={() => setSubmitError("Google sign-in failed. Please try again.")}
+                    text="continue_with"
+                    theme="filled_blue"
+                    shape="rectangular"
+                    size="large"
+                    width={String(googleButtonWidth)}
+                  />
+                </div>
+              ) : (
+                <p className="text-center text-xs text-muted-foreground">
+                  Google sign-in is not configured for this deployment.
+                </p>
+              )}
+
+              {mode === "login" && (
+                <button
+                  type="button"
+                  onClick={() => switchMode("register")}
+                  className="w-full py-3 rounded-xl border-2 border-border text-sm font-semibold text-foreground hover:border-primary hover:bg-secondary transition-all"
+                >
+                  Sign Up
+                </button>
+              )}
+            </div>
           </div>
 
           <p className="text-center text-xs text-muted-foreground mt-6">
@@ -599,7 +658,9 @@ export default function AuthPage({
           email={pendingEmail}
           university={form.school}
           major={form.major}
-          onVerified={onOTPVerified}
+          onVerified={() =>
+            onOTPVerified(new URLSearchParams(location.search).get("program"))
+          }
         />
       )}
       {recoveryOpen && (
@@ -782,6 +843,18 @@ function OTPModal({
     if (e.key === "Backspace" && !otp[i] && i > 0) refs.current[i - 1]?.focus();
   };
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const digits = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (!digits) return;
+    const next = ["", "", "", "", "", ""];
+    digits.split("").forEach((digit, index) => {
+      next[index] = digit;
+    });
+    setOtp(next);
+    refs.current[Math.min(digits.length, 5)]?.focus();
+  };
+
   const handleVerify = async () => {
     const code = otp.join("");
     if (code.length !== 6) {
@@ -865,6 +938,7 @@ function OTPModal({
               value={v}
               onChange={(e) => handleInput(i, e.target.value)}
               onKeyDown={(e) => handleKeyDown(i, e)}
+              onPaste={handlePaste}
               className="otp-input"
               maxLength={1}
               inputMode="numeric"

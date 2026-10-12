@@ -65,10 +65,15 @@ export async function loginWithGoogle(credential: string) {
   return result.user;
 }
 
-export function register(name: string, email: string, password: string) {
+export function register(
+  name: string,
+  email: string,
+  password: string,
+  captchaToken?: string,
+) {
   return apiRequest<{ message: string; email: string }>("/api/auth/register", {
     method: "POST",
-    body: JSON.stringify({ name, email, password }),
+    body: JSON.stringify({ name, email, password, captcha_token: captchaToken }),
   });
 }
 

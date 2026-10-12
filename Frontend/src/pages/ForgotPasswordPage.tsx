@@ -4,10 +4,8 @@ import { requestForgotPassword } from "../services/authNotifications";
 
 export default function ForgotPasswordPage({
   onBack,
-  onReset,
 }: {
   onBack: () => void;
-  onReset: () => void;
 }) {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");

@@ -101,11 +101,11 @@ export default function HomePage({ user, setPage }: HomePageProps) {
               <span className="w-2 h-2 rounded-full bg-accent pulse-dot" />
               Welcome back, {user.name.split(" ")[0]}
             </div>
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl leading-[1.04] max-w-2xl">
+            <h1 className="font-display font-extrabold text-4xl sm:text-5xl lg:text-6xl leading-[1.1] max-w-2xl">
               Your career starts with the{" "}
               <span className="text-gradient-gold">right opportunity.</span>
             </h1>
-            <p className="mt-5 text-white/65 text-base sm:text-lg max-w-xl leading-relaxed">
+            <p className="font-display mt-5 text-white/65 text-base sm:text-lg max-w-xl leading-relaxed">
               Discover internships across Ghana, submit a standout application,
               and let FIN handle the outreach while you track every move.
             </p>

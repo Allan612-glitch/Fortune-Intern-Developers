@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import AsyncState from "../components/AsyncState";
 import {
   printApplicationLetter,
   fromBackendApplication,
@@ -47,8 +48,11 @@ export default function ApplicationsPage({ email }: { email: string }) {
   const [sort, setSort] = useState<"recent" | "oldest">("recent");
   const [selected, setSelected] = useState<ApplicationRecord | null>(null);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError("");
     try {
       const latest = (await listApplications()).map((application) =>
         fromBackendApplication(application, email),
@@ -60,11 +64,14 @@ export default function ApplicationsPage({ email }: { email: string }) {
       setError("");
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to load applications.");
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [email]);
+
   useEffect(() => {
     void refresh();
-  }, [email]);
+  }, [refresh]);
 
   const visibleApplications = useMemo(
     () =>
@@ -110,75 +117,86 @@ export default function ApplicationsPage({ email }: { email: string }) {
           </p>
         </div>
       </div>
-      {error && <p className="mb-4 text-sm text-red-600" role="alert">{error}</p>}
-
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-        {[
-          ["Total Applications", applications.length],
-          ["Under Review", count("Under Review")],
-          ["Shortlisted", count("Shortlisted")],
-          ["Accepted", count("Accepted")],
-          ["Rejected", count("Rejected")],
-          ["Submitted", count("Submitted")],
-        ].map(([label, value]) => (
-          <div
-            key={String(label)}
-            className="bg-white border border-border rounded-xl p-4 shadow-sm"
-          >
-            <p className="text-2xl font-bold text-primary">{value}</p>
-            <p className="text-xs text-muted-foreground mt-1">{label}</p>
-          </div>
-        ))}
-      </div>
-
-      {applications.length === 0 ? (
-        <EmptyState />
+      {loading ? (
+        <AsyncState kind="loading" message="Loading your applications..." />
+      ) : error ? (
+        <AsyncState
+          kind="error"
+          message={error}
+          onRetry={() => void refresh()}
+        />
       ) : (
         <>
-          <div className="bg-white border border-border rounded-2xl p-4 mb-4 grid md:grid-cols-[1fr_auto_auto] gap-3">
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search title, organization, reference, or index number"
-              className="w-full px-4 py-2.5 rounded-xl border border-border bg-muted/30 text-sm outline-none focus:ring-2"
-            />
-            <select
-              value={filter}
-              onChange={(event) =>
-                setFilter(event.target.value as ApplicationStatus | "All")
-              }
-              className="px-3 py-2.5 rounded-xl border border-border bg-white text-sm"
-            >
-              <option value="All">All statuses</option>
-              {statuses.slice(1).map((status) => (
-                <option key={status}>{status}</option>
-              ))}
-            </select>
-            <select
-              value={sort}
-              onChange={(event) =>
-                setSort(event.target.value as "recent" | "oldest")
-              }
-              className="px-3 py-2.5 rounded-xl border border-border bg-white text-sm"
-            >
-              <option value="recent">Most recent</option>
-              <option value="oldest">Oldest</option>
-            </select>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+            {[
+              ["Total Applications", applications.length],
+              ["Under Review", count("Under Review")],
+              ["Shortlisted", count("Shortlisted")],
+              ["Accepted", count("Accepted")],
+              ["Rejected", count("Rejected")],
+              ["Submitted", count("Submitted")],
+            ].map(([label, value]) => (
+              <div
+                key={String(label)}
+                className="bg-white border border-border rounded-xl p-4 shadow-sm"
+              >
+                <p className="text-2xl font-bold text-primary">{value}</p>
+                <p className="text-xs text-muted-foreground mt-1">{label}</p>
+              </div>
+            ))}
           </div>
-          {visibleApplications.length === 0 ? (
-            <p className="text-center text-sm text-muted-foreground py-12">
-              No applications match your search.
-            </p>
+
+          {applications.length === 0 ? (
+            <AsyncState kind="empty" message="You have no applications yet." />
           ) : (
-            <div className="space-y-3">
-              {visibleApplications.map((application) => (
-                <ApplicationCard
-                  key={application.reference}
-                  application={application}
-                  onTrack={() => setSelected(application)}
+            <>
+              <div className="bg-white border border-border rounded-2xl p-4 mb-4 grid md:grid-cols-[1fr_auto_auto] gap-3">
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search title, organization, reference, or index number"
+                  className="w-full px-4 py-2.5 rounded-xl border border-border bg-muted/30 text-sm outline-none focus:ring-2"
                 />
-              ))}
-            </div>
+                <select
+                  value={filter}
+                  onChange={(event) =>
+                    setFilter(event.target.value as ApplicationStatus | "All")
+                  }
+                  className="px-3 py-2.5 rounded-xl border border-border bg-white text-sm"
+                >
+                  <option value="All">All statuses</option>
+                  {statuses.slice(1).map((status) => (
+                    <option key={status}>{status}</option>
+                  ))}
+                </select>
+                <select
+                  value={sort}
+                  onChange={(event) =>
+                    setSort(event.target.value as "recent" | "oldest")
+                  }
+                  className="px-3 py-2.5 rounded-xl border border-border bg-white text-sm"
+                >
+                  <option value="recent">Most recent</option>
+                  <option value="oldest">Oldest</option>
+                </select>
+              </div>
+              {visibleApplications.length === 0 ? (
+                <AsyncState
+                  kind="empty"
+                  message="No applications match your search."
+                />
+              ) : (
+                <div className="space-y-3">
+                  {visibleApplications.map((application) => (
+                    <ApplicationCard
+                      key={application.reference}
+                      application={application}
+                      onTrack={() => setSelected(application)}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </>
       )}
@@ -445,27 +463,6 @@ function Info({
           </button>
         )}
       </span>
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="bg-white border border-border rounded-2xl p-10 text-center shadow-sm">
-      <div className="w-14 h-14 rounded-2xl bg-secondary text-primary mx-auto flex items-center justify-center text-2xl">
-        ⌁
-      </div>
-      <h2 className="font-bold text-lg mt-4">No applications yet</h2>
-      <p className="text-sm text-muted-foreground mt-2">
-        Start exploring internship opportunities and submit your first
-        application.
-      </p>
-      <a
-        href="#"
-        className="inline-flex mt-5 px-5 py-3 rounded-xl bg-primary text-white text-sm font-semibold"
-      >
-        Browse Opportunities
-      </a>
     </div>
   );
 }

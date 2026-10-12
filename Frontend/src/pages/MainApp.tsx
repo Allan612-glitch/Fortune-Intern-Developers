@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import type { AppUser, AppPage } from "../App";
 import HomePage from "./HomePage";
 import DashboardPage from "./DashboardPage";
@@ -23,16 +24,51 @@ import {
 interface MainAppProps {
   user: AppUser;
   onLogout: () => void;
+  initialProgramId?: string | null;
+  onInitialProgramHandled?: () => void;
 }
 
-export default function MainApp({ user, onLogout }: MainAppProps) {
-  const [page, setPage] = useState<AppPage>("home");
+const appPages = new Set<AppPage>([
+  "home",
+  "dashboard",
+  "applications",
+  "announcements",
+  "programs",
+  "apply",
+  "profile",
+  "admin",
+]);
+
+export default function MainApp({
+  user,
+  onLogout,
+  initialProgramId = null,
+  onInitialProgramHandled,
+}: MainAppProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const pageSegment = location.pathname.replace(/^\/app\/?/, "").split("/")[0];
+  const page = appPages.has(pageSegment as AppPage)
+    ? pageSegment as AppPage
+    : "home";
+  const [programSelectionPending, setProgramSelectionPending] = useState(
+    Boolean(initialProgramId),
+  );
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notificationError, setNotificationError] = useState("");
   const [showLogout, setShowLogout] = useState(false);
+
+  useEffect(() => {
+    if (
+      !appPages.has(pageSegment as AppPage) ||
+      (page === "admin" && !user.isAdmin)
+    ) {
+      navigate("/app/home", { replace: true });
+    }
+  }, [navigate, page, pageSegment, user.isAdmin]);
 
   useEffect(() => {
     let active = true;
@@ -74,7 +110,7 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
   };
 
   const goTo = (p: AppPage) => {
-    setPage(p);
+    navigate(`/app/${p}`);
     setSidebarOpen(false);
   };
 
@@ -117,7 +153,18 @@ export default function MainApp({ user, onLogout }: MainAppProps) {
           )}
           {page === "applications" && <ApplicationsPage email={user.email} />}
           {page === "announcements" && <AnnouncementsPage user={user} />}
-          {page === "programs" && <ProgramsPage setPage={goTo} user={user} />}
+          {page === "programs" && (
+            <ProgramsPage
+              user={user}
+              initialSelectedProgramId={
+                programSelectionPending ? initialProgramId : null
+              }
+              onInitialSelectionHandled={() => {
+                setProgramSelectionPending(false);
+                onInitialProgramHandled?.();
+              }}
+            />
+          )}
           {page === "apply" && <ApplyPage user={user} />}
           {page === "profile" && <ProfilePage user={user} />}
           {page === "admin" && user.isAdmin && <AdminPage />}

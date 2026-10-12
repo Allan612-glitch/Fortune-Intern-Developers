@@ -41,7 +41,7 @@ export default function CookiePolicy() {
         <div className="mb-10">
           <h2 className="text-2xl font-extrabold text-[#0B172A] mb-4">3. Your Choices</h2>
           <p className="text-lg leading-relaxed">
-            The banner offers "Accept all cookies" or "Reject all cookies". Rejecting keeps only the necessary storage active, which is the safe default. You may change your choice at any time by clearing site data in your browser or asking us to reset your consent record. Blocking necessary storage signs you out and removes saved progress.
+            The banner offers &quot;Accept all cookies&quot; or &quot;Reject all cookies&quot;. Rejecting keeps only the necessary storage active, which is the safe default. You may change your choice at any time by clearing site data in your browser or asking us to reset your consent record. Blocking necessary storage signs you out and removes saved progress.
           </p>
         </div>
 

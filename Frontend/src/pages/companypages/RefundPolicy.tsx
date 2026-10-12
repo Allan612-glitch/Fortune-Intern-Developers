@@ -38,7 +38,7 @@ export default function RefundPolicy() {
           <p className="text-lg leading-relaxed">
             Email{" "}
             <a href="mailto:fortuneintern.gh@gmail.com" className="text-blue-600 underline">fortuneintern.gh@gmail.com</a>{" "}
-            with the subject "Refund Request" followed by your Paystack reference, within 14 days of payment. Verification with Paystack takes up to five working days. Approved refunds return to the original payment channel within 7 to 14 working days. Cash refunds are not available.
+            with the subject &quot;Refund Request&quot; followed by your Paystack reference, within 14 days of payment. Verification with Paystack takes up to five working days. Approved refunds return to the original payment channel within 7 to 14 working days. Cash refunds are not available.
           </p>
         </div>
 

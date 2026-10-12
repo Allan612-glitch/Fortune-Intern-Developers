@@ -82,22 +82,35 @@ export default function App() {
       let active = true
 
       Promise.all([getCurrentUser(), getProfile()])
+
         .then(([account, profile]) => {
           if (!active) return
 
           setUser({
             name: account.name,
+
             email: account.email,
+
             school: profile.university || "",
+
             major: profile.major || profile.course || "",
+
             avatar: account.name
+
               .split(" ")
+
               .map((part) => part[0])
+
               .join("")
+
               .toUpperCase()
+
               .slice(0, 2),
+
             isAdmin: account.is_admin,
+
             verified: true,
+
             role: "student",
           })
         })
@@ -110,7 +123,6 @@ export default function App() {
         active = false
       }
     }
-
     setAuthLoading(false)
   }, [])
 
@@ -118,7 +130,6 @@ export default function App() {
     setPendingUser(userData)
     setShowOTP(true)
   }
-
   const handleOTPVerified = (programId?: string | null) => {
     if (pendingUser) {
       const selectedProgram = programId || selectedProgramId
@@ -132,7 +143,6 @@ export default function App() {
       navigate(selectedProgram ? "/app/programs" : "/app/home")
     }
   }
-
   const handleLogin = (userData: AppUser, programId?: string | null) => {
     const selectedProgram = programId || selectedProgramId
     if (selectedProgram) {
@@ -294,7 +304,15 @@ export default function App() {
           element={
             user ? (
               <>
-                <MainApp user={user} onLogout={handleLogout} />
+                <MainApp
+                  user={user}
+                  onLogout={handleLogout}
+                  initialProgramId={selectedProgramId}
+                  onInitialProgramHandled={() => {
+                    pendingProgramIdRef.current = null
+                    setPendingProgramId(null)
+                  }}
+                />
                 <AIChatWidget user={user} />
               </>
             ) : (

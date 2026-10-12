@@ -1,4 +1,3 @@
-import type { AppPage } from "../../App";
 import type { NotificationItem } from "../../services/platform";
 import logo from "../../assets/attach1.png";
 import {
