@@ -54,6 +54,7 @@ This project uses **Tailwind CSS v4** through the `@tailwindcss/vite` plugin con
 ## Handoff log (newest first, keep last ~10 entries)
 Format: DATE – agent – what changed (files) – what is unfinished – commands the user must run
 - 2026-10-12 – Copilot – merged `main` into `add/companypages`, preserving company-page routes and integrating updated frontend behavior – frontend build and lint pass – none
+- 2026-10-12 – Copilot – connected landing-page footer company links to About, Contact, Privacy, and Terms routes (`src/pages/LandingPage.tsx`) – frontend build and lint pass – none
 - 2026-10-10 – Claude – added paste handling to the 6-digit email verification boxes (`handlePaste` + `onPaste` in `OTPModal`, src/pages/AuthPage.tsx only) – not yet tested in a browser; auto-fill from phone SMS/email (`autoComplete="one-time-code"`) not added – none (dev server hot-reloads)
 - 2026-10-10 – Claude – re-applied this guardrails version of Frontend/AGENTS.md after the file was found reverted to the old Figma Make text (git branch at the time: fix/design-system; cause of the revert unknown) – nothing unfinished; the user still has to commit it – none
 - 2026-10-08 – Claude – added `.github/copilot-instructions.md` at repo root (copy of the 8 guardrails, points here) and a log entry – nothing unfinished; not yet tested that Copilot loads it – none
