@@ -12,7 +12,6 @@ import CookiePolicy from "./pages/companypages/CookiePolicy";
 import PrivacyPolicy from "./pages/companypages/PrivacyPolicy";
 import RefundPolicy from "./pages/companypages/RefundPolicy";
 import Terms from "./pages/companypages/TAC";
-import BottomNav from "./components/layout/BottomNav";
 import Footer from "./components/layout/Footer";
 import { getCurrentUser, getProfile } from "./services/auth";
 import { getAccessToken, setAccessToken } from "./services/api";
@@ -166,7 +165,6 @@ export default function App() {
             )
           } />
         </Routes>
-        <BottomNav />
         <Footer />
       </>
     );

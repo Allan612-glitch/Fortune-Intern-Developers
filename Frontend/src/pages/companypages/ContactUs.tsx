@@ -52,7 +52,7 @@ export default function ContactUs() {
                             Send message
                         </button>
                     </div>
-                    <p className="text-gray-400 text-sm">We respond within one to two working days.</p>
+                    <p className="texts-gray-400 text-sm">We respond within one to two working days.</p>
                 </form>
             </div>
           </div>
