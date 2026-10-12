@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
+import { Link } from "react-router-dom"
 
 import logo from "../assets/attach1.png"
 
@@ -863,8 +864,11 @@ export default function LandingPage({
                 "Privacy Policy",
 
                 "Terms of Service",
-              ]}
 
+                "Cookie Policy",
+
+                "Refund Policy",
+              ]}
             />
           </div>
           <div>
@@ -1255,18 +1259,46 @@ interface FooterColumnProps {
 }
 
 function FooterColumn({ title, links }: FooterColumnProps) {
+  const routes: Record<string, string> = {
+    "Find Internships": "#internships",
+    "How It Works": "#how-it-works",
+    "Application Tracking": "/app/applications",
+    "Student Dashboard": "/app/dashboard",
+    "About Us": "/about",
+    Contact: "/contact",
+    "Privacy Policy": "/privacy-policy",
+    "Terms of Service": "/terms",
+    "Cookie Policy": "/cookie-policy",
+    "Refund Policy": "/refund-policy",
+  }
+
   return (
     <div>
       <p className="text-sm font-bold">{title}</p>
       <div className="flex flex-col items-start gap-3 mt-4">
-        {links.map((link) => (
-          <button
-            key={link}
-            className="text-xs text-white/55 hover:text-white transition-colors"
-          >
-            {link}
-          </button>
-        ))}
+        {links.map((label) => {
+          const to = routes[label]
+          const className =
+            "text-xs text-white/55 hover:text-white transition-colors"
+
+          if (!to) {
+            return null
+          }
+
+          if (to.startsWith("#")) {
+            return (
+              <a key={label} href={to} className={className}>
+                {label}
+              </a>
+            )
+          }
+
+          return (
+            <Link key={label} to={to} className={className}>
+              {label}
+            </Link>
+          )
+        })}
       </div>
     </div>
   )
