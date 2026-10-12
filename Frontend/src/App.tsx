@@ -1,38 +1,38 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react"
 import {
   Navigate,
   Route,
   Routes,
   useLocation,
   useNavigate,
-} from "react-router-dom";
+} from "react-router-dom"
 
-import AuthPage from "./pages/AuthPage";
-import MainApp from "./pages/MainApp";
-import AIChatWidget from "./components/AIChatWidget";
-import LandingPage from "./pages/LandingPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import About from "./pages/companypages/About";
-import Contact from "./pages/companypages/ContactUs";
-import CookiePolicy from "./pages/companypages/CookiePolicy";
-import PrivacyPolicy from "./pages/companypages/PrivacyPolicy";
-import RefundPolicy from "./pages/companypages/RefundPolicy";
-import Terms from "./pages/companypages/TAC";
-import Footer from "./components/layout/Footer";
-import { getCurrentUser, getProfile } from "./services/auth";
-import { getAccessToken, setAccessToken } from "./services/api";
+import AuthPage from "./pages/AuthPage"
+import MainApp from "./pages/MainApp"
+import AIChatWidget from "./components/AIChatWidget"
+import LandingPage from "./pages/LandingPage"
+import ForgotPasswordPage from "./pages/ForgotPasswordPage"
+import ResetPasswordPage from "./pages/ResetPasswordPage"
+import About from "./pages/companypages/About"
+import Contact from "./pages/companypages/ContactUs"
+import CookiePolicy from "./pages/companypages/CookiePolicy"
+import PrivacyPolicy from "./pages/companypages/PrivacyPolicy"
+import RefundPolicy from "./pages/companypages/RefundPolicy"
+import Terms from "./pages/companypages/TAC"
+import Footer from "./components/layout/Footer"
+import { getCurrentUser, getProfile } from "./services/auth"
+import { getAccessToken, setAccessToken } from "./services/api"
 
 export type AppUser = {
-  name: string;
-  email: string;
-  school: string;
-  major: string;
-  avatar: string;
-  isAdmin: boolean;
-  verified: boolean;
-  role: "student";
-};
+  name: string
+  email: string
+  school: string
+  major: string
+  avatar: string
+  isAdmin: boolean
+  verified: boolean
+  role: "student"
+}
 
 export type AppPage =
   | "home"
@@ -42,30 +42,30 @@ export type AppPage =
   | "programs"
   | "apply"
   | "profile"
-  | "admin";
+  | "admin"
 
 export default function App() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [user, setUser] = useState<AppUser | null>(null);
-  const [authLoading, setAuthLoading] = useState(Boolean(getAccessToken()));
-  const [showOTP, setShowOTP] = useState(false);
-  const [pendingUser, setPendingUser] = useState<AppUser | null>(null);
-  const [pendingProgramId, setPendingProgramId] = useState<string | null>(null);
-  const pendingProgramIdRef = useRef<string | null>(null);
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [user, setUser] = useState<AppUser | null>(null)
+  const [authLoading, setAuthLoading] = useState(Boolean(getAccessToken()))
+  const [showOTP, setShowOTP] = useState(false)
+  const [pendingUser, setPendingUser] = useState<AppUser | null>(null)
+  const [pendingProgramId, setPendingProgramId] = useState<string | null>(null)
+  const pendingProgramIdRef = useRef<string | null>(null)
 
   const selectedProgramId =
     pendingProgramIdRef.current ||
     pendingProgramId ||
-    new URLSearchParams(location.search).get("program");
-  const authenticatedPath = selectedProgramId ? "/app/programs" : "/app/home";
-  const programIdFromUrl = new URLSearchParams(location.search).get("program");
+    new URLSearchParams(location.search).get("program")
+  const authenticatedPath = selectedProgramId ? "/app/programs" : "/app/home"
+  const programIdFromUrl = new URLSearchParams(location.search).get("program")
 
   useEffect(() => {
-    if (!programIdFromUrl) return;
-    pendingProgramIdRef.current = programIdFromUrl;
-    setPendingProgramId(programIdFromUrl);
-  }, [programIdFromUrl]);
+    if (!programIdFromUrl) return
+    pendingProgramIdRef.current = programIdFromUrl
+    setPendingProgramId(programIdFromUrl)
+  }, [programIdFromUrl])
 
   const navigateAuth = (
     path: "/login" | "/register" | "/forgot-password" | "/reset-password",
@@ -75,15 +75,15 @@ export default function App() {
       search: selectedProgramId
         ? `?program=${encodeURIComponent(selectedProgramId)}`
         : "",
-    });
+    })
 
   useEffect(() => {
     if (getAccessToken()) {
-      let active = true;
+      let active = true
 
       Promise.all([getCurrentUser(), getProfile()])
         .then(([account, profile]) => {
-          if (!active) return;
+          if (!active) return
 
           setUser({
             name: account.name,
@@ -99,59 +99,59 @@ export default function App() {
             isAdmin: account.is_admin,
             verified: true,
             role: "student",
-          });
+          })
         })
         .catch(() => setAccessToken(null))
         .finally(() => {
-          if (active) setAuthLoading(false);
-        });
+          if (active) setAuthLoading(false)
+        })
 
       return () => {
-        active = false;
-      };
+        active = false
+      }
     }
 
-    setAuthLoading(false);
-  }, []);
+    setAuthLoading(false)
+  }, [])
 
   const handleRegister = (userData: AppUser) => {
-    setPendingUser(userData);
-    setShowOTP(true);
-  };
+    setPendingUser(userData)
+    setShowOTP(true)
+  }
 
   const handleOTPVerified = (programId?: string | null) => {
     if (pendingUser) {
-      const selectedProgram = programId || selectedProgramId;
+      const selectedProgram = programId || selectedProgramId
       if (selectedProgram) {
-        pendingProgramIdRef.current = selectedProgram;
-        setPendingProgramId(selectedProgram);
+        pendingProgramIdRef.current = selectedProgram
+        setPendingProgramId(selectedProgram)
       }
-      setUser({ ...pendingUser, verified: true });
-      setPendingUser(null);
-      setShowOTP(false);
-      navigate(selectedProgram ? "/app/programs" : "/app/home");
+      setUser({ ...pendingUser, verified: true })
+      setPendingUser(null)
+      setShowOTP(false)
+      navigate(selectedProgram ? "/app/programs" : "/app/home")
     }
-  };
+  }
 
   const handleLogin = (userData: AppUser, programId?: string | null) => {
-    const selectedProgram = programId || selectedProgramId;
+    const selectedProgram = programId || selectedProgramId
     if (selectedProgram) {
-      pendingProgramIdRef.current = selectedProgram;
-      setPendingProgramId(selectedProgram);
+      pendingProgramIdRef.current = selectedProgram
+      setPendingProgramId(selectedProgram)
     }
-    setUser(userData);
-    navigate(selectedProgram ? "/app/programs" : "/app/home");
-  };
+    setUser(userData)
+    navigate(selectedProgram ? "/app/programs" : "/app/home")
+  }
 
   const handleLogout = () => {
-    setAccessToken(null);
-    setUser(null);
-    setPendingUser(null);
-    setShowOTP(false);
-    pendingProgramIdRef.current = null;
-    setPendingProgramId(null);
-    navigate("/login");
-  };
+    setAccessToken(null)
+    setUser(null)
+    setPendingUser(null)
+    setShowOTP(false)
+    pendingProgramIdRef.current = null
+    setPendingProgramId(null)
+    navigate("/login")
+  }
 
   const authPage = (mode: "login" | "register") =>
     user ? (
@@ -160,9 +160,9 @@ export default function App() {
       <AuthPage
         initialMode={mode}
         onBack={() => {
-          pendingProgramIdRef.current = null;
-          setPendingProgramId(null);
-          navigate("/");
+          pendingProgramIdRef.current = null
+          setPendingProgramId(null)
+          navigate("/")
         }}
         onModeChange={(nextMode) => navigateAuth(`/${nextMode}`)}
         onLogin={handleLogin}
@@ -172,7 +172,7 @@ export default function App() {
         pendingEmail={pendingUser?.email || ""}
         onForgotPassword={() => navigateAuth("/forgot-password")}
       />
-    );
+    )
 
   if (authLoading) {
     return (
@@ -183,7 +183,7 @@ export default function App() {
       >
         Checking your session...
       </div>
-    );
+    )
   }
 
   return (
@@ -198,9 +198,9 @@ export default function App() {
               <LandingPage
                 onStudentPortal={(mode = "login") => navigateAuth(`/${mode}`)}
                 onApplyToProgram={(programId) => {
-                  setPendingProgramId(programId);
-                  pendingProgramIdRef.current = programId;
-                  navigate(`/login?program=${encodeURIComponent(programId)}`);
+                  setPendingProgramId(programId)
+                  pendingProgramIdRef.current = programId
+                  navigate(`/login?program=${encodeURIComponent(programId)}`)
                 }}
               />
             )
@@ -294,15 +294,7 @@ export default function App() {
           element={
             user ? (
               <>
-                <MainApp
-                  user={user}
-                  onLogout={handleLogout}
-                  initialProgramId={selectedProgramId}
-                  onInitialProgramHandled={() => {
-                    pendingProgramIdRef.current = null;
-                    setPendingProgramId(null);
-                  }}
-                />
+                <MainApp user={user} onLogout={handleLogout} />
                 <AIChatWidget user={user} />
               </>
             ) : (
@@ -316,5 +308,5 @@ export default function App() {
         />
       </Routes>
     </>
-  );
+  )
 }
