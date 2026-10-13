@@ -65,7 +65,7 @@ export default function Footer() {
 
         <div>
           <p className="text-sm font-bold">Follow Us</p>
-          <div className="flex items-center gap-3 mt-4">
+          <div className="flex flex-wrap items-center gap-3 mt-4">
             <a
               href="https://www.linkedin.com/company/fortune-intern-network/"
               target="_blank"
