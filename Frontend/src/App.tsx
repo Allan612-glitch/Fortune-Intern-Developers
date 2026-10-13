@@ -15,9 +15,7 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage"
 import ResetPasswordPage from "./pages/ResetPasswordPage"
 import About from "./pages/companypages/About"
 import Contact from "./pages/companypages/ContactUs"
-import CookiePolicy from "./pages/companypages/CookiePolicy"
 import PrivacyPolicy from "./pages/companypages/PrivacyPolicy"
-import RefundPolicy from "./pages/companypages/RefundPolicy"
 import Terms from "./pages/companypages/TAC"
 import Footer from "./components/layout/Footer"
 import { getCurrentUser, getProfile } from "./services/auth"
@@ -265,12 +263,7 @@ export default function App() {
         />
         <Route
           path="/cookie-policy"
-          element={
-            <>
-              <CookiePolicy />
-              <Footer />
-            </>
-          }
+          element={<Navigate to="/privacy-policy" replace />}
         />
         <Route
           path="/privacy-policy"
@@ -283,12 +276,7 @@ export default function App() {
         />
         <Route
           path="/refund-policy"
-          element={
-            <>
-              <RefundPolicy />
-              <Footer />
-            </>
-          }
+          element={<Navigate to="/terms#refunds" replace />}
         />
         <Route
           path="/terms"

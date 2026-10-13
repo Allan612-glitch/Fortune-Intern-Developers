@@ -864,10 +864,6 @@ export default function LandingPage({
                 "Privacy Policy",
 
                 "Terms of Service",
-
-                "Cookie Policy",
-
-                "Refund Policy",
               ]}
             />
           </div>
@@ -900,6 +896,15 @@ export default function LandingPage({
                 className="w-10 h-10 rounded-xl bg-white/10 text-white/70 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-colors"
               >
                 <Icon name="x" className="w-5 h-5" />
+              </a>
+              <a
+                href="https://www.instagram.com/fortuneintern/"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Fortune Intern on Instagram"
+                className="w-10 h-10 rounded-xl bg-white/10 text-white/70 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-colors"
+              >
+                <Icon name="instagram" className="w-5 h-5" />
               </a>
             </div>
           </div>
@@ -1268,8 +1273,6 @@ function FooterColumn({ title, links }: FooterColumnProps) {
     Contact: "/contact",
     "Privacy Policy": "/privacy-policy",
     "Terms of Service": "/terms",
-    "Cookie Policy": "/cookie-policy",
-    "Refund Policy": "/refund-policy",
   }
 
   return (

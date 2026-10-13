@@ -29,9 +29,33 @@ export default function Terms() {
         </div>
 
         <div className="mb-10">
-          <h2 className="text-2xl font-extrabold text-[#0B172A] mb-4">3. Applications and Fees</h2>
+          <h2 className="text-2xl font-extrabold text-[#0B172A] mb-4">3. Applications, Fees and Refunds</h2>
           <p className="text-lg leading-relaxed">
-            Submission requires the single processing fee shown at checkout, paid through Paystack. Official documents are released only after verified payment. Refunds follow the <a href="/refund-policy" className="text-blue-600 underline">Refund Policy</a>.
+            Submission requires the single processing fee shown at checkout, paid through Paystack. Official documents are released only after verified payment. The processing fee covers verification, document generation and placement administration. It is not refundable once processing begins, except as described below.
+          </p>
+          <h3 id="refunds" className="text-xl font-bold text-[#0B172A] mt-6 mb-3">Refund eligibility</h3>
+          <p className="text-lg leading-relaxed mb-3">We issue refunds for:</p>
+          <ul className="list-disc pl-6 space-y-3 text-lg leading-relaxed">
+            <li>Duplicate payment for the same application reference.</li>
+            <li>A debited transaction that Paystack did not verify as successful.</li>
+            <li>A system fault that prevented creation of your application record despite successful payment.</li>
+            <li>Cancellation of a programme or cycle by FIN before your application was processed.</li>
+          </ul>
+          <h3 className="text-xl font-bold text-[#0B172A] mt-6 mb-3">When refunds are not available</h3>
+          <ul className="list-disc pl-6 space-y-3 text-lg leading-relaxed">
+            <li>Change of mind after processing has begun or documents have issued.</li>
+            <li>Disqualification or termination for false information or breach of these Terms and Conditions.</li>
+            <li>Where a host organisation does not select you, since selection decisions are theirs alone.</li>
+          </ul>
+          <h3 className="text-xl font-bold text-[#0B172A] mt-6 mb-3">How to request a refund</h3>
+          <p className="text-lg leading-relaxed">
+            Email{" "}
+            <a href="mailto:fortuneintern.gh@gmail.com" className="text-blue-600 underline">fortuneintern.gh@gmail.com</a>{" "}
+            with the subject &quot;Refund Request&quot; followed by your Paystack reference, within 14 days of payment. Verification with Paystack takes up to five working days. Approved refunds return to the original payment channel within 7 to 14 working days. Cash refunds are not available.
+          </p>
+          <h3 className="text-xl font-bold text-[#0B172A] mt-6 mb-3">Statutory rights</h3>
+          <p className="text-lg leading-relaxed">
+            Nothing in this refund policy limits your rights under Ghanaian consumer protection law or the Electronic Transactions Act, 2008 (Act 772).
           </p>
         </div>
 

@@ -1,4 +1,5 @@
 import React from "react";
+import Icon from "../../components/ui/Icon";
 
 export default function ContactUs() {
     return (
@@ -12,13 +13,46 @@ export default function ContactUs() {
 
                 <div className="bg-white border border-gray-200 rounded-2xl p-6 mt-10">
                     <ul className="space-y-4">
-                        <li><span className="font-bold text-[#0B172A]">Email:</span> <a href="mailto:fortuneintern.gh@gmail.com" className="text-blue-600 underline">fortuneintern.gh@gmail.com</a></li>
-                        <li><span className="font-bold text-[#0B172A]">Phone:</span> <a href="tel:+233200313672" className="text-blue-600 underline">+233 20 031 3672</a> and <a href="tel:+233257038948" className="text-blue-600 underline">+233 25 703 8948</a> (WhatsApp)</li>
-                        <li><span className="font-bold text-[#0B172A]">WhatsApp channel:</span> <a href="#" className="text-blue-600 underline">join for updates</a></li>
-                        <li><span className="font-bold text-[#0B172A]">LinkedIn:</span> <a href="#" className="text-blue-600 underline">Fortune Intern Network</a></li>
-                        <li><span className="font-bold text-[#0B172A]">X:</span> <a href="#" className="text-blue-600 underline">@fortune_intern1</a></li>
-                        <li><span className="font-bold text-[#0B172A]">Instagram:</span> <a href="#" className="text-blue-600 underline">@fortuneintern</a></li>
-                        <li><span className="font-bold text-[#0B172A]">Locations:</span> Accra and Kumasi, Ghana</li>
+                        <li className="flex items-center gap-3">
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><Icon name="email" className="h-5 w-5" /></span>
+                          <a href="mailto:fortuneintern.gh@gmail.com" className="text-blue-600 underline underline-offset-2">fortuneintern.gh@gmail.com</a>
+                        </li>
+                        <li className="flex items-center gap-3">
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><Icon name="phone" className="h-5 w-5" /></span>
+                          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <a href="tel:+233200313672" className="text-blue-600 underline underline-offset-2">+233 20 031 3672</a>
+                            <span>and</span>
+                            <a href="tel:+233257038948" className="text-blue-600 underline underline-offset-2">+233 25 703 8948</a>
+                          </span>
+                        </li>
+                        <li className="flex items-center gap-3">
+                          <a href="https://whatsapp.com/channel/0029Val97zy1yT2BGkOZi511" target="_blank" rel="noopener noreferrer" aria-label="Fortune Intern WhatsApp Channel" className="flex items-center gap-3 text-[#128C7E] hover:text-[#075E54] transition-colors">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50"><Icon name="whatsapp" className="h-5 w-5" /></span>
+                            <span className="underline underline-offset-2">Join our WhatsApp channel for updates</span>
+                          </a>
+                        </li>
+                        <li className="flex items-center gap-3">
+                          <a href="https://www.linkedin.com/company/fortune-intern-network/" target="_blank" rel="noopener noreferrer" aria-label="Fortune Intern on LinkedIn" className="flex items-center gap-3 text-[#0A66C2] hover:text-[#084d91] transition-colors">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50"><Icon name="linkedin" className="h-5 w-5" /></span>
+                            <span className="underline underline-offset-2">Fortune Intern Network</span>
+                          </a>
+                        </li>
+                        <li className="flex items-center gap-3">
+                          <a href="https://x.com/fortune_intern1" target="_blank" rel="noopener noreferrer" aria-label="Fortune Intern on X" className="flex items-center gap-3 text-[#0B172A] hover:text-slate-600 transition-colors">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100"><Icon name="x" className="h-5 w-5" /></span>
+                            <span className="underline underline-offset-2">@fortune_intern1</span>
+                          </a>
+                        </li>
+                        <li className="flex items-center gap-3">
+                          <a href="https://www.instagram.com/fortuneintern/" target="_blank" rel="noopener noreferrer" aria-label="Fortune Intern on Instagram" className="flex items-center gap-3 text-[#C13584] hover:text-[#96266a] transition-colors">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-pink-50"><Icon name="instagram" className="h-5 w-5" /></span>
+                            <span className="underline underline-offset-2">@fortuneintern</span>
+                          </a>
+                        </li>
+                        <li className="flex items-center gap-3">
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700"><Icon name="pin" className="h-5 w-5" /></span>
+                          <span>Accra and Kumasi, Ghana</span>
+                        </li>
                     </ul>
                 </div>
 

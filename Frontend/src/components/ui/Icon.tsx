@@ -28,6 +28,12 @@ const paths: Record<string, React.ReactNode> = {
   pin: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 21s7-6.2 7-12a7 7 0 10-14 0c0 5.8 7 12 7 12zM12 11.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" />
   ),
+  email: (
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 6h18v12H3zM3 7l9 7 9-7" />
+  ),
+  phone: (
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 3h4l2 5-3 2a15 15 0 006 6l2-3 5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z" />
+  ),
   briefcase: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 6V4h6v2m-12 5h18m-16-5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z" />
   ),
@@ -42,6 +48,13 @@ const paths: Record<string, React.ReactNode> = {
   ),
   whatsapp: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M20 11.5a8 8 0 01-11.8 7L4 20l1.5-4.1A8 8 0 1120 11.5zm-5.2 2.2c-.2.5-.8.8-1.3.6-2.2-.8-3.7-2.1-4.6-4.2-.2-.5 0-1.1.5-1.4l.6-.3.8 1.4-.5.5c.5.9 1.1 1.5 2 2l.5-.5 1.5.7.5.6z" />
+  ),
+  instagram: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="5" strokeWidth={1.8} />
+      <circle cx="12" cy="12" r="4" strokeWidth={1.8} />
+      <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none" />
+    </>
   ),
   x: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 4l14 16M19 4L5 20" />
