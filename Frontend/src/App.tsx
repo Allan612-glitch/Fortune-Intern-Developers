@@ -52,6 +52,16 @@ export default function App() {
   const [pendingProgramId, setPendingProgramId] = useState<string | null>(null)
   const pendingProgramIdRef = useRef<string | null>(null)
 
+  useEffect(() => {
+    if (location.hash) {
+      const targetId = decodeURIComponent(location.hash.slice(1))
+      document.getElementById(targetId)?.scrollIntoView()
+      return
+    }
+
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" })
+  }, [location.pathname, location.hash])
+
   const selectedProgramId =
     pendingProgramIdRef.current ||
     pendingProgramId ||
