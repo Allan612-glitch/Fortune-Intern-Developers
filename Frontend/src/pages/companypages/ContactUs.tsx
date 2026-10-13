@@ -13,8 +13,18 @@ export default function ContactUs() {
 
                 <div className="bg-white border border-gray-200 rounded-2xl p-6 mt-10">
                     <ul className="space-y-4">
-                        <li><span className="font-bold text-[#0B172A]">Email:</span> <a href="mailto:fortuneintern.gh@gmail.com" className="text-blue-600 underline">fortuneintern.gh@gmail.com</a></li>
-                        <li><span className="font-bold text-[#0B172A]">Phone:</span> <a href="tel:+233200313672" className="text-blue-600 underline">+233 20 031 3672</a> and <a href="tel:+233257038948" className="text-blue-600 underline">+233 25 703 8948</a> (WhatsApp)</li>
+                        <li className="flex items-center gap-3">
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><Icon name="email" className="h-5 w-5" /></span>
+                          <a href="mailto:fortuneintern.gh@gmail.com" className="text-blue-600 underline underline-offset-2">fortuneintern.gh@gmail.com</a>
+                        </li>
+                        <li className="flex items-center gap-3">
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><Icon name="phone" className="h-5 w-5" /></span>
+                          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <a href="tel:+233200313672" className="text-blue-600 underline underline-offset-2">+233 20 031 3672</a>
+                            <span>and</span>
+                            <a href="tel:+233257038948" className="text-blue-600 underline underline-offset-2">+233 25 703 8948</a>
+                          </span>
+                        </li>
                         <li className="flex items-center gap-3">
                           <a href="https://whatsapp.com/channel/0029Val97zy1yT2BGkOZi511" target="_blank" rel="noopener noreferrer" aria-label="Fortune Intern WhatsApp Channel" className="flex items-center gap-3 text-[#128C7E] hover:text-[#075E54] transition-colors">
                             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50"><Icon name="whatsapp" className="h-5 w-5" /></span>
@@ -39,7 +49,10 @@ export default function ContactUs() {
                             <span className="underline underline-offset-2">@fortuneintern</span>
                           </a>
                         </li>
-                        <li><span className="font-bold text-[#0B172A]">Locations:</span> Accra and Kumasi, Ghana</li>
+                        <li className="flex items-center gap-3">
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700"><Icon name="pin" className="h-5 w-5" /></span>
+                          <span>Accra and Kumasi, Ghana</span>
+                        </li>
                     </ul>
                 </div>
 

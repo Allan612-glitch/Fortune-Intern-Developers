@@ -28,6 +28,12 @@ const paths: Record<string, React.ReactNode> = {
   pin: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 21s7-6.2 7-12a7 7 0 10-14 0c0 5.8 7 12 7 12zM12 11.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" />
   ),
+  email: (
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 6h18v12H3zM3 7l9 7 9-7" />
+  ),
+  phone: (
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 3h4l2 5-3 2a15 15 0 006 6l2-3 5 2v4a2 2 0 01-2 2A16 16 0 013 5a2 2 0 012-2z" />
+  ),
   briefcase: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 6V4h6v2m-12 5h18m-16-5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z" />
   ),
