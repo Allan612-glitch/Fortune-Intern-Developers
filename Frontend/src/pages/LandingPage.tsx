@@ -917,6 +917,14 @@ export default function LandingPage({
             >
               0200313672
             </a>
+            <br />
+            <a
+              href="tel:0257038948"
+              aria-label="Call Fortune Intern Customer Service"
+              className="inline-flex text-sm text-white/70 hover:text-white transition-colors"
+            >
+              0257038948
+            </a>
           </div>
         </div>
         <div className="border-t border-white/10">
@@ -1438,6 +1446,30 @@ function Icon({ name, className }: IconProps) {
         strokeWidth={1.8}
         d="M20 11.5a8 8 0 01-11.8 7L4 20l1.5-4.1A8 8 0 1120 11.5zm-5.2 2.2c-.2.5-.8.8-1.3.6-2.2-.8-3.7-2.1-4.6-4.2-.2-.5 0-1.1.5-1.4l.6-.3.8 1.4-.5.5c.5.9 1.1 1.5 2 2l.5-.5 1.5.7.5.6z"
       />
+    ),
+
+    instagram: (
+      <>
+        <rect
+          x="3"
+          y="3"
+          width="18"
+          height="18"
+          rx="5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.8}
+        />
+        <circle
+          cx="12"
+          cy="12"
+          r="4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.8}
+        />
+        <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none" />
+      </>
     ),
 
     x: (
