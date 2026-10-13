@@ -52,9 +52,31 @@ export default function PrivacyPolicy() {
         </div>
 
         <div className="mb-10">
-          <h2 className="text-2xl font-extrabold text-[#0B172A] mb-4">5. Cookies</h2>
+          <h2 className="text-2xl font-extrabold text-[#0B172A] mb-4">5. Cookies and Similar Technologies</h2>
           <p className="text-lg leading-relaxed">
-            See our <a href="/cookie-policy" className="text-blue-600 underline">Cookie Policy</a>. Necessary storage is always active. Analytics and marketing tools run only after you accept them.
+            This section explains how Fortune Intern Network uses cookies and similar technologies, including browser local storage, on our portal.
+          </p>
+          <h3 className="text-xl font-bold text-[#0B172A] mt-6 mb-3">What we use and why</h3>
+          <ul className="list-disc pl-6 space-y-4 text-lg leading-relaxed">
+            <li>
+              <span className="font-bold text-[#0B172A]">Necessary, no consent required:</span> session and login storage, saved document fields and your consent record. The portal cannot function without these.
+            </li>
+            <li>
+              <span className="font-bold text-[#0B172A]">On-device functionality:</span> the Super AI knowledge base and, if you provide one, your OpenAI key remain on your device and are never uploaded.
+            </li>
+            <li>
+              <span className="font-bold text-[#0B172A]">Analytics and marketing:</span> none at present. If introduced, they load only after you accept and this policy is updated.
+            </li>
+          </ul>
+          <h3 className="text-xl font-bold text-[#0B172A] mt-6 mb-3">Third-party services</h3>
+          <ul className="list-disc pl-6 space-y-3 text-lg leading-relaxed">
+            <li>Paystack sets checkout cookies on its own domain during payment.</li>
+            <li>Google Fonts and content delivery networks receive your IP address when assets load but set no cookies.</li>
+            <li>Social platforms are involved only when you click through to them.</li>
+          </ul>
+          <h3 className="text-xl font-bold text-[#0B172A] mt-6 mb-3">Your choices</h3>
+          <p className="text-lg leading-relaxed">
+            The banner offers &quot;Accept all cookies&quot; or &quot;Reject all cookies&quot;. Rejecting keeps only the necessary storage active, which is the safe default. You may change your choice at any time by clearing site data in your browser or asking us to reset your consent record. Blocking necessary storage signs you out and removes saved progress.
           </p>
         </div>
 

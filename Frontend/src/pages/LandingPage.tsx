@@ -864,10 +864,6 @@ export default function LandingPage({
                 "Privacy Policy",
 
                 "Terms of Service",
-
-                "Cookie Policy",
-
-                "Refund Policy",
               ]}
             />
           </div>
@@ -1268,8 +1264,6 @@ function FooterColumn({ title, links }: FooterColumnProps) {
     Contact: "/contact",
     "Privacy Policy": "/privacy-policy",
     "Terms of Service": "/terms",
-    "Cookie Policy": "/cookie-policy",
-    "Refund Policy": "/refund-policy",
   }
 
   return (

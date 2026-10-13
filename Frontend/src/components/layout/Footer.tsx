@@ -60,8 +60,6 @@ export default function Footer() {
             { name: "Contact", href: "/contact" },
             { name: "Privacy Policy", href: "/privacy-policy" },
             { name: "Terms & Conditions", href: "/terms" },
-            { name: "Cookie Policy", href: "/cookie-policy" },
-            { name: "Refund Policy", href: "/refund-policy" },
           ]}
         />
 
