@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta, timezone
+import hmac
+from hashlib import sha256
 from uuid import UUID
 
 import jwt
@@ -9,6 +11,22 @@ from pwdlib import PasswordHash
 from Backend.core.config import settings
 
 password_hash = PasswordHash.recommended()
+ONE_TIME_HASH_PREFIX = "hmac-sha256:"
+
+
+def hash_one_time_secret(secret: str, purpose: str) -> str:
+    digest = hmac.new(
+        settings.jwt_secret.encode(),
+        f"{purpose}\0{secret}".encode(),
+        sha256,
+    ).hexdigest()
+    return f"{ONE_TIME_HASH_PREFIX}{digest}"
+
+
+def verify_one_time_secret(secret: str, stored_hash: str, purpose: str) -> bool:
+    if stored_hash.startswith(ONE_TIME_HASH_PREFIX):
+        return hmac.compare_digest(hash_one_time_secret(secret, purpose), stored_hash)
+    return verify_password(secret, stored_hash)
 
 
 def hash_password(password: str) -> str:

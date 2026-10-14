@@ -1,9 +1,12 @@
+from dataclasses import dataclass, replace
 from pathlib import Path
 from uuid import UUID, uuid4
 
 from botocore.exceptions import BotoCoreError, ClientError
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import Response
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, or_, select
 
 from Backend.api.deps import get_current_user
@@ -29,6 +32,41 @@ from Database.schemas import (
 router = APIRouter(prefix="/api/applications", tags=["applications"])
 
 
+@dataclass(frozen=True)
+class _ApplicationFields:
+    program_id: str
+    program_name: str
+    institution: str
+    course: str
+    contact: str
+    company_name: str
+    company_address: str
+    applicant_name: str
+    gender: str
+    student_index_number: str
+    year_of_study: str
+    suggested_company: str
+
+
+@dataclass(frozen=True)
+class _PreparedApplication:
+    fields: _ApplicationFields
+    program_id: UUID
+    program_name: str
+    program_company: str | None
+
+
+@dataclass(frozen=True)
+class _ApplicationReceipt:
+    to_email: str
+    student_name: str
+    program_name: str
+    year_of_study: str
+    company: str
+    reference: str
+    submitted_at: str
+
+
 def serialize_application(row: application, program_name: str) -> ApplicationResponse:
     return ApplicationResponse(
         id=str(row.id),
@@ -51,15 +89,218 @@ def serialize_application(row: application, program_name: str) -> ApplicationRes
     )
 
 
+def _prepare_application(
+    session: Session,
+    account: user,
+    fields: _ApplicationFields,
+) -> _PreparedApplication:
+    applying_for_self = (
+        not fields.applicant_name
+        or fields.applicant_name.casefold() == account.name.casefold()
+    )
+    if applying_for_self:
+        profile = session.exec(
+            select(user_profile).where(user_profile.user_id == account.id)
+        ).first()
+        fields = replace(
+            fields,
+            applicant_name=fields.applicant_name or account.name,
+            institution=fields.institution or (profile.university or "" if profile else ""),
+            course=fields.course
+            or ((profile.course or profile.major or "") if profile else ""),
+            contact=fields.contact
+            or ((profile.phone_number or "") if profile else ""),
+            student_index_number=fields.student_index_number
+            or ((profile.student_index_number or "") if profile else ""),
+            year_of_study=fields.year_of_study
+            or (
+                str(profile.year_of_study)
+                if profile and profile.year_of_study is not None
+                else ""
+            ),
+        )
+
+    program_record = None
+    if fields.program_id:
+        try:
+            program_record = session.get(program, UUID(fields.program_id))
+        except ValueError:
+            program_record = None
+        if not program_record:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Program not found",
+            )
+
+    program_name = (
+        program_record.name if program_record else fields.program_name
+    ).strip()
+    if not program_name:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Program name is required",
+        )
+
+    program_record = program_record or session.exec(
+        select(program).where(program.name == program_name)
+    ).first()
+    if not program_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Program not found",
+        )
+
+    duplicate_identity = application.applicant_name == fields.applicant_name
+    if fields.student_index_number:
+        duplicate_identity = or_(
+            duplicate_identity,
+            application.student_index_number == fields.student_index_number,
+        )
+    if applying_for_self:
+        duplicate_identity = or_(
+            duplicate_identity,
+            application.applicant_name.is_(None),
+        )
+    existing_application = session.exec(
+        select(application).where(
+            application.user_id == account.id,
+            application.program_id == program_record.id,
+            application.status != "withdrawn",
+            duplicate_identity,
+        )
+    ).first()
+    if existing_application:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="You already have an active application for this program",
+        )
+
+    return _PreparedApplication(
+        fields=fields,
+        program_id=program_record.id,
+        program_name=program_name,
+        program_company=program_record.company,
+    )
+
+
+def _save_application(
+    session: Session,
+    request: Request,
+    account: user,
+    prepared: _PreparedApplication,
+    resume_document: tuple[bytes, str, str] | None,
+) -> tuple[ApplicationResponse, _ApplicationReceipt]:
+    fields = prepared.fields
+    resume_filename = None
+    resume_path = None
+    if resume_document is not None:
+        content, resume_filename, verified_content_type = resume_document
+        extension = Path(resume_filename).suffix.lower()
+        resume_path = f"resumes/{account.id}/{uuid4()}{extension}"
+        try:
+            storage.upload_resume(
+                resume_path,
+                content,
+                content_type=verified_content_type,
+            )
+        except (BotoCoreError, ClientError, RuntimeError) as error:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Resume storage is not configured",
+            ) from error
+
+    new_application = application(
+        user_id=account.id,
+        program_id=prepared.program_id,
+        status="submitted",
+        resume_filename=resume_filename,
+        resume_path=resume_path,
+        applicant_institution=fields.institution or None,
+        applicant_course=fields.course or None,
+        applicant_contact=fields.contact or None,
+        host_company_name=fields.company_name or None,
+        host_company_address=fields.company_address or None,
+        applicant_name=fields.applicant_name or None,
+        gender=fields.gender or None,
+        student_index_number=fields.student_index_number or None,
+        year_of_study=fields.year_of_study or None,
+        suggested_company=fields.suggested_company or None,
+    )
+    session.add(new_application)
+    session.add(
+        notification(
+            user_id=account.id,
+            message=f"Your application for {prepared.program_name} was submitted successfully.",
+            target_type="application",
+            target_id=str(new_application.id),
+            read=False,
+        )
+    )
+    session.add(
+        application_status_history(
+            application_id=new_application.id,
+            actor_id=account.id,
+            previous_status=None,
+            new_status=new_application.status,
+        )
+    )
+    record_audit_event(
+        session,
+        request,
+        actor_id=account.id,
+        action="application.create",
+        object_type="application",
+        object_id=str(new_application.id),
+    )
+    try:
+        session.commit()
+    except IntegrityError as error:
+        session.rollback()
+        if resume_path:
+            try:
+                storage.delete_file(resume_path)
+            except (BotoCoreError, ClientError, RuntimeError):
+                raise RuntimeError(
+                    "Application creation failed and the uploaded resume could not be cleaned up"
+                ) from error
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="You already have an active application for this program",
+        ) from error
+    session.refresh(new_application)
+
+    return (
+        serialize_application(new_application, prepared.program_name),
+        _ApplicationReceipt(
+            to_email=account.email,
+            student_name=new_application.applicant_name or account.name,
+            program_name=prepared.program_name,
+            year_of_study=new_application.year_of_study or "Not provided",
+            company=(
+                new_application.host_company_name
+                or new_application.suggested_company
+                or prepared.program_company
+                or ""
+            ),
+            reference=str(new_application.id),
+            submitted_at=new_application.created_at.strftime("%Y-%m-%d"),
+        ),
+    )
+
+
 @router.get("", response_model=list[ApplicationResponse])
 def list_applications(
     account: user = Depends(get_current_user),
     session: Session = Depends(get_session),
+    limit: int = Query(default=100, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
 ):
     rows = session.exec(
         select(application)
         .where(application.user_id == account.id)
         .order_by(application.created_at.desc())
+        .offset(offset)
+        .limit(limit)
     ).all()
 
     results = []
@@ -188,7 +429,8 @@ async def create_application(
     account: user = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    enforce_rate_limit(
+    await run_in_threadpool(
+        enforce_rate_limit,
         session, request, "application-create", str(account.id),
         ip_limit=500,
         identity_limit=10,
@@ -199,160 +441,66 @@ async def create_application(
     resume = None
     if content_type.startswith("multipart/form-data"):
         form = await request.form()
-        program_id_value = str(form.get("program_id") or "")
-        program_name_value = str(form.get("program_name") or "")
+        fields = _ApplicationFields(
+            program_id=str(form.get("program_id") or ""),
+            program_name=str(form.get("program_name") or ""),
+            institution=str(form.get("university") or form.get("institution") or "").strip(),
+            course=str(form.get("course") or "").strip(),
+            contact=str(form.get("phone") or form.get("contact") or "").strip(),
+            company_name=str(form.get("companyName") or form.get("company_name") or "").strip(),
+            company_address=str(form.get("companyAddress") or form.get("company_address") or "").strip(),
+            applicant_name=str(form.get("applicant_name") or "").strip(),
+            gender=str(form.get("gender") or "").strip(),
+            student_index_number=str(form.get("student_index_number") or "").strip(),
+            year_of_study=str(form.get("year_of_study") or "").strip(),
+            suggested_company=str(form.get("suggested_company") or "").strip(),
+        )
         resume = form.get("resume")
-        institution_value = str(form.get("university") or form.get("institution") or "").strip()
-        course_value = str(form.get("course") or "").strip()
-        contact_value = str(form.get("phone") or form.get("contact") or "").strip()
-        company_name_value = str(form.get("companyName") or form.get("company_name") or "").strip()
-        company_address_value = str(form.get("companyAddress") or form.get("company_address") or "").strip()
-        applicant_name_value = str(form.get("applicant_name") or "").strip()
-        gender_value = str(form.get("gender") or "").strip()
-        student_index_value = str(form.get("student_index_number") or "").strip()
-        year_of_study_value = str(form.get("year_of_study") or "").strip()
-        suggested_company_value = str(form.get("suggested_company") or "").strip()
     else:
         payload = await request.json()
-        program_id_value = str(payload.get("program_id") or "")
-        program_name_value = str(payload.get("program_name") or "")
-        institution_value = str(payload.get("university") or payload.get("institution") or "").strip()
-        course_value = str(payload.get("course") or "").strip()
-        contact_value = str(payload.get("phone") or payload.get("contact") or "").strip()
-        company_name_value = str(payload.get("companyName") or payload.get("company_name") or "").strip()
-        company_address_value = str(payload.get("companyAddress") or payload.get("company_address") or "").strip()
-        applicant_name_value = str(payload.get("applicant_name") or "").strip()
-        gender_value = str(payload.get("gender") or "").strip()
-        student_index_value = str(payload.get("student_index_number") or "").strip()
-        year_of_study_value = str(payload.get("year_of_study") or "").strip()
-        suggested_company_value = str(payload.get("suggested_company") or "").strip()
+        fields = _ApplicationFields(
+            program_id=str(payload.get("program_id") or ""),
+            program_name=str(payload.get("program_name") or ""),
+            institution=str(payload.get("university") or payload.get("institution") or "").strip(),
+            course=str(payload.get("course") or "").strip(),
+            contact=str(payload.get("phone") or payload.get("contact") or "").strip(),
+            company_name=str(payload.get("companyName") or payload.get("company_name") or "").strip(),
+            company_address=str(payload.get("companyAddress") or payload.get("company_address") or "").strip(),
+            applicant_name=str(payload.get("applicant_name") or "").strip(),
+            gender=str(payload.get("gender") or "").strip(),
+            student_index_number=str(payload.get("student_index_number") or "").strip(),
+            year_of_study=str(payload.get("year_of_study") or "").strip(),
+            suggested_company=str(payload.get("suggested_company") or "").strip(),
+        )
 
-    applying_for_self = (
-        not applicant_name_value
-        or applicant_name_value.casefold() == account.name.casefold()
+    prepared = await run_in_threadpool(
+        _prepare_application,
+        session,
+        account,
+        fields,
     )
-    if applying_for_self:
-        profile = session.exec(
-            select(user_profile).where(user_profile.user_id == account.id)
-        ).first()
-        applicant_name_value = applicant_name_value or account.name
-        if profile:
-            institution_value = institution_value or profile.university or ""
-            course_value = course_value or profile.course or profile.major or ""
-            contact_value = contact_value or profile.phone_number or ""
-            student_index_value = student_index_value or profile.student_index_number or ""
-            if not year_of_study_value and profile.year_of_study is not None:
-                year_of_study_value = str(profile.year_of_study)
 
-    program_record = None
-    if program_id_value:
-        try:
-            program_record = session.get(program, UUID(program_id_value))
-        except ValueError:
-            program_record = None
-        if not program_record:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Program not found")
-
-    program_name = (program_record.name if program_record else program_name_value).strip()
-    if not program_name:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Program name is required",
-        )
-
-    program_record = program_record or session.exec(select(program).where(program.name == program_name)).first()
-    if not program_record:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Program not found")
-    duplicate_identity = application.applicant_name == applicant_name_value
-    if student_index_value:
-        duplicate_identity = or_(
-            duplicate_identity,
-            application.student_index_number == student_index_value,
-        )
-    if applying_for_self:
-        duplicate_identity = or_(
-            duplicate_identity,
-            application.applicant_name.is_(None),
-        )
-    existing_application = session.exec(
-        select(application).where(
-            application.user_id == account.id,
-            application.program_id == program_record.id,
-            application.status != "withdrawn",
-            duplicate_identity,
-        )
-    ).first()
-    if existing_application:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="You already have an active application for this program",
-        )
-
-    resume_filename = None
-    resume_path = None
+    resume_document = None
     if resume is not None and getattr(resume, "filename", None):
-        content, original_filename, verified_content_type = await read_validated_document(resume, "Resume")
-        extension = Path(original_filename).suffix.lower()
-        stored_key = f"resumes/{account.id}/{uuid4()}{extension}"
-        try:
-            storage.upload_resume(stored_key, content, content_type=verified_content_type)
-        except (BotoCoreError, ClientError, RuntimeError) as error:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Resume storage is not configured") from error
-        resume_filename = original_filename
-        resume_path = stored_key
+        resume_document = await read_validated_document(resume, "Resume")
 
-    new_application = application(
-        user_id=account.id,
-        program_id=program_record.id,
-        status="submitted",
-        resume_filename=resume_filename,
-        resume_path=resume_path,
-        applicant_institution=institution_value or None,
-        applicant_course=course_value or None,
-        applicant_contact=contact_value or None,
-        host_company_name=company_name_value or None,
-        host_company_address=company_address_value or None,
-        applicant_name=applicant_name_value or None,
-        gender=gender_value or None,
-        student_index_number=student_index_value or None,
-        year_of_study=year_of_study_value or None,
-        suggested_company=suggested_company_value or None,
+    response, receipt = await run_in_threadpool(
+        _save_application,
+        session,
+        request,
+        account,
+        prepared,
+        resume_document,
     )
-    session.add(new_application)
-    session.add(notification(
-        user_id=account.id,
-        message=f"Your application for {program_name} was submitted successfully.",
-        target_type="application",
-        target_id=str(new_application.id),
-        read=False,
-    ))
-    session.add(
-        application_status_history(
-            application_id=new_application.id,
-            actor_id=account.id,
-            previous_status=None,
-            new_status=new_application.status,
-        )
-    )
-    record_audit_event(
-        session, request, actor_id=account.id, action="application.create",
-        object_type="application", object_id=str(new_application.id),
-    )
-    session.commit()
-    session.refresh(new_application)
     background_tasks.add_task(
         send_application_received_email,
-        to_email=account.email,
-        student_name=new_application.applicant_name or account.name,
-        program_name=program_name,
-        year_of_study=new_application.year_of_study or "Not provided",
-        company=(
-            new_application.host_company_name
-            or new_application.suggested_company
-            or program_record.company
-        ),
-        reference=str(new_application.id),
-        submitted_at=new_application.created_at.strftime("%Y-%m-%d"),
+        to_email=receipt.to_email,
+        student_name=receipt.student_name,
+        program_name=receipt.program_name,
+        year_of_study=receipt.year_of_study,
+        company=receipt.company,
+        reference=receipt.reference,
+        submitted_at=receipt.submitted_at,
     )
 
-    return serialize_application(new_application, program_name)
+    return response

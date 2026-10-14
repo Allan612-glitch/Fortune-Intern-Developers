@@ -3,7 +3,7 @@ from uuid import UUID
 import logging
 
 from botocore.exceptions import BotoCoreError, ClientError
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response
 from sqlmodel import Session, select
 
@@ -60,8 +60,16 @@ def parse_deadline(value: str | None):
 
 
 @router.get("/users", response_model=list[AdminUserResponse])
-def list_users(request: Request, admin: user = Depends(get_current_admin), session: Session = Depends(get_session)):
-	rows = session.exec(select(user).order_by(user.created_at.desc())).all()
+def list_users(
+	request: Request,
+	admin: user = Depends(get_current_admin),
+	session: Session = Depends(get_session),
+	limit: int = Query(default=100, ge=1, le=200),
+	offset: int = Query(default=0, ge=0),
+):
+	rows = session.exec(
+		select(user).order_by(user.created_at.desc()).offset(offset).limit(limit)
+	).all()
 	record_audit_event(session, request, actor_id=admin.id, action="users.list", object_type="user", object_id="all")
 	session.commit()
 	return [AdminUserResponse(id=str(row.id), name=row.name, email=row.email, is_admin=row.is_admin, is_suspended=row.is_suspended) for row in rows]
@@ -86,8 +94,19 @@ def update_user_suspension(user_id: str, suspended: bool, request: Request, admi
 
 
 @router.get("/applications", response_model=list[ApplicationResponse])
-def list_admin_applications(request: Request, admin: user = Depends(get_current_admin), session: Session = Depends(get_session)):
-	rows = session.exec(select(application).order_by(application.created_at.desc())).all()
+def list_admin_applications(
+	request: Request,
+	admin: user = Depends(get_current_admin),
+	session: Session = Depends(get_session),
+	limit: int = Query(default=100, ge=1, le=200),
+	offset: int = Query(default=0, ge=0),
+):
+	rows = session.exec(
+		select(application)
+		.order_by(application.created_at.desc())
+		.offset(offset)
+		.limit(limit)
+	).all()
 	results = []
 	for row in rows:
 		program_record = session.get(program, row.program_id)
@@ -197,62 +216,79 @@ def update_application_status(application_id: str, payload: AdminApplicationStat
 		row = None
 	if not row:
 		raise HTTPException(status_code=404, detail="Application not found")
-	if requested_status not in allowed_transitions.get(row.status, set()):
-		raise HTTPException(status_code=409, detail="Invalid application status transition")
-	previous_status = row.status
-	row.status = requested_status
-	session.add(row)
-	session.add(application_status_history(
-		application_id=row.id,
-		actor_id=admin.id,
-		previous_status=previous_status,
-		new_status=requested_status,
-	))
-	record_audit_event(
-		session, request, actor_id=admin.id, action="application.status.update",
-		object_type="application", object_id=str(row.id),
+	retrying_documents = (
+		requested_status == "accepted"
+		and row.status == "accepted"
+		and not row.documents_sent
 	)
-	if requested_status in {"accepted", "rejected"}:
-		decision = "accepted" if requested_status == "accepted" else "rejected"
-		session.add(notification(
-			user_id=row.user_id,
-			message=f"Your application was {decision} by the Fortune Intern Network team.",
-			target_type="application",
-			target_id=str(row.id),
-			read=False,
+	if (
+		requested_status not in allowed_transitions.get(row.status, set())
+		and not retrying_documents
+	):
+		raise HTTPException(status_code=409, detail="Invalid application status transition")
+	if not retrying_documents:
+		previous_status = row.status
+		row.status = requested_status
+		session.add(row)
+		session.add(application_status_history(
+			application_id=row.id,
+			actor_id=admin.id,
+			previous_status=previous_status,
+			new_status=requested_status,
 		))
-	session.commit()
+		record_audit_event(
+			session, request, actor_id=admin.id, action="application.status.update",
+			object_type="application", object_id=str(row.id),
+		)
+		if requested_status in {"accepted", "rejected"}:
+			decision = "accepted" if requested_status == "accepted" else "rejected"
+			session.add(notification(
+				user_id=row.user_id,
+				message=f"Your application was {decision} by the Fortune Intern Network team.",
+				target_type="application",
+				target_id=str(row.id),
+				read=False,
+			))
+		session.commit()
 	program_record = session.get(program, row.program_id)
 	program_name = program_record.name if program_record else "Program"
 
-	if payload.status == "accepted" and not row.documents_sent:
+	if requested_status == "accepted" and not row.documents_sent:
 		applicant = session.get(user, row.user_id)
-		if applicant:
-			try:
-				reference_no = f"FIN/{datetime.now(timezone.utc).year}/{str(row.id)[:8].upper()}"
-				letter_pdf = documents.build_recommendation_letter_pdf(
-					student_name=applicant.name,
-					institution=row.applicant_institution or "Not specified",
-					program_course=row.applicant_course,
-					contact=row.applicant_contact,
-					email=applicant.email,
-					host_company=row.host_company_name or (program_record.company if program_record else "Fortune Intern Network"),
-					host_location=row.host_company_address or (program_record.location if program_record else None),
-					reference_no=reference_no,
-				)
-				assessment_pdf = documents.build_assessment_form_pdf()
-				send_application_documents_email(
-					to_email=applicant.email,
-					student_name=applicant.name,
-					program_name=program_name,
-					letter_pdf=letter_pdf,
-					assessment_pdf=assessment_pdf,
-				)
-				row.documents_sent = True
-				session.add(row)
-				session.commit()
-			except (BotoCoreError, ClientError, RuntimeError):
-				logging.getLogger(__name__).exception("Failed to send application documents for application %s", row.id)
+		if not applicant:
+			raise HTTPException(status_code=404, detail="Applicant not found")
+		try:
+			reference_no = f"FIN/{datetime.now(timezone.utc).year}/{str(row.id)[:8].upper()}"
+			letter_pdf = documents.build_recommendation_letter_pdf(
+				student_name=applicant.name,
+				institution=row.applicant_institution or "Not specified",
+				program_course=row.applicant_course,
+				contact=row.applicant_contact,
+				email=applicant.email,
+				host_company=row.host_company_name or (program_record.company if program_record else "Fortune Intern Network"),
+				host_location=row.host_company_address or (program_record.location if program_record else None),
+				reference_no=reference_no,
+			)
+			assessment_pdf = documents.build_assessment_form_pdf()
+			send_application_documents_email(
+				to_email=applicant.email,
+				student_name=applicant.name,
+				program_name=program_name,
+				letter_pdf=letter_pdf,
+				assessment_pdf=assessment_pdf,
+			)
+		except (BotoCoreError, ClientError, RuntimeError, ValueError) as error:
+			logging.getLogger(__name__).exception(
+				"Failed to send application documents for application %s",
+				row.id,
+			)
+			raise HTTPException(
+				status_code=503,
+				detail="Application documents could not be sent; retry the accepted status update",
+			) from error
+		row.documents_sent = True
+		session.add(row)
+		session.commit()
 
 	return ApplicationResponse(
 		id=str(row.id), user_id=str(row.user_id), program_id=str(row.program_id),
@@ -329,8 +365,19 @@ def create_announcement(payload: AnnouncementCreateRequest, request: Request, ad
 
 
 @router.get("/announcements", response_model=list[AnnouncementResponse])
-def list_announcements(request: Request, admin: user = Depends(get_current_admin), session: Session = Depends(get_session)):
-	rows = session.exec(select(announcement).order_by(announcement.created_at.desc())).all()
+def list_announcements(
+	request: Request,
+	admin: user = Depends(get_current_admin),
+	session: Session = Depends(get_session),
+	limit: int = Query(default=100, ge=1, le=200),
+	offset: int = Query(default=0, ge=0),
+):
+	rows = session.exec(
+		select(announcement)
+		.order_by(announcement.created_at.desc())
+		.offset(offset)
+		.limit(limit)
+	).all()
 	record_audit_event(session, request, actor_id=admin.id, action="announcements.list", object_type="announcement", object_id="all")
 	session.commit()
 	return [AnnouncementResponse(id=str(row.id), title=row.title, content=row.content, created_at=row.created_at.isoformat()) for row in rows]

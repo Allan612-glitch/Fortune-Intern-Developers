@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 import logging
 from secrets import randbelow, token_urlsafe
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from google.auth.transport import requests as google_requests
@@ -11,7 +12,13 @@ from sqlmodel import Session, select
 from Backend.api.deps import get_current_user
 from Backend.core.captcha import verify_turnstile
 from Backend.core.config import settings
-from Backend.core.security import create_access_token, hash_password, verify_password
+from Backend.core.security import (
+    create_access_token,
+    hash_one_time_secret,
+    hash_password,
+    verify_one_time_secret,
+    verify_password,
+)
 from Backend.core.rate_limit import enforce_rate_limit
 from Backend.database import get_session
 from Database.models import password_reset, registration_verification, user
@@ -60,7 +67,8 @@ def send_password_reset_email(email: str, token: str) -> None:
     if not all((settings.resend_api_key, settings.resend_from_email)):
         raise HTTPException(status_code=503, detail="Email delivery is not configured")
 
-    reset_link = f"{settings.frontend_url}/reset-password.html?email={email}&token={token}"
+    query = urlencode({"email": email, "token": token})
+    reset_link = f"{settings.frontend_url}/reset-password.html?{query}"
     resend.api_key = settings.resend_api_key
     try:
         resend.Emails.send({
@@ -99,8 +107,9 @@ def login(
     session: Session = Depends(get_session),
 ):
     email = validate_email(credentials.email)
+    client_ip = request.client.host if request.client else "unknown"
     enforce_rate_limit(
-        session, request, "login", email,
+        session, request, "login", f"{email}:{client_ip}",
         ip_limit=500,
         identity_limit=10,
         window_seconds=60,
@@ -248,21 +257,21 @@ def register(
             name=name,
             email=email,
             password_hash=hash_password(credentials.password),
-            code_hash=hash_password(code),
+            code_hash=hash_one_time_secret(code, "registration-code"),
             failed_attempts=0,
             expires_at=datetime.now(timezone.utc) + timedelta(minutes=settings.verification_code_expire_minutes),
         )
     else:
         pending_registration.name = name
         pending_registration.password_hash = hash_password(credentials.password)
-        pending_registration.code_hash = hash_password(code)
+        pending_registration.code_hash = hash_one_time_secret(code, "registration-code")
         pending_registration.failed_attempts = 0
         pending_registration.expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.verification_code_expire_minutes)
         pending_registration.created_at = datetime.now(timezone.utc)
 
-    send_verification_email(email, code)
     session.add(pending_registration)
     session.commit()
+    send_verification_email(email, code)
     return VerificationStartResponse(
         message="Verification code sent",
         email=email,
@@ -296,13 +305,13 @@ def resend_verification(
         return response
 
     code = f"{randbelow(1_000_000):06d}"
-    pending_registration.code_hash = hash_password(code)
+    pending_registration.code_hash = hash_one_time_secret(code, "registration-code")
     pending_registration.failed_attempts = 0
     pending_registration.expires_at = now + timedelta(minutes=settings.verification_code_expire_minutes)
     pending_registration.created_at = now
-    send_verification_email(email, code)
     session.add(pending_registration)
     session.commit()
+    send_verification_email(email, code)
     return response
 
 
@@ -337,7 +346,11 @@ def verify_email(
             detail="Too many incorrect codes. Request a new verification code.",
         )
 
-    if not verify_password(payload.code.strip(), pending_registration.code_hash):
+    if not verify_one_time_secret(
+        payload.code.strip(),
+        pending_registration.code_hash,
+        "registration-code",
+    ):
         pending_registration.failed_attempts += 1
         session.add(pending_registration)
         session.commit()
@@ -401,12 +414,12 @@ def forgot_password(
     token = token_urlsafe(32)
     reset_request = password_reset(
         user_id=account.id,
-        token_hash=hash_password(token),
+        token_hash=hash_one_time_secret(token, "password-reset"),
         expires_at=datetime.now(timezone.utc) + timedelta(minutes=settings.password_reset_token_expire_minutes),
     )
     session.add(reset_request)
-    send_password_reset_email(email, token)
     session.commit()
+    send_password_reset_email(email, token)
     return generic_response
 
 
@@ -437,7 +450,15 @@ def reset_password(
         .order_by(password_reset.created_at.desc())
     ).all()
     matching_reset = next(
-        (candidate for candidate in candidates if verify_password(payload.token, candidate.token_hash)),
+        (
+            candidate
+            for candidate in candidates
+            if verify_one_time_secret(
+                payload.token,
+                candidate.token_hash,
+                "password-reset",
+            )
+        ),
         None,
     )
     if not matching_reset or matching_reset.expires_at <= datetime.now(timezone.utc):

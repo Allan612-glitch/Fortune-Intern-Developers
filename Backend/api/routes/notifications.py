@@ -1,6 +1,8 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, update
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from Backend.api.deps import get_current_user
@@ -27,17 +29,30 @@ def serialize_notification(row: notification) -> NotificationResponse:
 
 
 @router.get("", response_model=list[NotificationResponse])
-def list_notifications(account: user = Depends(get_current_user), session: Session = Depends(get_session)):
+def list_notifications(
+	account: user = Depends(get_current_user),
+	session: Session = Depends(get_session),
+	limit: int = Query(default=100, ge=1, le=200),
+	offset: int = Query(default=0, ge=0),
+):
 	rows = session.exec(
-		select(notification).where(notification.user_id == account.id).order_by(notification.created_at.desc())
+		select(notification)
+		.where(notification.user_id == account.id)
+		.order_by(notification.created_at.desc())
+		.offset(offset)
+		.limit(limit)
 	).all()
 	return [serialize_notification(row) for row in rows]
 
 
 @router.get("/unread-count")
 def unread_count(account: user = Depends(get_current_user), session: Session = Depends(get_session)):
-	rows = session.exec(select(notification).where(notification.user_id == account.id)).all()
-	return {"count": sum(not row.read for row in rows)}
+	count = session.exec(
+		select(func.count())
+		.select_from(notification)
+		.where(notification.user_id == account.id, notification.read.is_(False))
+	).one()
+	return {"count": count}
 
 
 @router.put("/{notification_id}/read", response_model=NotificationResponse)
@@ -57,12 +72,13 @@ def mark_notification_read(notification_id: str, account: user = Depends(get_cur
 
 @router.put("/read-all")
 def mark_all_notifications_read(account: user = Depends(get_current_user), session: Session = Depends(get_session)):
-	rows = session.exec(select(notification).where(notification.user_id == account.id)).all()
-	for row in rows:
-		row.read = True
-		session.add(row)
+	result = session.exec(
+		update(notification)
+		.where(notification.user_id == account.id, notification.read.is_(False))
+		.values(read=True)
+	)
 	session.commit()
-	return {"updated": len(rows)}
+	return {"updated": result.rowcount or 0}
 
 
 @router.get("/preferences", response_model=NotificationPreferencesResponse)
@@ -84,7 +100,20 @@ def update_notification_preferences(payload: NotificationPreferencesUpdateReques
 	profile.sms_notifications = payload.sms_notifications
 	profile.opportunity_alerts = payload.opportunity_alerts
 	session.add(profile)
-	session.commit()
+	try:
+		session.commit()
+	except IntegrityError:
+		session.rollback()
+		profile = session.exec(
+			select(user_profile).where(user_profile.user_id == account.id)
+		).first()
+		if profile is None:
+			raise
+		profile.email_notifications = payload.email_notifications
+		profile.sms_notifications = payload.sms_notifications
+		profile.opportunity_alerts = payload.opportunity_alerts
+		session.add(profile)
+		session.commit()
 	session.refresh(profile)
 	return NotificationPreferencesResponse(
 		email_notifications=profile.email_notifications,

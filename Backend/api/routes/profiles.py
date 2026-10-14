@@ -4,7 +4,9 @@ from uuid import UUID, uuid4
 
 from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import Response
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from Backend.api.deps import get_current_user
@@ -51,6 +53,36 @@ def serialize_profile(profile: user_profile) -> ProfileResponse:
     )
 
 
+def _save_profile_document(
+    session: Session,
+    account: user,
+    content: bytes,
+    filename: str,
+    content_type: str,
+) -> ProfileDocumentResponse:
+    extension = Path(filename).suffix.lower()
+    storage_path = f"profile-documents/{account.id}/{uuid4()}{extension}"
+    try:
+        storage.upload_file(storage_path, content, content_type=content_type)
+    except (BotoCoreError, ClientError, RuntimeError) as error:
+        raise HTTPException(
+            status_code=503,
+            detail="Profile document storage is unavailable",
+        ) from error
+
+    row = profile_document(
+        user_id=account.id,
+        filename=filename,
+        storage_path=storage_path,
+        content_type=content_type,
+        file_size=len(content),
+    )
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    return serialize_document(row)
+
+
 @router.get("", response_model=ProfileResponse)
 def get_profile(
     account: user = Depends(get_current_user),
@@ -78,7 +110,15 @@ def get_profile(
             opportunity_alerts=True,
         )
         session.add(profile)
-        session.commit()
+        try:
+            session.commit()
+        except IntegrityError:
+            session.rollback()
+            profile = session.exec(
+                select(user_profile).where(user_profile.user_id == account.id)
+            ).first()
+            if profile is None:
+                raise
         session.refresh(profile)
 
     return serialize_profile(profile)
@@ -106,7 +146,20 @@ def update_profile(
     profile.updated_at = datetime.now(timezone.utc)
 
     session.add(profile)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        profile = session.exec(
+            select(user_profile).where(user_profile.user_id == account.id)
+        ).first()
+        if profile is None:
+            raise
+        for field, value in updates.items():
+            setattr(profile, field, value)
+        profile.updated_at = datetime.now(timezone.utc)
+        session.add(profile)
+        session.commit()
     session.refresh(profile)
     return serialize_profile(profile)
 
@@ -226,7 +279,8 @@ async def upload_profile_document(
     account: user = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    enforce_rate_limit(
+    await run_in_threadpool(
+        enforce_rate_limit,
         session, request, "profile-document-upload", str(account.id),
         ip_limit=500,
         identity_limit=20,
@@ -234,25 +288,14 @@ async def upload_profile_document(
         identity_window_seconds=3600,
     )
     content, filename, content_type = await read_validated_document(file, "Document")
-    extension = Path(filename).suffix.lower()
-
-    storage_path = f"profile-documents/{account.id}/{uuid4()}{extension}"
-    try:
-        storage.upload_file(storage_path, content, content_type=content_type)
-    except (BotoCoreError, ClientError, RuntimeError) as error:
-        raise HTTPException(status_code=503, detail="Profile document storage is unavailable") from error
-
-    row = profile_document(
-        user_id=account.id,
-        filename=filename,
-        storage_path=storage_path,
-        content_type=content_type,
-        file_size=len(content),
+    return await run_in_threadpool(
+        _save_profile_document,
+        session,
+        account,
+        content,
+        filename,
+        content_type,
     )
-    session.add(row)
-    session.commit()
-    session.refresh(row)
-    return serialize_document(row)
 
 
 @router.get("/documents/{document_id}/download")

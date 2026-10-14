@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
+from sqlalchemy import func
 from sqlmodel import Session, select
 
 from Backend.api.deps import get_current_user
@@ -37,36 +38,47 @@ def get_dashboard(
 	]
 	profile_completion = round(sum(bool(value) for value in profile_values) / len(profile_values) * 100)
 
-	applications = session.exec(
-		select(application)
+	status_counts = {
+		status_key.lower(): count
+		for status_key, count in session.exec(
+			select(application.status, func.count())
+			.where(application.user_id == account.id)
+			.group_by(application.status)
+		).all()
+	}
+	total_applications = sum(status_counts.values())
+	recent_rows = session.exec(
+		select(application, program.name)
+		.outerjoin(program, application.program_id == program.id)
 		.where(application.user_id == account.id)
 		.order_by(application.created_at.desc())
+		.limit(5)
 	).all()
-	status_counts = {}
-	recent_applications = []
-	for row in applications:
-		status_key = row.status.lower()
-		status_counts[status_key] = status_counts.get(status_key, 0) + 1
-		if len(recent_applications) < 5:
-			program_record = session.get(program, row.program_id)
-			recent_applications.append(
-				DashboardApplication(
-					id=str(row.id),
-					program_name=program_record.name if program_record else "Program",
-					status=row.status,
-					created_at=row.created_at.isoformat(),
-				)
-			)
+	recent_applications = [
+		DashboardApplication(
+			id=str(row.id),
+			program_name=program_name or "Program",
+			status=row.status,
+			created_at=row.created_at.isoformat(),
+		)
+		for row, program_name in recent_rows
+	]
 
 	now = datetime.now(timezone.utc)
 	open_programs = session.exec(
-		select(program).where(program.status == "open")
-	).all()
-	deadlines = [item.deadline for item in open_programs if item.deadline and item.deadline >= now]
+		select(func.count()).select_from(program).where(program.status == "open")
+	).one()
+	next_deadline = session.exec(
+		select(func.min(program.deadline)).where(
+			program.status == "open",
+			program.deadline.is_not(None),
+			program.deadline >= now,
+		)
+	).one()
 
 	return DashboardResponse(
 		profile_completion=profile_completion,
-		total_applications=len(applications),
+		total_applications=total_applications,
 		active_applications=sum(
 			count for status_key, count in status_counts.items()
 			if status_key not in {"rejected", "withdrawn", "accepted"}
@@ -74,7 +86,7 @@ def get_dashboard(
 		interviews=status_counts.get("interview", 0),
 		accepted_applications=status_counts.get("accepted", 0),
 		rejected_applications=status_counts.get("rejected", 0),
-		open_programs=len(open_programs),
-		next_deadline=min(deadlines).isoformat() if deadlines else None,
+		open_programs=open_programs,
+		next_deadline=next_deadline.isoformat() if next_deadline else None,
 		recent_applications=recent_applications,
 	)

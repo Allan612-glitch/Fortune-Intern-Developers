@@ -33,19 +33,32 @@ def create_app() -> FastAPI:
     )
 
     @application.middleware("http")
-    async def set_response_security_headers(request: Request, call_next):
-        response = await call_next(request)
-        response.headers["Cache-Control"] = "no-store"
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        return response
-
-    @application.middleware("http")
     async def add_request_id_and_log(request: Request, call_next):
         request_id = str(uuid4())
         request.state.request_id = request_id
         started_at = perf_counter()
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception:
+            logger.exception(
+                "unhandled request error",
+                extra={
+                    "request_id": request_id,
+                    "method": request.method,
+                    "path": request.url.path,
+                },
+            )
+            response = JSONResponse(
+                status_code=500,
+                content={
+                    "detail": "Internal server error",
+                    "request_id": request_id,
+                },
+            )
+
         response.headers["X-Request-ID"] = request_id
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
         logger.info(
             "request completed",
             extra={

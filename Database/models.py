@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, JSON, String, Uuid
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, JSON, String, Uuid, text
 from sqlmodel import Field, SQLModel
 from uuid import UUID, uuid4
 from datetime import datetime,timezone
@@ -20,7 +20,7 @@ class user(SQLModel, table=True):
 class user_profile(SQLModel, table=True):
     __tablename__ = "user_profiles"
     id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
-    user_id: UUID = Field(sa_column=Column("user_id", Uuid, ForeignKey("users.id"), nullable=False))
+    user_id: UUID = Field(sa_column=Column("user_id", Uuid, ForeignKey("users.id"), nullable=False, unique=True, index=True))
     bio: str | None = Field(default=None, sa_column=Column("bio", String))
     profile_picture: str | None = Field(default=None, sa_column=Column("profile_picture", String))
     student_index_number: str | None = Field(default=None, sa_column=Column("student_index_number", String))
@@ -70,7 +70,7 @@ class program(SQLModel, table=True):
 class application(SQLModel, table=True):
     __tablename__ = "applications"
     id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
-    user_id: UUID = Field(sa_column=Column("user_id", Uuid, ForeignKey("users.id"), nullable=False))
+    user_id: UUID = Field(sa_column=Column("user_id", Uuid, ForeignKey("users.id"), nullable=False, index=True))
     program_id: UUID = Field(sa_column=Column("program_id", Uuid, ForeignKey("programs.id"), nullable=False))
     status: str = Field(sa_column=Column("status", String, nullable=False))
     resume_filename: str | None = Field(default=None, sa_column=Column("resume_filename", String))
@@ -88,6 +88,38 @@ class application(SQLModel, table=True):
     documents_sent: bool = Field(default=False, sa_column=Column("documents_sent", Boolean, nullable=False, default=False))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
+    __table_args__ = (
+        Index(
+            "uq_applications_active_user_program_applicant",
+            "user_id",
+            "program_id",
+            "applicant_name",
+            unique=True,
+            postgresql_where=text("status <> 'withdrawn' AND applicant_name IS NOT NULL"),
+            sqlite_where=text("status <> 'withdrawn' AND applicant_name IS NOT NULL"),
+        ),
+        Index(
+            "uq_applications_active_user_program_student_index",
+            "user_id",
+            "program_id",
+            "student_index_number",
+            unique=True,
+            postgresql_where=text("status <> 'withdrawn' AND student_index_number IS NOT NULL"),
+            sqlite_where=text("status <> 'withdrawn' AND student_index_number IS NOT NULL"),
+        ),
+        Index(
+            "uq_applications_active_user_program_without_identity",
+            "user_id",
+            "program_id",
+            unique=True,
+            postgresql_where=text(
+                "status <> 'withdrawn' AND applicant_name IS NULL AND student_index_number IS NULL"
+            ),
+            sqlite_where=text(
+                "status <> 'withdrawn' AND applicant_name IS NULL AND student_index_number IS NULL"
+            ),
+        ),
+    )
 
 class education_record(SQLModel, table=True):
     __tablename__ = "education_records"
@@ -142,7 +174,7 @@ class announcement(SQLModel, table=True):
 class notification(SQLModel, table=True):
     __tablename__ = "notifications"
     id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
-    user_id: UUID = Field(sa_column=Column("user_id", Uuid, ForeignKey("users.id"), nullable=False))
+    user_id: UUID = Field(sa_column=Column("user_id", Uuid, ForeignKey("users.id"), nullable=False, index=True))
     message: str = Field(sa_column=Column("message", String, nullable=False))
     target_type: str | None = Field(default=None, sa_column=Column("target_type", String))
     target_id: str | None = Field(default=None, sa_column=Column("target_id", String))

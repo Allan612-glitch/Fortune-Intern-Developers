@@ -11,5 +11,5 @@ engine = create_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
 
 
 def get_session():
-    with Session(engine) as session:
+    with Session(engine, expire_on_commit=False) as session:
         yield session

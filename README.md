@@ -135,7 +135,7 @@ Create the PostgreSQL database and user referenced by `DATABASE_URL`, then run m
 .\.venv\Scripts\python.exe -m alembic -c Database/alembic.ini upgrade head
 ```
 
-The migrations create the users, profiles, programs, applications, notifications, mentors, mentorships, announcements, admin role, moderation flags, and registration-verification support tables.
+The migrations create the users, profiles, programs, applications, notifications, mentors, mentorships, announcements, admin role, moderation flags, and registration-verification support tables. The latest migration adds lookup indexes and uniqueness guards for profiles and active applications. It intentionally stops without modifying data if duplicate records already exist; resolve those records manually while preserving any required data, then rerun the migration.
 
 ## Run the Backend
 

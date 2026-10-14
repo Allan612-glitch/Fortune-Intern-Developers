@@ -86,8 +86,9 @@ def send_application_documents_email(
     assessment_pdf: bytes,
 ) -> None:
     if not all((settings.resend_api_key, settings.resend_from_email)):
-        logger.warning("Skipping application documents email: RESEND_API_KEY/RESEND_FROM_EMAIL not configured")
-        return
+        raise RuntimeError(
+            "RESEND_API_KEY and RESEND_FROM_EMAIL must be configured to send application documents"
+        )
 
     resend.api_key = settings.resend_api_key
     try:
@@ -116,5 +117,6 @@ def send_application_documents_email(
                 },
             ],
         })
-    except Exception:
+    except Exception as error:
         logger.exception("Failed to send application documents email to %s", to_email)
+        raise RuntimeError("Unable to send application documents email") from error
