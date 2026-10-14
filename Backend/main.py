@@ -17,6 +17,7 @@ from Backend.api.routes.notifications import router as notification_router
 # from Backend.api.routes.mentorship import router as mentorship_router
 from Backend.api.routes.admin import router as admin_router
 from Backend.api.routes.announcements import router as announcements_router
+from Backend.api.routes.contact import router as contact_router
 from Backend.core.config import settings
 from Backend.database import engine
 
@@ -87,6 +88,7 @@ def create_app() -> FastAPI:
     # application.include_router(mentorship_router)
     application.include_router(admin_router)
     application.include_router(announcements_router)
+    application.include_router(contact_router)
 
     @application.exception_handler(Exception)
     async def handle_unexpected_error(request: Request, _: Exception):
