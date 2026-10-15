@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap");
 @import "tailwindcss";
 
 @theme inline {
@@ -23,6 +23,7 @@
   --font-sans: "Poppins", sans-serif;
   --font-display: "Inter", "Poppins", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
+  --font-heading: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
 }
 
 :root {
@@ -35,7 +36,7 @@
   --secondary: #eef0f8;
   --secondary-foreground: #2d3561;
   --muted: #e8e8e2;
-  --muted-foreground: #6b7280;
+  --muted-foreground: #596070;
   --accent: #f5b731;
   --accent-foreground: #1a1f3a;
   --border: #d1d5db;
@@ -53,6 +54,7 @@
   --surface: #f8faf9;
   --surface-soft: #fbfcfb;
   --footer: #11182d;
+  --gold-text: #976a07;
 }
 
 * {
@@ -110,6 +112,38 @@ html {
   font-size: 0.625rem;
   font-weight: 600;
 }
+/* Landing page typography: Plus Jakarta Sans for headings, Inter stays for body */
+.landing-fonts :is(h1, h2, h3, h4, .font-display) {
+  font-family: var(--font-heading);
+}
+
+/* Main headings (h1, h2) use Inter, as requested 2026-10-15. h3/h4 stay Plus Jakarta Sans. */
+.landing-fonts :is(h1, h2) {
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+/* Landing eyebrow labels: gold uppercase (darker gold so it is readable on light backgrounds) */
+.landing-fonts .section-eyebrow {
+  color: var(--gold-text);
+}
+
+/* Short gold rule under landing section titles (not Explore Internship Opportunities) */
+.landing-fonts .section-title::after {
+  content: "";
+  display: block;
+  width: 2.5rem;
+  height: 3px;
+  margin-top: 0.875rem;
+  border-radius: 999px;
+  background: var(--gold);
+}
+.landing-fonts .text-center .section-title::after {
+  margin-inline: auto;
+}
+.landing-fonts #opportunities .section-title::after {
+  display: none;
+}
+
 .check-dot {
   width: 1.5rem;
   height: 1.5rem;
@@ -118,8 +152,8 @@ html {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: #d1fae5;
-  color: #047857;
+  background: var(--secondary);
+  color: var(--primary);
 }
 
 @media (max-width: 640px) {

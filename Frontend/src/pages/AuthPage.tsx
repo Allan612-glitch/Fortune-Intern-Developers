@@ -940,7 +940,7 @@ function OTPModal({
               onKeyDown={(e) => handleKeyDown(i, e)}
               onPaste={handlePaste}
               className="otp-input"
-              maxLength={1}
+              maxLength={1} autoComplete="one-time-code"
               inputMode="numeric"
               style={{ borderColor: v ? "#2D3561" : undefined }}
             />

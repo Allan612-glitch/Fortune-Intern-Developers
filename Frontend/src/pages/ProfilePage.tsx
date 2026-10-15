@@ -254,7 +254,7 @@ export default function ProfilePage({ user }: { user: AppUser }) {
             <p className="text-white/60 text-sm">
               {draft.school} · {draft.major}
             </p>
-            <p className="text-white/40 text-xs mt-0.5">
+            <p className="text-white/70 text-xs mt-0.5">
               @{draft.username} · {user.email}
             </p>
           </div>
@@ -281,7 +281,7 @@ export default function ProfilePage({ user }: { user: AppUser }) {
               >
                 {v}
               </div>
-              <div className="text-[10px] text-white/50">{l}</div>
+              <div className="text-[10px] text-white/70">{l}</div>
             </div>
           ))}
         </div>

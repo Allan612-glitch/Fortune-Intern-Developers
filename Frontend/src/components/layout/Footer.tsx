@@ -1,5 +1,6 @@
 import logo from "../../assets/attach1.png";
 import Icon from "../ui/Icon";
+import { openCookieSettings } from "../../services/consent";
 
 function FooterColumn({ title, links }: { title: string; links: { name: string; href: string }[] }) {
   return (
@@ -126,8 +127,15 @@ export default function Footer() {
       </div>
 
       <div className="border-t border-white/10">
-        <div className="landing-container py-5 text-xs text-white/40">
-          © 2026 Fortune Intern Network. All rights reserved.
+        <div className="landing-container py-5 text-xs text-white/40 flex flex-wrap items-center justify-between gap-3">
+          <span>© 2026 Fortune Intern Network. All rights reserved.</span>
+          <button
+            type="button"
+            onClick={openCookieSettings}
+            className="text-white/55 hover:text-white transition-colors underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 rounded"
+          >
+            Cookie settings
+          </button>
         </div>
       </div>
     </footer>

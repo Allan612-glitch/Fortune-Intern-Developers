@@ -76,7 +76,7 @@ export default function PrivacyPolicy() {
           </ul>
           <h3 className="text-xl font-bold text-[#0B172A] mt-6 mb-3">Your choices</h3>
           <p className="text-lg leading-relaxed">
-            The banner offers &quot;Accept all cookies&quot; or &quot;Reject all cookies&quot;. Rejecting keeps only the necessary storage active, which is the safe default. You may change your choice at any time by clearing site data in your browser or asking us to reset your consent record. Blocking necessary storage signs you out and removes saved progress.
+            The banner offers &quot;Accept all cookies&quot; or &quot;Reject all cookies&quot;. Rejecting keeps only the necessary storage active, which is the safe default. You may change your choice at any time using the &quot;Cookie settings&quot; link in the site footer. Blocking necessary storage signs you out and removes saved progress.
           </p>
         </div>
 

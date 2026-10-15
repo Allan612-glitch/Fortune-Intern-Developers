@@ -10,6 +10,7 @@ import {
 import AuthPage from "./pages/AuthPage"
 import MainApp from "./pages/MainApp"
 import AIChatWidget from "./components/AIChatWidget"
+import CookieConsent from "./components/CookieConsent"
 import LandingPage from "./pages/LandingPage"
 import ForgotPasswordPage from "./pages/ForgotPasswordPage"
 import ResetPasswordPage from "./pages/ResetPasswordPage"
@@ -323,6 +324,7 @@ export default function App() {
           element={<Navigate to={user ? authenticatedPath : "/"} replace />}
         />
       </Routes>
+      <CookieConsent />
     </>
   )
 }

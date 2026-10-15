@@ -123,15 +123,15 @@ export default function HomePage({ user, setPage }: HomePageProps) {
                 Start an application
               </button>
             </div>
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-7 text-xs text-white/55">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-7 text-xs text-white/70">
               <span className="flex items-center gap-2">
                 <CheckIcon /> Secure Paystack checkout
               </span>
             </div>
           </div>
 
-          <div className="relative hidden md:block">
-            <div className="absolute -inset-5 rounded-[2rem] bg-accent/10 rotate-3" />
+          <div className="relative">
+            <div className="absolute -inset-5 rounded-[2rem] bg-accent/10 rotate-3 hidden md:block" />
             <div className="relative rounded-3xl bg-white text-foreground shadow-2xl overflow-hidden border border-white/20">
               <div className="px-5 py-4 border-b border-border flex items-center justify-between">
                 <div>
@@ -200,7 +200,7 @@ export default function HomePage({ user, setPage }: HomePageProps) {
                     <p className="text-xs font-semibold">
                       Super improved your letter
                     </p>
-                    <p className="text-[10px] text-white/55 mt-0.5">
+                    <p className="text-[10px] text-white/70 mt-0.5">
                       Ready to send to Flutterwave
                     </p>
                   </div>
@@ -221,7 +221,7 @@ export default function HomePage({ user, setPage }: HomePageProps) {
                 <p className="font-display text-2xl text-accent">
                   {stat.value}
                 </p>
-                <p className="text-xs text-white/45 mt-1">{stat.label}</p>
+                <p className="text-xs text-white/70 mt-1">{stat.label}</p>
               </div>
             ))}
           </div>

@@ -7,6 +7,12 @@ interface BottomNavProps {
   onNavigate?: (page: AppPage) => void;
 }
 
+// Shorter names so seven items fit on a 375px phone. The full name is kept in aria-label.
+const shortLabels: Record<string, string> = {
+  announcements: "News",
+  applications: "Applied",
+};
+
 export default function BottomNav({ page, onNavigate }: BottomNavProps) {
   const navigate = useNavigate();
 
@@ -26,14 +32,14 @@ export default function BottomNav({ page, onNavigate }: BottomNavProps) {
     >
       <div className="flex w-full items-center">
         {navItems
-          .filter((item) => item.id !== "announcements")
           .map((item) => {
             const active = page === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => handleNavigate(item.id as AppPage)}
-                className="relative flex flex-1 flex-col items-center gap-1 px-1 py-2.5 transition-colors"
+                aria-label={item.label}
+                className="relative flex min-w-0 flex-1 flex-col items-center gap-1 px-0.5 py-2.5 transition-colors"
                 style={{ color: active ? "#2D3561" : "#9ca3af" }}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -43,7 +49,7 @@ export default function BottomNav({ page, onNavigate }: BottomNavProps) {
                   className="nav-label w-full break-words text-center leading-tight"
                   style={{ color: active ? "#F5B731" : "#9ca3af" }}
                 >
-                  {item.label}
+                  {shortLabels[item.id] ?? item.label}
                 </span>
                 {active && (
                   <div
