@@ -1,8 +1,42 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import Icon from "../../components/ui/Icon";
+import { ApiError } from "../../services/api";
+import { sendContactMessage } from "../../services/contact";
 
 export default function ContactUs() {
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+    async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        if (isSubmitting) return;
+
+        const form = event.currentTarget;
+        const formData = new FormData(form);
+        setIsSubmitting(true);
+        setFeedback(null);
+        try {
+            await sendContactMessage({
+                name: String(formData.get("name") || ""),
+                email: String(formData.get("email") || ""),
+                message: String(formData.get("message") || ""),
+                consent: formData.get("consent") === "on",
+            });
+            form.reset();
+            setFeedback({ type: "success", message: "Your message has been sent. We’ll respond within one to two working days." });
+        } catch (error) {
+            setFeedback({
+                type: "error",
+                message: error instanceof ApiError && error.status === 503
+                    ? "We couldn’t send your message right now. Please email fortuneintern.gh@gmail.com."
+                    : "We couldn’t send your message. Please try again or email fortuneintern.gh@gmail.com.",
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
+    }
+
     return (
         <div className="min-h-screen bg-[#f8f9fa] flex flex-col pt-12 pb-24 px-4 sm:px-8 md:px-16 lg:px-32">
           <div className="max-w-3xl w-full mx-auto text-slate-700">
@@ -59,7 +93,7 @@ export default function ContactUs() {
 
                 <h2 className="font-extrabold text-[#0b172a] mt-12 mb-6 text-3xl">Send us a message</h2>
 
-                <form className="flex flex-col gap-6">
+                <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
                     <div className="flex flex-col">
                         <label htmlFor="contact-name" className="mb-2 font-bold text-sm text-[#0B172A]">Your full name</label>
                         <input id="contact-name" type="text" className="bg-white p-3 border border-gray-300 rounded-lg outline-none focus:border-blue-500"/>
@@ -76,18 +110,23 @@ export default function ContactUs() {
                     </div>
 
                    <div className="flex items-start gap-3 mt-2">
-                     <input type="checkbox" className="mt-1 w-4 h-4 shrink-0 cursor-pointer" />
+                      <input id="contact-consent" name="consent" type="checkbox" required className="mt-1 w-4 h-4 shrink-0 cursor-pointer" />
                      <p className="text-sm">
                        I consent to Fortune Intern Network processing the information provided in this form for the purpose of responding to my enquiry, in line with the <Link to="/privacy-policy" className="font-bold text-[#0B172A] underline">Privacy Policy</Link>.
                      </p>
                    </div>
 
                     <div>
-                        <button type="submit" className="bg-[#0B172A] text-white font-bold py-3 px-6 rounded-lg mt-4 hover:bg-slate-800 transition-colors">
-                            Send message
+                         <button type="submit" disabled={isSubmitting} className="bg-[#0B172A] text-white font-bold py-3 px-6 rounded-lg mt-4 hover:bg-slate-800 transition-colors disabled:cursor-not-allowed disabled:opacity-60">
+                             {isSubmitting ? "Sending..." : "Send message"}
                         </button>
                     </div>
-                    <p className="text-gray-400 text-sm">We respond within one to two working days.</p>
+                     <p className="text-gray-500 text-sm">We respond within one to two working days.</p>
+                     {feedback && (
+                         <p role="status" aria-live="polite" className={`text-sm ${feedback.type === "success" ? "text-emerald-700" : "text-red-700"}`}>
+                             {feedback.message}
+                         </p>
+                     )}
                 </form>
             </div>
           </div>

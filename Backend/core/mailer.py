@@ -120,3 +120,35 @@ def send_application_documents_email(
     except Exception as error:
         logger.exception("Failed to send application documents email to %s", to_email)
         raise RuntimeError("Unable to send application documents email") from error
+
+
+def send_contact_message(
+    *,
+    to_email: str,
+    name: str,
+    email: str,
+    message: str,
+) -> None:
+    if not all((settings.resend_api_key, settings.resend_from_email)):
+        raise RuntimeError(
+            "RESEND_API_KEY and RESEND_FROM_EMAIL must be configured to deliver contact messages"
+        )
+
+    resend.api_key = settings.resend_api_key
+    try:
+        resend.Emails.send({
+            "from": settings.resend_from_email,
+            "to": [to_email],
+            "reply_to": email,
+            "subject": "New contact form enquiry",
+            "text": f"Name: {name}\nEmail: {email}\n\n{message}",
+            "html": (
+                "<h2>New contact form enquiry</h2>"
+                f"<p><strong>Name:</strong> {escape(name)}</p>"
+                f"<p><strong>Email:</strong> {escape(email)}</p>"
+                f"<p>{escape(message).replace(chr(10), '<br>')}</p>"
+            ),
+        })
+    except Exception as error:
+        logger.exception("Failed to deliver contact form submission")
+        raise RuntimeError("Unable to send contact form message") from error
