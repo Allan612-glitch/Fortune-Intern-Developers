@@ -95,24 +95,24 @@ export default function ContactUs() {
 
                 <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
                     <div className="flex flex-col">
-                         <label htmlFor="contact-name" className="mb-2 font-bold text-sm text-[#0B172A]">Your full name</label>
-                         <input id="contact-name" name="name" type="text" autoComplete="name" maxLength={120} required className="bg-white p-3 border border-gray-300 rounded-lg outline-none focus:border-blue-500"/>
+                        <label htmlFor="contact-name" className="mb-2 font-bold text-sm text-[#0B172A]">Your full name</label>
+                        <input id="contact-name" type="text" className="bg-white p-3 border border-gray-300 rounded-lg outline-none focus:border-blue-500"/>
                     </div>
 
                     <div className="flex flex-col">
-                         <label htmlFor="contact-email" className="mb-2 font-bold text-sm text-[#0B172A]">Your email address</label>
-                         <input id="contact-email" name="email" type="email" autoComplete="email" maxLength={254} required className="bg-white p-3 border border-gray-300 rounded-lg outline-none focus:border-blue-500"/>
+                        <label htmlFor="contact-email" className="mb-2 font-bold text-sm text-[#0B172A]">Your email address</label>
+                        <input id="contact-email" type="email" className="bg-white p-3 border border-gray-300 rounded-lg outline-none focus:border-blue-500"/>
                     </div>
 
                     <div className="flex flex-col">
-                         <label htmlFor="contact-message" className="mb-2 font-bold text-sm text-[#0B172A]">How can we help?</label>
-                         <textarea id="contact-message" name="message" rows={6} maxLength={5000} required className="bg-white p-3 border border-gray-300 rounded-lg outline-none focus:border-blue-500 resize-y"></textarea>
+                        <label htmlFor="contact-message" className="mb-2 font-bold text-sm text-[#0B172A]">How can we help?</label>
+                        <textarea id="contact-message" rows={6} className="bg-white p-3 border border-gray-300 rounded-lg outline-none focus:border-blue-500 resize-y"></textarea>
                     </div>
 
                    <div className="flex items-start gap-3 mt-2">
                       <input id="contact-consent" name="consent" type="checkbox" required className="mt-1 w-4 h-4 shrink-0 cursor-pointer" />
                      <p className="text-sm">
-                        I consent to Fortune Intern Network processing the information provided in this form for the purpose of responding to my enquiry, in line with the <Link to="/privacy-policy" className="font-bold text-[#0B172A] underline">Privacy Policy</Link>.
+                       I consent to Fortune Intern Network processing the information provided in this form for the purpose of responding to my enquiry, in line with the <Link to="/privacy-policy" className="font-bold text-[#0B172A] underline">Privacy Policy</Link>.
                      </p>
                    </div>
 

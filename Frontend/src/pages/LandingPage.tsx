@@ -18,13 +18,13 @@ const studentImage =
   "https://images.unsplash.com/photo-1620829813947-ef4246827355?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=85&w=900"
 
 const navLinks = [
-  ["Home", "home"],
-
-  ["Internships", "internships"],
+  ["Opportunities", "internships"],
 
   ["How It Works", "how-it-works"],
 
-  ["About Us", "about"],
+  ["About", "about-us"],
+
+  ["Contact", "contact"],
 ]
 
 const benefits = [
@@ -84,47 +84,6 @@ const steps = [
     title: "Start Your Journey",
 
     text: "Connect with organizations, gain experience, and take your next confident step.",
-  },
-]
-
-const testimonials = [
-  {
-    quote:
-      "Fortune Intern Network made it easier for me to discover internship opportunities related to my field.",
-
-    name: "Ama Mensah",
-
-    school: "University of Ghana",
-
-    field: "Business Administration",
-
-    initials: "AM",
-  },
-
-  {
-    quote:
-      "The organized application process helped me feel more confident when reaching out to companies.",
-
-    name: "Kwame Owusu",
-
-    school: "KNUST",
-
-    field: "Computer Engineering",
-
-    initials: "KO",
-  },
-
-  {
-    quote:
-      "I finally had one place to find relevant roles and understand the progress of every application.",
-
-    name: "Naa Adjeley",
-
-    school: "Ashesi University",
-
-    field: "Management Information Systems",
-
-    initials: "NA",
   },
 ]
 
@@ -246,7 +205,7 @@ export default function LandingPage({
   }
 
   return (
-    <div id="home" className="min-h-screen bg-white text-foreground">
+    <div id="home" className="landing-fonts min-h-screen bg-white text-foreground">
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-border/70">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-18 flex items-center">
           <button
@@ -261,39 +220,40 @@ export default function LandingPage({
             />
             <div className="text-left leading-tight">
               <p className="font-display text-lg text-primary">Fortune</p>
-              <p className="text-[9px] uppercase tracking-[0.18em] font-bold text-emerald-700">
-                Intern Network
+              <p className="text-[9px] uppercase tracking-[0.18em] font-bold">
+                <span className="text-accent">Intern</span>{" "}
+                <span className="text-foreground">Network</span>
               </p>
             </div>
           </button>
 
           <nav
-            className="hidden lg:flex items-center gap-7 mx-auto"
+            className="hidden md:flex items-center gap-7 ml-auto"
             aria-label="Primary navigation"
           >
             {navLinks.map(([label, id]) => (
               <button
                 key={id}
                 onClick={() => goTo(id)}
-             className="inline-block text-sm font-medium text-muted-foreground cursor-pointer transition-all ease-in-out duration-300 hover:text-primary hover:scale-105"
+             className="inline-block text-sm font-medium text-muted-foreground cursor-pointer transition-colors underline decoration-transparent decoration-2 underline-offset-[10px] hover:text-primary hover:decoration-accent"
               >
                 {label}
               </button>
             ))}
           </nav>
 
-          <div className="hidden lg:flex items-center gap-2">
+          <div className="hidden md:flex items-center ml-7">
             <button
               onClick={() => onStudentPortal("login")}
-              className="px-4 py-2.5 hover:cursor-pointer text-sm font-semibold text-primary hover:bg-secondary rounded-xl transition-colors"
+              className="px-5 py-2.5 hover:cursor-pointer text-sm font-semibold rounded-xl bg-accent text-accent-foreground hover:bg-amber-300 transition-colors"
             >
-              Student Portal
+              Sign In
             </button>
           </div>
 
           <button
             onClick={() => setMobileMenu(!mobileMenu)}
-            className="lg:hidden ml-auto w-10 h-10 rounded-xl border border-border flex items-center justify-center"
+            className="md:hidden ml-auto w-10 h-10 rounded-xl border border-border flex items-center justify-center"
             aria-label="Toggle navigation"
             aria-expanded={mobileMenu}
           >
@@ -302,7 +262,7 @@ export default function LandingPage({
         </div>
 
         {mobileMenu && (
-          <div className="lg:hidden border-t border-border bg-white px-4 py-4 shadow-xl">
+          <div className="md:hidden border-t border-border bg-white px-4 py-4">
             <nav className="space-y-1">
               {navLinks.map(([label, id]) => (
                 <button
@@ -314,12 +274,12 @@ export default function LandingPage({
                 </button>
               ))}
             </nav>
-            <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-border">
+            <div className="mt-4 pt-4 border-t border-border">
               <button
                 onClick={() => onStudentPortal("login")}
-                className="py-3 rounded-xl border border-border text-sm font-semibold"
+                className="w-full py-3 rounded-xl bg-accent text-accent-foreground text-sm font-semibold hover:bg-amber-300 transition-colors"
               >
-                Student Portal
+                Sign In
               </button>
             </div>
           </div>
@@ -328,16 +288,11 @@ export default function LandingPage({
 
       <main>
         <section className="relative overflow-hidden bg-surface">
-          <div className="absolute inset-y-0 right-0 w-1/3 bg-emerald-50/70 hidden lg:block" />
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-14 md:py-20 lg:py-24 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center relative">
             <div className="fade-in">
-              <span className="inline-flex items-center gap-2 py-2 px-3 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-800 text-xs font-bold">
-                <span className="w-2 h-2 bg-emerald-500 rounded-full" /> Find
-                your next opportunity
-              </span>
-              <h1 className="font-display text-4xl sm:text-5xl lg:text-[4.2rem] leading-[1.04] mt-6 text-primary">
+              <h1 className="font-display font-extrabold text-4xl sm:text-5xl lg:text-[4.2rem] leading-[1.04] text-primary">
                 Build Your Future Through the{" "}
-                <span className="text-emerald-700">Right Internship.</span>
+                <span className="text-[#c89a3c]">Right Internship.</span>
               </h1>
               <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mt-6 max-w-xl">
                 Fortune Intern Network connects students and internship seekers
@@ -347,46 +302,39 @@ export default function LandingPage({
               <div className="flex flex-col sm:flex-row gap-3 mt-8">
                 <button
                   onClick={() => goTo("internships")}
-                  className="px-6 py-3.5 rounded-xl bg-primary text-white text-sm hover:cursor-pointer font-bold hover:bg-primary-hover transition-all shadow-lg shadow-primary/15 flex items-center justify-center gap-2"
+                  className="px-6 py-3.5 rounded-xl bg-primary text-white text-sm hover:cursor-pointer font-bold hover:bg-primary-hover transition-colors flex items-center justify-center gap-2"
                 >
                   Find an Internship <Icon name="arrow" className="w-4 h-4" />
                 </button>
+                <button
+                  onClick={() => onStudentPortal("register")}
+                  className="px-6 py-3.5 rounded-xl border-2 border-primary text-primary text-sm hover:cursor-pointer font-bold hover:bg-primary hover:text-white transition-colors flex items-center justify-center"
+                >
+                  Create an Account
+                </button>
               </div>
               <p className="mt-5 text-xs text-muted-foreground flex items-center gap-2">
-                <Icon name="check" className="w-4 h-4 text-emerald-600" />{" "}
+                <Icon name="check" className="w-4 h-4 text-primary" />{" "}
                 Connecting students with opportunities that matter.
               </p>
             </div>
 
             <div className="relative pb-8 sm:px-8 lg:px-0">
-              <div className="rounded-[2rem] overflow-hidden aspect-[4/4.3] bg-muted shadow-2xl">
+              <div className="rounded-[2rem] overflow-hidden aspect-[4/4.3] bg-muted">
                 <img
                   src={heroImage}
                   alt="Young Ghanaian professional working on a laptop"
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-t from-primary/30 via-transparent to-transparent" />
               </div>
-              <FloatingRole
-                className="top-8 -left-2 sm:-left-8"
-                title="Software Engineering Intern"
-                company="Accra · Hybrid"
-                icon="code"
-              />
-              <FloatingRole
-                className="top-1/2 -right-2 sm:-right-8"
-                title="Data Analyst Intern"
-                company="Finance · Accra"
-                icon="chart"
-              />
             </div>
           </div>
         </section>
 
         <section id="internships" className="relative -mt-3 z-10 px-4 sm:px-6">
-          <div className="max-w-6xl mx-auto bg-white rounded-3xl border border-border shadow-xl shadow-primary/5 p-5 sm:p-8">
+          <div className="max-w-6xl mx-auto bg-white rounded-3xl border border-border p-5 sm:p-8">
             <div className="text-center mb-6">
-              <p className="text-xs uppercase tracking-[0.18em] font-bold text-emerald-700">
+              <p className="text-xs uppercase tracking-[0.18em] font-bold text-primary">
                 Opportunity search
               </p>
               <h2 className="font-display text-2xl sm:text-3xl text-primary mt-2">
@@ -434,65 +382,11 @@ export default function LandingPage({
                   className={`min-h-10 px-3.5 py-2 rounded-full text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                     category === item
                       ? "bg-primary text-white"
-                      : "bg-secondary text-primary hover:bg-emerald-50 hover:text-emerald-800"
+                      : "bg-secondary text-primary hover:bg-muted"
                   }`}
                 >
                   {item || "All fields"}
                 </button>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section id="about" className="section-space bg-white">
-          <div className="landing-container">
-            <SectionHeading
-              eyebrow="Why Fortune Intern Network?"
-              title="Everything You Need to Start Your Career Journey"
-              text="A focused platform built to help emerging professionals move from discovery to meaningful experience."
-            />
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-10">
-              {benefits.map((item) => (
-                <article
-                  key={item.title}
-                  className="group rounded-2xl border border-border p-6 bg-white hover-lift hover:border-emerald-200"
-                >
-                  <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                    <Icon name={item.icon} className="w-5 h-5" />
-                  </div>
-                  <h3 className="font-display text-xl text-primary mt-6">
-                    {item.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed mt-3">
-                    {item.text}
-                  </p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section id="how-it-works" className="section-space bg-surface">
-          <div className="landing-container">
-            <SectionHeading
-              eyebrow="Simple by design"
-              title="Your Internship Journey Starts Here"
-              text="Three clear steps take you from creating your profile to beginning your professional journey."
-            />
-            <div className="grid md:grid-cols-3 gap-5 mt-12 relative">
-              <div className="hidden md:block absolute top-8 left-[16%] right-[16%] h-px bg-emerald-200" />
-              {steps.map((step) => (
-                <article key={step.number} className="relative text-center">
-                  <div className="relative z-10 w-16 h-16 rounded-full bg-white border-2 border-emerald-500 text-emerald-700 mx-auto flex items-center justify-center font-mono font-bold shadow-sm">
-                    {step.number}
-                  </div>
-                  <h3 className="font-display text-xl text-primary mt-5">
-                    {step.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed mt-3 max-w-xs mx-auto">
-                    {step.text}
-                  </p>
-                </article>
               ))}
             </div>
           </div>
@@ -509,7 +403,7 @@ export default function LandingPage({
               />
               <button
                 onClick={() => goTo("internships")}
-                className="text-sm hover:cursor-pointer transition-all duration-300 ease-in-out hover:scale-110 font-bold text-primary hover:text-emerald-700 flex items-center gap-2 whitespace-nowrap"
+                className="text-sm hover:cursor-pointer transition-colors font-bold text-primary hover:underline underline-offset-4 flex items-center gap-2 whitespace-nowrap"
               >
                 Search opportunities <Icon name="arrow" className="w-4 h-4" />
               </button>
@@ -605,7 +499,7 @@ export default function LandingPage({
                   {visiblePrograms.map((program) => (
                     <article
                       key={program.id}
-                      className="rounded-2xl border border-border p-5 bg-white hover-lift"
+                      className="rounded-2xl border border-border p-5 bg-white transition-colors hover:border-primary/30"
                     >
                       <div className="flex items-center gap-3">
                         <span
@@ -625,7 +519,7 @@ export default function LandingPage({
                             .toUpperCase()}
                         </span>
                         <div className="min-w-0">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-primary">
                             {program.category}
                           </p>
                           <p className="text-xs text-muted-foreground truncate">
@@ -671,18 +565,72 @@ export default function LandingPage({
           </div>
         </section>
 
+        <section id="about" className="section-space bg-white">
+          <div className="landing-container">
+            <SectionHeading
+              eyebrow="Why Fortune Intern Network?"
+              title="Everything You Need to Start Your Career Journey"
+              text="A focused platform built to help emerging professionals move from discovery to meaningful experience."
+            />
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-10">
+              {benefits.map((item) => (
+                <article
+                  key={item.title}
+                  className="group rounded-2xl border border-border p-6 bg-white transition-colors hover:border-primary/30"
+                >
+                  <div className="w-11 h-11 rounded-xl bg-secondary text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                    <Icon name={item.icon} className="w-5 h-5" />
+                  </div>
+                  <h3 className="font-display text-xl text-primary mt-6">
+                    {item.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed mt-3">
+                    {item.text}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="how-it-works" className="section-space bg-surface">
+          <div className="landing-container">
+            <SectionHeading
+              eyebrow="Simple to apply"
+              title="Your Internship Journey Starts Here"
+              text="Three clear steps take you from creating your profile to beginning your professional journey."
+            />
+            <div className="grid md:grid-cols-3 gap-5 mt-12 relative">
+              <div className="hidden md:block absolute top-8 left-[16%] right-[16%] h-px bg-border" />
+              {steps.map((step) => (
+                <article key={step.number} className="relative text-center">
+                  <div className="relative z-10 w-16 h-16 rounded-full bg-white border-2 border-accent text-primary mx-auto flex items-center justify-center font-mono font-bold shadow-sm">
+                    {step.number}
+                  </div>
+                  <h3 className="font-display text-xl text-primary mt-5">
+                    {step.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed mt-3 max-w-xs mx-auto">
+                    {step.text}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section className="section-space bg-surface">
           <div className="landing-container grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
             <div className="relative">
-              <div className="rounded-3xl overflow-hidden aspect-[4/3] shadow-lg">
+              <div className="rounded-3xl overflow-hidden aspect-[4/3]">
                 <img
                   src={studentImage}
                   alt="Ghanaian student preparing for her career"
                   className="w-full h-full object-cover"
                 />
               </div>
-              <div className="absolute -bottom-5 right-5 bg-white rounded-2xl border border-border shadow-lg p-4 max-w-52">
-                <p className="font-display text-2xl text-emerald-700">
+              <div className="absolute -bottom-5 right-5 bg-white rounded-2xl border border-border p-4 max-w-52">
+                <p className="font-display text-2xl text-primary">
                   Connect. Apply. Grow.
                 </p>
                 <p className="text-[10px] text-muted-foreground mt-1">
@@ -733,69 +681,32 @@ export default function LandingPage({
           </div>
         </section>
 
-        <section className="border-b border-border bg-white">
-          <div className="landing-container py-9 grid grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              ["500+", "Internship Opportunities"],
-
-              ["1,000+", "Students Connected"],
-
-              ["100+", "Companies"],
-
-              ["20+", "Career Fields"],
-            ].map(([value, label]) => (
-              <div
-                key={label}
-                className="text-center lg:border-r lg:last:border-r-0 border-border"
-              >
-                <p className="font-display text-3xl text-primary">{value}</p>
-                <p className="text-xs text-muted-foreground mt-1">{label}</p>
-                <p className="text-[9px] uppercase tracking-wider text-emerald-700 mt-2">
-                  Placeholder data
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="section-space bg-white">
+        <section id="about-us" className="section-space bg-white">
           <div className="landing-container">
-            <SectionHeading
-              eyebrow="Community stories"
-              title="What Our Community Says"
-              text="Illustrative feedback showing the experience we are building toward. Replace with verified member feedback before launch."
-            />
-            <div className="grid md:grid-cols-3 gap-5 mt-10">
-              {testimonials.map((item) => (
-                <article
-                  key={item.name}
-                  className="rounded-2xl border border-border p-6 bg-surface-soft"
-                >
-                  <p className="text-[10px] uppercase tracking-widest font-bold text-emerald-700">
-                    Placeholder testimonial
-                  </p>
-                  <blockquote className="font-display text-lg leading-relaxed text-primary mt-4">
-                    “{item.quote}”
-                  </blockquote>
-                  <div className="flex items-center gap-3 mt-6 pt-5 border-t border-border">
-                    <span className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">
-                      {item.initials}
-                    </span>
-                    <div>
-                      <p className="text-sm font-semibold">{item.name}</p>
-                      <p className="text-[10px] text-muted-foreground">
-                        {item.school} · {item.field}
-                      </p>
-                    </div>
-                  </div>
-                </article>
-              ))}
+            <div className="max-w-3xl">
+              <p className="section-eyebrow">About us</p>
+              <h2 className="section-title">Bridging Dreams and Careers</h2>
+              <p className="section-copy">
+                Fortune Intern Network is a Ghanaian student development
+                organisation headquartered in Accra, with an active campus
+                chapter at Kwame Nkrumah University of Science and Technology.
+                We partner with leading banks, telecoms, insurers, hospitals
+                and manufacturers to place tertiary students into internships
+                aligned with their course of study.
+              </p>
+              <p className="section-copy">
+                Beyond placement, we issue verified internship letters,
+                supervisor assessment forms and certificates of completion, and
+                we run FIN Academy skills tracks and leadership programmes. Our
+                Super AI assistant supports students with applications, CVs and
+                cover letters every day of the year.
+              </p>
             </div>
           </div>
         </section>
 
         <section className="px-4 sm:px-6 pb-16 bg-white">
-          <div className="max-w-7xl mx-auto rounded-3xl bg-emerald-50 border border-emerald-100 px-6 py-12 sm:p-14 text-center">
+          <div className="max-w-7xl mx-auto rounded-3xl bg-surface border border-border px-6 py-12 sm:p-14 text-center">
             <p className="section-eyebrow">Connect. Apply. Grow.</p>
             <h2 className="font-display text-3xl sm:text-5xl text-primary mt-3">
               Your Next Opportunity Is Waiting.
@@ -812,16 +723,72 @@ export default function LandingPage({
               </button>
               <button
                 onClick={() => onStudentPortal("register")}
-                className="px-6 py-3.5 hover:cursor-pointer hover:bg-emerald-700 hover:text-white rounded-xl bg-white border border-border text-primary text-sm font-bold hover:border-primary/30 transition-colors"
+                className="px-6 py-3.5 hover:cursor-pointer hover:bg-secondary rounded-xl bg-white border border-border text-primary text-sm font-bold hover:border-primary/30 transition-colors"
               >
                 Join Fortune Intern Network
               </button>
             </div>
           </div>
         </section>
+
+        <section id="contact" className="section-space bg-surface">
+          <div className="landing-container">
+            <SectionHeading
+              eyebrow="Customer service"
+              title="Talk to Us Today"
+              text="Our team in Accra responds within one to two working days."
+            />
+            <div className="grid md:grid-cols-3 gap-4 mt-10 max-w-4xl mx-auto">
+              {[
+                {
+                  label: "Call us",
+                  value: "020 031 3672",
+                  href: "tel:+233200313672",
+                  icon: "phone",
+                  external: false,
+                },
+                {
+                  label: "WhatsApp",
+                  value: "025 703 8948",
+                  href: "https://wa.me/233257038948",
+                  icon: "whatsapp",
+                  external: true,
+                },
+                {
+                  label: "Email",
+                  value: "fortuneintern.gh@gmail.com",
+                  href: "mailto:fortuneintern.gh@gmail.com",
+                  icon: "mail",
+                  external: false,
+                },
+              ].map((item) => (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  {...(item.external
+                    ? { target: "_blank", rel: "noopener noreferrer" }
+                    : {})}
+                  className="group flex items-center gap-4 rounded-2xl border border-border p-5 bg-white transition-colors hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                >
+                  <span className="w-11 h-11 flex-shrink-0 rounded-xl bg-secondary text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+                    <Icon name={item.icon} className="w-5 h-5" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-primary">
+                      {item.label}
+                    </span>
+                    <span className="block text-sm text-muted-foreground break-words">
+                      {item.value}
+                    </span>
+                  </span>
+                </a>
+              ))}
+            </div>
+          </div>
+        </section>
       </main>
 
-      <footer className="bg-footer text-white">
+      <footer className="bg-footer text-white border-t-4 border-accent">
         <div className="landing-container py-12 grid sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr] gap-10">
           <div>
             <div className="flex items-center gap-3">
@@ -832,7 +799,7 @@ export default function LandingPage({
               />
               <div>
                 <p className="font-display text-xl">Fortune Intern Network</p>
-                <p className="text-[10px] tracking-widest uppercase text-emerald-300">
+                <p className="text-[10px] tracking-widest uppercase text-accent">
                   Bridging Dreams and Careers.
                 </p>
               </div>
@@ -868,14 +835,16 @@ export default function LandingPage({
             />
           </div>
           <div>
-            <p className="text-sm font-bold">Follow Us</p>
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">
+              Follow Us
+            </p>
             <div className="flex flex-wrap items-center gap-3 mt-4">
               <a
                 href="https://www.linkedin.com/company/fortune-intern-network/"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Fortune Intern on LinkedIn"
-                className="w-10 h-10 rounded-xl bg-white/10 text-white/70 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-colors"
+                className="w-10 h-10 rounded-xl bg-white/10 text-white/70 flex items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors"
               >
                 <Icon name="linkedin" className="w-5 h-5" />
               </a>
@@ -884,7 +853,7 @@ export default function LandingPage({
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Fortune Intern WhatsApp Channel"
-                className="w-10 h-10 rounded-xl bg-white/10 text-white/70 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-colors"
+                className="w-10 h-10 rounded-xl bg-white/10 text-white/70 flex items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors"
               >
                 <Icon name="whatsapp" className="w-5 h-5" />
               </a>
@@ -893,7 +862,7 @@ export default function LandingPage({
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Fortune Intern on X"
-                className="w-10 h-10 rounded-xl bg-white/10 text-white/70 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-colors"
+                className="w-10 h-10 rounded-xl bg-white/10 text-white/70 flex items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors"
               >
                 <Icon name="x" className="w-5 h-5" />
               </a>
@@ -902,16 +871,18 @@ export default function LandingPage({
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Fortune Intern on Instagram"
-                className="w-10 h-10 rounded-xl bg-white/10 text-white/70 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-colors"
+                className="w-10 h-10 rounded-xl bg-white/10 text-white/70 flex items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors"
               >
                 <Icon name="instagram" className="w-5 h-5" />
               </a>
             </div>
           </div>
           <div>
-            <p className="text-sm font-bold">Customer Service</p>
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">
+              Customer Service
+            </p>
             <a
-              href="tel:0200313672"
+              href="tel:+233200313672"
               aria-label="Call Fortune Intern Customer Service"
               className="inline-flex mt-4 text-sm text-white/70 hover:text-white transition-colors"
             >
@@ -919,7 +890,7 @@ export default function LandingPage({
             </a>
             <br />
             <a
-              href="tel:0257038948"
+              href="tel:+233257038948"
               aria-label="Call Fortune Intern Customer Service"
               className="inline-flex text-sm text-white/70 hover:text-white transition-colors"
             >
@@ -980,38 +951,6 @@ function SectionHeading({
       <p className="section-eyebrow">{eyebrow}</p>
       <h2 className="section-title">{title}</h2>
       <p className="section-copy">{text}</p>
-    </div>
-  )
-}
-
-function FloatingRole({
-  className,
-
-  title,
-
-  company,
-
-  icon,
-}: {
-  className: string
-
-  title: string
-
-  company: string
-
-  icon: string
-}) {
-  return (
-    <div
-      className={`absolute hidden sm:flex bg-white rounded-2xl shadow-xl border border-border p-3 items-center gap-3 ${className}`}
-    >
-      <span className="w-9 h-9 rounded-xl bg-secondary text-primary flex items-center justify-center">
-        <Icon name={icon} className="w-4 h-4" />
-      </span>
-      <div>
-        <p className="text-xs font-bold text-primary">{title}</p>
-        <p className="text-[10px] text-muted-foreground mt-0.5">{company}</p>
-      </div>
     </div>
   )
 }
@@ -1163,11 +1102,11 @@ function OpportunityDetailsDialog({
       onClick={(event) => {
         if (event.target === event.currentTarget) dialogRef.current?.close()
       }}
-      className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-2xl border-0 bg-white p-0 text-foreground shadow-2xl backdrop:bg-black/60"
+      className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-2xl border-0 bg-white p-0 text-foreground shadow-lg backdrop:bg-black/60"
     >
       <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-border bg-white p-5 sm:p-6">
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">
+          <p className="text-xs font-bold uppercase tracking-wider text-primary">
             {program.category}
           </p>
           <h2
@@ -1176,9 +1115,6 @@ function OpportunityDetailsDialog({
           >
             {program.name}
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {program.company} · {program.location || "Location not specified"}
-          </p>
         </div>
         <button
           ref={closeButtonRef}
@@ -1191,19 +1127,20 @@ function OpportunityDetailsDialog({
         </button>
       </div>
       <div className="space-y-5 p-5 sm:p-6">
-        <div className="grid grid-cols-2 gap-3">
-          <ProgramFact
-            label="Duration"
-            value={program.duration || "Not specified"}
-          />
-          <ProgramFact
-            label="Deadline"
-            value={
-              program.deadline
-                ? new Date(program.deadline).toLocaleDateString()
-                : "Not specified"
-            }
-          />
+        <div className="flex flex-wrap gap-2">
+          <span className="rounded-lg bg-secondary px-2.5 py-1.5 text-xs font-semibold text-muted-foreground">
+            {program.company}
+          </span>
+          {program.location && (
+            <span className="rounded-lg bg-secondary px-2.5 py-1.5 text-xs font-semibold text-muted-foreground">
+              {program.location}
+            </span>
+          )}
+          {program.duration && (
+            <span className="rounded-lg bg-secondary px-2.5 py-1.5 text-xs font-semibold text-muted-foreground">
+              {program.duration}
+            </span>
+          )}
         </div>
         {program.skills.length > 0 && (
           <section aria-labelledby="opportunity-skills-title">
@@ -1231,38 +1168,36 @@ function OpportunityDetailsDialog({
               "No description has been provided for this opportunity."}
           </p>
         </section>
-        <div className="flex flex-col-reverse gap-3 border-t border-border pt-5 sm:flex-row sm:justify-end">
-          <button
-            type="button"
-            onClick={() => dialogRef.current?.close()}
-            className="min-h-11 rounded-xl border border-border px-5 py-3 text-sm font-semibold text-foreground hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-          >
-            Keep browsing
-          </button>
+        <section aria-labelledby="opportunity-requirements-title">
+          <h3 id="opportunity-requirements-title" className="font-semibold">
+            What you need
+          </h3>
+          <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
+            <li>An active FIN student account and profile.</li>
+            <li>
+              Current CV and, where required, an introduction letter.
+            </li>
+            <li>Payment of the single processing fee at submission.</li>
+          </ul>
+        </section>
+        <div className="flex flex-col gap-3 sm:flex-row">
           <button
             type="button"
             onClick={() => onApply(program.id)}
-            className="min-h-11 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            className="min-h-11 flex-1 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           >
-            Apply for this opportunity
+            Apply through the portal
+          </button>
+          <button
+            type="button"
+            onClick={() => dialogRef.current?.close()}
+            className="min-h-11 flex-1 rounded-xl border border-border px-5 py-3 text-sm font-semibold text-foreground hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            Close
           </button>
         </div>
       </div>
     </dialog>
-  )
-}
-
-interface ProgramFactProps {
-  label: string
-  value: string
-}
-
-function ProgramFact({ label, value }: ProgramFactProps) {
-  return (
-    <div className="rounded-xl bg-surface p-3">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-foreground">{value}</p>
-    </div>
   )
 }
 
@@ -1285,7 +1220,9 @@ function FooterColumn({ title, links }: FooterColumnProps) {
 
   return (
     <div>
-      <p className="text-sm font-bold">{title}</p>
+      <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">
+        {title}
+      </p>
       <div className="flex flex-col items-start gap-3 mt-4">
         {links.map((label) => {
           const to = routes[label]
@@ -1427,6 +1364,24 @@ function Icon({ name, className }: IconProps) {
         strokeLinejoin="round"
         strokeWidth={1.8}
         d="M6 4a2 2 0 012-2h8a2 2 0 012 2v18l-6-4-6 4V4z"
+      />
+    ),
+
+    phone: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.8}
+        d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z"
+      />
+    ),
+
+    mail: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.8}
+        d="M4 4h16a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm18 2l-10 7L2 6"
       />
     ),
 
