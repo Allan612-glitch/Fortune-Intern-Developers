@@ -96,17 +96,17 @@ export default function ContactUs() {
                 <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
                     <div className="flex flex-col">
                         <label htmlFor="contact-name" className="mb-2 font-bold text-sm text-[#0B172A]">Your full name</label>
-                        <input id="contact-name" type="text" className="bg-white p-3 border border-gray-300 rounded-lg outline-none focus:border-blue-500"/>
+                        <input id="contact-name" name="name" type="text" required className="bg-white p-3 border border-gray-300 rounded-lg outline-none focus:border-blue-500"/>
                     </div>
 
                     <div className="flex flex-col">
                         <label htmlFor="contact-email" className="mb-2 font-bold text-sm text-[#0B172A]">Your email address</label>
-                        <input id="contact-email" type="email" className="bg-white p-3 border border-gray-300 rounded-lg outline-none focus:border-blue-500"/>
+                        <input id="contact-email" name="email" type="email" required className="bg-white p-3 border border-gray-300 rounded-lg outline-none focus:border-blue-500"/>
                     </div>
 
                     <div className="flex flex-col">
                         <label htmlFor="contact-message" className="mb-2 font-bold text-sm text-[#0B172A]">How can we help?</label>
-                        <textarea id="contact-message" rows={6} className="bg-white p-3 border border-gray-300 rounded-lg outline-none focus:border-blue-500 resize-y"></textarea>
+                        <textarea id="contact-message" name="message" rows={6} required className="bg-white p-3 border border-gray-300 rounded-lg outline-none focus:border-blue-500 resize-y"></textarea>
                     </div>
 
                    <div className="flex items-start gap-3 mt-2">
