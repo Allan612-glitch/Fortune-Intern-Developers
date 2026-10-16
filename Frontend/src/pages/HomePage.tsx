@@ -91,14 +91,12 @@ export default function HomePage({ user, setPage }: HomePageProps) {
   }, []);
 
   return (
-    <div className="overflow-hidden">
+    <div className="overflow-hidden bg-white">
       <section className="relative gradient-hero text-white">
         <div className="absolute inset-0 hero-grid opacity-20" />
-        <div className="absolute -top-24 right-0 w-80 h-80 rounded-full bg-accent/20 blur-3xl" />
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-10 lg:py-20 grid lg:grid-cols-[1.08fr_.92fr] gap-10 items-center">
           <div>
             <div className="inline-flex items-center gap-2 text-white/70 text-xs font-semibold uppercase tracking-[0.18em] mb-5">
-              <span className="w-2 h-2 rounded-full bg-accent pulse-dot" />
               Welcome back, {user.name.split(" ")[0]}
             </div>
             <h1 className="font-display font-extrabold text-4xl sm:text-5xl lg:text-6xl leading-[1.1] max-w-2xl">
@@ -112,7 +110,7 @@ export default function HomePage({ user, setPage }: HomePageProps) {
             <div className="flex flex-col sm:flex-row gap-3 mt-8">
               <button
                 onClick={() => setPage("programs")}
-                className="px-6 py-3.5 rounded-xl bg-accent text-accent-foreground text-sm font-bold hover:bg-amber-300 transition-colors shadow-lg shadow-black/10"
+                className="px-6 py-3.5 rounded-xl bg-accent text-accent-foreground text-sm font-bold hover:bg-amber-300 transition-colors"
               >
                 Explore internships
               </button>
@@ -131,8 +129,7 @@ export default function HomePage({ user, setPage }: HomePageProps) {
           </div>
 
           <div className="relative">
-            <div className="absolute -inset-5 rounded-[2rem] bg-accent/10 rotate-3 hidden md:block" />
-            <div className="relative rounded-3xl bg-white text-foreground shadow-2xl overflow-hidden border border-white/20">
+            <div className="relative rounded-3xl bg-white text-foreground overflow-hidden border border-border">
               <div className="px-5 py-4 border-b border-border flex items-center justify-between">
                 <div>
                   <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
@@ -142,7 +139,7 @@ export default function HomePage({ user, setPage }: HomePageProps) {
                     Your progress this month
                   </p>
                 </div>
-                <span className="text-[10px] font-bold px-2.5 py-1.5 rounded-full bg-emerald-50 text-emerald-700">
+                <span className="text-[10px] font-bold px-2.5 py-1.5 rounded-full bg-secondary text-primary">
                   {dashboard?.active_applications ?? 0} active
                 </span>
               </div>
@@ -231,7 +228,7 @@ export default function HomePage({ user, setPage }: HomePageProps) {
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-12 lg:py-20">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 mb-8">
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] font-bold text-primary mb-2">
+            <p className="text-xs uppercase tracking-[0.18em] font-bold text-[#976a07] mb-2">
               Built for Ghanaian students
             </p>
             <h2 className="font-display text-3xl sm:text-4xl max-w-xl">
@@ -248,9 +245,9 @@ export default function HomePage({ user, setPage }: HomePageProps) {
           {features.map((feature, index) => (
             <article
               key={feature.title}
-              className="bg-white border border-border rounded-2xl p-6 hover-lift"
+              className="group bg-white border border-border rounded-2xl p-6 hover-lift"
             >
-              <div className="w-11 h-11 rounded-xl bg-secondary flex items-center justify-center text-primary mb-8">
+              <div className="w-11 h-11 rounded-xl bg-secondary flex items-center justify-center text-primary mb-8 group-hover:bg-primary group-hover:text-white transition-colors">
                 <svg
                   className="w-6 h-6"
                   fill="none"
@@ -274,10 +271,10 @@ export default function HomePage({ user, setPage }: HomePageProps) {
         </div>
       </section>
 
-      <section className="bg-white border-y border-border">
+      <section className="bg-surface border-y border-border">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 lg:py-20 grid lg:grid-cols-[.8fr_1.2fr] gap-10 lg:gap-16 items-start">
           <div className="lg:sticky lg:top-20">
-            <p className="text-xs uppercase tracking-[0.18em] font-bold text-primary mb-2">
+            <p className="text-xs uppercase tracking-[0.18em] font-bold text-[#976a07] mb-2">
               How FIN works
             </p>
             <h2 className="font-display text-3xl sm:text-4xl">
@@ -298,7 +295,7 @@ export default function HomePage({ user, setPage }: HomePageProps) {
             {process.map((item) => (
               <div
                 key={item.step}
-                className="rounded-2xl border border-border p-5 flex gap-5 bg-background"
+                className="rounded-2xl border border-border p-5 flex gap-5 bg-white"
               >
                 <span className="font-mono text-xs font-bold text-primary bg-secondary rounded-lg w-9 h-9 flex items-center justify-center flex-shrink-0">
                   {item.step}
@@ -318,7 +315,7 @@ export default function HomePage({ user, setPage }: HomePageProps) {
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-12 lg:py-20">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] font-bold text-primary mb-2">
+            <p className="text-xs uppercase tracking-[0.18em] font-bold text-[#976a07] mb-2">
               Fresh opportunities
             </p>
             <h2 className="font-display text-3xl">Hiring now</h2>
@@ -338,11 +335,11 @@ export default function HomePage({ user, setPage }: HomePageProps) {
             >
               <div className="flex items-start justify-between">
                 <div
-                  className={`w-11 h-11 rounded-xl flex items-center justify-center text-xs font-bold ${["bg-accent text-accent-foreground", "bg-amber-300 text-accent-foreground", "bg-emerald-600 text-white"][index % 3]}`}
+                  className={`w-11 h-11 rounded-xl flex items-center justify-center text-xs font-bold ${["bg-accent text-accent-foreground", "bg-amber-300 text-accent-foreground", "bg-primary text-white"][index % 3]}`}
                 >
                   {program.company.slice(0, 2).toUpperCase()}
                 </div>
-                <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-emerald-50 text-emerald-700">
+                <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-accent/20 text-[#976a07]">
                   New
                 </span>
               </div>
@@ -368,7 +365,6 @@ export default function HomePage({ user, setPage }: HomePageProps) {
 
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-14 lg:pb-20">
         <div className="gradient-hero rounded-3xl p-7 sm:p-10 text-white relative overflow-hidden">
-          <div className="absolute right-0 top-0 w-64 h-64 bg-accent/20 blur-3xl rounded-full" />
           <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] font-bold text-accent mb-2">
@@ -394,10 +390,10 @@ export default function HomePage({ user, setPage }: HomePageProps) {
   );
 }
 
-function CheckIcon() {
+function CheckIcon({ className = "text-accent" }: { className?: string }) {
   return (
     <svg
-      className="w-4 h-4 text-accent flex-shrink-0"
+      className={`w-4 h-4 ${className} flex-shrink-0`}
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
