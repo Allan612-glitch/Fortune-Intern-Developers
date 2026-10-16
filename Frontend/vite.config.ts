@@ -21,10 +21,15 @@ export default defineConfig(({ mode }) => {
     loadEnv(mode, envRoot, "VITE_GOOGLE_CLIENT_ID").VITE_GOOGLE_CLIENT_ID ||
     loadEnv(mode, envRoot, "GOOGLE_CLIENT_ID").GOOGLE_CLIENT_ID ||
     "";
+  const turnstileSiteKey =
+    process.env.VITE_TURNSTILE_SITE_KEY ||
+    loadEnv(mode, envRoot, "VITE_TURNSTILE_SITE_KEY").VITE_TURNSTILE_SITE_KEY ||
+    "";
 
   return {
     define: {
       "import.meta.env.VITE_GOOGLE_CLIENT_ID": JSON.stringify(googleClientId),
+      "import.meta.env.VITE_TURNSTILE_SITE_KEY": JSON.stringify(turnstileSiteKey),
     },
     base: process.env.FIGMA_PUBLIC_URL
       ? `${process.env.FIGMA_PUBLIC_URL}/`

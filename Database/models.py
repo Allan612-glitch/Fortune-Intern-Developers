@@ -162,6 +162,7 @@ class rate_limit_bucket(SQLModel, table=True):
     key: str = Field(primary_key=True)
     window_started_at: datetime = Field(sa_column=Column("window_started_at", DateTime(timezone=True), nullable=False))
     count: int = Field(sa_column=Column("count", Integer, nullable=False))
+    failure_count: int = Field(default=0, sa_column=Column("failure_count", Integer, nullable=False, default=0, server_default="0"))
 
 class announcement(SQLModel, table=True):
     __tablename__ = "announcements"

@@ -156,7 +156,11 @@ export default function AuthPage({
       return;
     setLoading(true);
     try {
-      const account = await login(form.email.trim(), form.password);
+      const account = await login(
+        form.email.trim(),
+        form.password,
+        captchaToken || undefined,
+      );
       const profile = await getProfile();
       onLogin(
         {
@@ -177,8 +181,22 @@ export default function AuthPage({
         new URLSearchParams(location.search).get("program"),
       );
     } catch (error) {
+      if (
+        error instanceof ApiError &&
+        (error.code === "captcha_required" || error.code === "captcha_invalid")
+      ) {
+        setCaptchaRequired(true);
+        setCaptchaToken("");
+        setCaptchaWidgetKey((key) => key + 1);
+        setSubmitError(error.code === "captcha_invalid" ? error.message : "");
+        return;
+      }
       setSubmitError(error instanceof Error ? error.message : "Unable to sign in.");
     } finally {
+      if (captchaToken) {
+        setCaptchaToken("");
+        setCaptchaWidgetKey((key) => key + 1);
+      }
       setLoading(false);
     }
   };
@@ -300,6 +318,9 @@ export default function AuthPage({
       industry: "",
       userType: "student",
     });
+    setCaptchaRequired(false);
+    setCaptchaToken("");
+    setCaptchaWidgetKey((key) => key + 1);
     if (onModeChange) {
       onModeChange(m);
       return;
@@ -403,6 +424,30 @@ export default function AuthPage({
                   }
                 />
 
+                {captchaRequired && (
+                  <div className="space-y-2">
+                    {turnstileSiteKey ? (
+                      <>
+                        <p className="text-xs text-muted-foreground">
+                          Please complete this security check to continue signing in.
+                        </p>
+                        <TurnstileChallenge
+                          key={captchaWidgetKey}
+                          siteKey={turnstileSiteKey}
+                          onToken={(token) => {
+                            setCaptchaToken(token);
+                            if (token) setSubmitError("");
+                          }}
+                        />
+                      </>
+                    ) : (
+                      <p className="text-red-500 text-xs" role="alert">
+                        Login security verification is not configured. Please contact support.
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" className="rounded border-border" />
@@ -429,7 +474,7 @@ export default function AuthPage({
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || (captchaRequired && !captchaToken)}
                   className="w-full py-3.5 rounded-xl text-white font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-60 shadow-md"
                   style={{
                     background: "linear-gradient(135deg, #2D3561, #3d4a8a)",

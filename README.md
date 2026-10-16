@@ -124,7 +124,7 @@ TURNSTILE_SECRET_KEY=your_cloudflare_turnstile_secret_key
 ```
 
 `JWT_SECRET` must be at least 32 characters. The backend will refuse to start with the example placeholder or an insecure short value.
-Set `TURNSTILE_SECRET_KEY` in the backend environment and `VITE_TURNSTILE_SITE_KEY` in the frontend build environment. Signup presents a Cloudflare Turnstile challenge when an IP exceeds 500 signup requests per minute; without these keys, that fallback cannot be completed.
+Set `TURNSTILE_SECRET_KEY` in the backend environment and `VITE_TURNSTILE_SITE_KEY` in the frontend build environment. Signup presents a Cloudflare Turnstile challenge when an IP exceeds 500 signup requests per minute. Password login also challenges elevated-risk client groups; configure both keys so users can complete those challenges.
 
 Verify the sender domain in Resend before registering accounts. Registration emails contain a six-digit OTP that expires after 10 minutes and is locked after five incorrect guesses; the user can request a new code. `POST /api/auth/register` sends the OTP and `POST /api/auth/verify-email` accepts the email and OTP before the account is created.
 
@@ -138,7 +138,7 @@ Create the PostgreSQL database and user referenced by `DATABASE_URL`, then run m
 .\.venv\Scripts\python.exe -m alembic -c Database/alembic.ini upgrade head
 ```
 
-The migrations create the users, profiles, programs, applications, notifications, mentors, mentorships, announcements, admin role, moderation flags, and registration-verification support tables. The latest migration adds lookup indexes and uniqueness guards for profiles and active applications. It intentionally stops without modifying data if duplicate records already exist; resolve those records manually while preserving any required data, then rerun the migration.
+The migrations create the users, profiles, programs, applications, notifications, mentors, mentorships, announcements, admin role, moderation flags, and registration-verification support tables. The latest migrations add lookup indexes, preserve existing application rows even if they contain active duplicates, and add login-failure counts to the rate-limit buckets. Application submissions are checked in the API and serialized with a PostgreSQL transaction-scoped advisory lock so concurrent API requests cannot create a duplicate for the same user and program. The profile index remains unique and the migration stops if duplicate profiles need manual review.
 
 ## Run the Backend
 
@@ -164,7 +164,7 @@ npm ci
 npm run dev
 ```
 
-Set `VITE_TURNSTILE_SITE_KEY` in `Frontend/.env.local` for the signup fallback challenge. Vite proxies `/api` requests to `http://127.0.0.1:8000` by default. Set `API_PROXY_TARGET` to change the development backend address. When the frontend and backend are hosted separately, set the frontend build variable `VITE_API_URL` to the backend origin and include the frontend origin in backend `CORS_ORIGINS`.
+Set `VITE_TURNSTILE_SITE_KEY` in `Frontend/.env.local` for signup and elevated-risk login challenges. Vite proxies `/api` requests to `http://127.0.0.1:8000` by default. Set `API_PROXY_TARGET` to change the development backend address. When the frontend and backend are hosted separately, set the frontend build variable `VITE_API_URL` to the backend origin and include the frontend origin in backend `CORS_ORIGINS`.
 
 ## Admin Access
 
@@ -187,6 +187,8 @@ Admins can manage users, mentors, programs, applications, resumes, and announcem
 ## Authentication and Security
 
 - Passwords are hashed with Argon2 through `pwdlib`.
+- Login risk is aggregated over a 10-minute window using both a keyed HTTP-client fingerprint and a keyed source-network prefix (/24 for IPv4, /64 for IPv6). Changing browser headers alone therefore does not reset risk within the same network. These are still coarse signals, not TLS fingerprints: proxy pools and changing networks can evade them. After five attempts with at least an 85% failure ratio, or twelve attempts with at least a 90% failure ratio, an untrusted login must pass Turnstile before password verification. Successful authentication issues an email- and client-bound trusted-device token that lasts 30 days.
+- Application duplicate prevention is enforced for API submissions, including concurrent submissions. Existing duplicate application records are retained; direct database writes bypass the API-level guard.
 - JWT bearer tokens are used for protected endpoints.
 - Suspended users are blocked from protected API access.
 - Admin routes require the persisted admin role or the configured `ADMIN_EMAIL`.

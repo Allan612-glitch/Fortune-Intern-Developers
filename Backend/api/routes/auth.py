@@ -12,12 +12,21 @@ from sqlmodel import Session, select
 from Backend.api.deps import get_current_user
 from Backend.core.captcha import verify_turnstile
 from Backend.core.config import settings
+from Backend.core.login_risk import (
+    LoginRisk,
+    get_login_risk,
+    record_login_outcome,
+    request_client_fingerprint,
+    request_risk_keys,
+)
 from Backend.core.security import (
     create_access_token,
+    create_trusted_device_token,
     hash_one_time_secret,
     hash_password,
     verify_one_time_secret,
     verify_password,
+    verify_trusted_device_token,
 )
 from Backend.core.rate_limit import enforce_rate_limit
 from Backend.database import get_session
@@ -90,6 +99,15 @@ def serialize_user(account: user) -> UserResponse:
     return UserResponse(id=str(account.id), name=account.name, email=account.email, is_admin=account.is_admin)
 
 
+def create_auth_response(account: user, client_fingerprint: str) -> TokenResponse:
+    return TokenResponse(
+        access_token=create_access_token(account.id, account.token_version),
+        token_type="bearer",
+        user=serialize_user(account),
+        device_token=create_trusted_device_token(account.email, client_fingerprint),
+    )
+
+
 def validate_email(email: str) -> str:
     normalized_email = email.strip().lower()
     if "@" not in normalized_email:
@@ -115,19 +133,42 @@ def login(
         window_seconds=60,
         identity_window_seconds=900,
     )
+    fingerprint = request_client_fingerprint(request)
+    risk_keys = request_risk_keys(request, fingerprint)
+    risk = get_login_risk(session, risk_keys)
+    trusted_device = verify_trusted_device_token(
+        credentials.trusted_device_token,
+        email,
+        fingerprint,
+    )
+    if (risk.medium or risk.high) and not trusted_device:
+        verify_turnstile(credentials.captcha_token, client_ip)
+
     account = session.exec(select(user).where(user.email == email)).first()
     if not account or not account.password_hash or not verify_password(credentials.password, account.password_hash):
-        logger.warning(
-            "login rejected",
-            extra={
-                "auth_action": "login",
-                "source_ip": request.client.host if request.client else None,
-            },
+        record_login_outcome(session, risk_keys, failed=True)
+        next_risk = LoginRisk(
+            attempts=risk.attempts + 1,
+            failures=risk.failures + 1,
         )
+        if (
+            (not risk.medium and next_risk.medium)
+            or (not risk.high and next_risk.high)
+        ):
+            logger.warning(
+                "login cohort now requires an additional verification step",
+                extra={
+                    "auth_action": "login",
+                    "source_ip": client_ip,
+                    "risk_attempts": next_risk.attempts,
+                    "risk_failures": next_risk.failures,
+                },
+            )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
+    record_login_outcome(session, risk_keys, failed=False)
     if account.is_suspended:
         logger.warning(
             "suspended account login rejected",
@@ -138,11 +179,7 @@ def login(
         )
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended")
 
-    return TokenResponse(
-        access_token=create_access_token(account.id, account.token_version),
-        token_type="bearer",
-        user=serialize_user(account),
-    )
+    return create_auth_response(account, fingerprint)
 
 
 @router.post("/google", response_model=TokenResponse)
@@ -211,11 +248,7 @@ def google_login(
     session.refresh(account)
     if account.is_suspended:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended")
-    return TokenResponse(
-        access_token=create_access_token(account.id, account.token_version),
-        token_type="bearer",
-        user=serialize_user(account),
-    )
+    return create_auth_response(account, request_client_fingerprint(request))
 
 
 @router.post("/register", response_model=VerificationStartResponse, status_code=status.HTTP_202_ACCEPTED)
@@ -375,11 +408,7 @@ def verify_email(
     session.delete(pending_registration)
     session.commit()
     session.refresh(account)
-    return TokenResponse(
-        access_token=create_access_token(account.id, account.token_version),
-        token_type="bearer",
-        user=serialize_user(account),
-    )
+    return create_auth_response(account, request_client_fingerprint(request))
 
 
 @router.post("/forgot-password", response_model=MessageResponse)

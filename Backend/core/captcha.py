@@ -25,7 +25,7 @@ def verify_turnstile(token: str | None, remote_ip: str | None) -> None:
         logger.error("Turnstile verification requested but TURNSTILE_SECRET_KEY is not configured")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Signup security verification is not configured",
+            detail="Security verification is not configured",
         )
 
     form_data = {
