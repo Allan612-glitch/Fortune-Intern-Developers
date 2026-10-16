@@ -499,7 +499,7 @@ export default function LandingPage({
                   {visiblePrograms.map((program) => (
                     <article
                       key={program.id}
-                      className="rounded-2xl border border-border p-5 bg-white transition-colors hover:border-primary/30"
+                      className="rounded-2xl border border-border p-5 bg-white hover-lift hover:border-primary/30"
                     >
                       <div className="flex items-center gap-3">
                         <span
@@ -576,7 +576,7 @@ export default function LandingPage({
               {benefits.map((item) => (
                 <article
                   key={item.title}
-                  className="group rounded-2xl border border-border p-6 bg-white transition-colors hover:border-primary/30"
+                  className="group rounded-2xl border border-border p-6 bg-white hover-lift hover:border-primary/30"
                 >
                   <div className="w-11 h-11 rounded-xl bg-secondary text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
                     <Icon name={item.icon} className="w-5 h-5" />
