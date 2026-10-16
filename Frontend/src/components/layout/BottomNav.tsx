@@ -32,6 +32,7 @@ export default function BottomNav({ page, onNavigate }: BottomNavProps) {
     >
       <div className="flex w-full items-center">
         {navItems
+          .filter((item) => item.id !== "announcements" && item.id !== "applications")
           .map((item) => {
             const active = page === item.id;
             return (
