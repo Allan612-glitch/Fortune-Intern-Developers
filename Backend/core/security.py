@@ -45,6 +45,49 @@ def create_access_token(user_id: UUID, token_version: int = 0) -> str:
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
+def _trusted_device_claim(email: str, client_fingerprint: str) -> str:
+    return hmac.new(
+        settings.jwt_secret.encode(),
+        f"trusted-device\0{email.strip().lower()}\0{client_fingerprint}".encode(),
+        sha256,
+    ).hexdigest()
+
+
+def create_trusted_device_token(email: str, client_fingerprint: str) -> str:
+    expires_at = datetime.now(timezone.utc) + timedelta(days=30)
+    payload = {
+        "purpose": "trusted-device",
+        "sub": _trusted_device_claim(email, client_fingerprint),
+        "exp": expires_at,
+    }
+    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+
+
+def verify_trusted_device_token(
+    token: str | None,
+    email: str,
+    client_fingerprint: str,
+) -> bool:
+    if not token:
+        return False
+
+    try:
+        payload = jwt.decode(
+            token,
+            settings.jwt_secret,
+            algorithms=[settings.jwt_algorithm],
+        )
+    except jwt.InvalidTokenError:
+        return False
+    expected_claim = _trusted_device_claim(email, client_fingerprint)
+    token_claim = payload.get("sub")
+    return (
+        payload.get("purpose") == "trusted-device"
+        and isinstance(token_claim, str)
+        and hmac.compare_digest(token_claim, expected_claim)
+    )
+
+
 def get_user_id_from_token(
     credentials: HTTPAuthorizationCredentials | None,
 ) -> tuple[UUID, int]:
