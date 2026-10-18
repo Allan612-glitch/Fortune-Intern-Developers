@@ -215,27 +215,6 @@ export default function HomePage({ user, setPage }: HomePageProps) {
                     </div>
                   ))}
                 </div>
-                <div className="mt-5 bg-primary rounded-2xl p-4 text-white flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-accent text-accent-foreground flex items-center justify-center">
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      {featureIcons[0]}
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold">
-                      Super improved your letter
-                    </p>
-                    <p className="text-[10px] text-white/70 mt-0.5">
-                      Ready to send to Flutterwave
-                    </p>
-                  </div>
-                  <CheckIcon />
-                </div>
               </div>
             </div>
           </div>
