@@ -530,7 +530,7 @@ class TestAcceptedApplicationDocuments(unittest.TestCase):
             patch(
                 "Backend.api.routes.admin.documents.build_recommendation_letter_pdf",
                 return_value=b"letter",
-            ),
+            ) as build_letter_pdf,
             patch(
                 "Backend.api.routes.admin.documents.build_assessment_form_pdf",
                 return_value=b"assessment",
@@ -554,6 +554,11 @@ class TestAcceptedApplicationDocuments(unittest.TestCase):
         self.assertEqual(row.status, "accepted")
         self.assertFalse(row.documents_sent)
         self.assertEqual(session.commit.call_count, 1)
+        self.assertEqual(
+            build_letter_pdf.call_args.kwargs["reference_no"],
+            str(application_id),
+        )
+        self.assertIsNone(build_letter_pdf.call_args.kwargs["index_number"])
 
         with (
             patch("Backend.api.routes.admin.record_audit_event"),

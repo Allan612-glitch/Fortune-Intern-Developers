@@ -258,7 +258,7 @@ def update_application_status(application_id: str, payload: AdminApplicationStat
 		if not applicant:
 			raise HTTPException(status_code=404, detail="Applicant not found")
 		try:
-			reference_no = f"FIN/{datetime.now(timezone.utc).year}/{str(row.id)[:8].upper()}"
+			reference_no = str(row.id)
 			letter_pdf = documents.build_recommendation_letter_pdf(
 				student_name=row.applicant_name or applicant.name,
 				institution=row.applicant_institution or "Not specified",

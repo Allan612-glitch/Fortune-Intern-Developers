@@ -72,17 +72,8 @@ def _footer() -> Paragraph:
     )
 
 
-def _ordinal(day: int) -> str:
-    suffix = "th" if 11 <= (day % 100) <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
-    return f"{day}{suffix}"
-
-
 def _formatted_date(dt: datetime) -> str:
-    months = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December",
-    ]
-    return f"{_ordinal(dt.day)} {months[dt.month - 1]}, {dt.year}"
+    return f"{dt.month}/{dt.day}/{dt.year}"
 
 
 def _build_signature_drawing(width: float = 38 * mm, height: float = 25 * mm) -> Drawing:
@@ -367,9 +358,11 @@ def build_recommendation_letter_pdf(
     ]))
     story.append(ref_table)
 
-    detail_rows = [("NAME OF STUDENT:", student_name), ("INSTITUTION:", institution)]
-    if index_number:
-        detail_rows.append(("INDEX NUMBER:", index_number))
+    detail_rows = [
+        ("NAME OF STUDENT:", student_name),
+        ("INSTITUTION:", institution),
+        ("INDEX NUMBER:", index_number or "N/A"),
+    ]
     detail_rows += [
         ("CONTACT:", contact or "N/A"),
         ("PROGRAM / COURSE OF STUDY:", program_course or "N/A"),
