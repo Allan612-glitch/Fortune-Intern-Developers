@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { AppUser } from "../App";
+import AsyncState from "../components/AsyncState";
 import {
   deleteProfileDocument,
   downloadProfileDocument,
@@ -51,9 +52,18 @@ export default function ProfilePage({ user }: { user: AppUser }) {
   const [dashboard, setDashboard] = useState<DashboardSummary | null>(null);
   const [documentBusy, setDocumentBusy] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
+  const [skillsSaving, setSkillsSaving] = useState(false);
+  const [experienceSaving, setExperienceSaving] = useState(false);
   useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setLoadError("");
     Promise.all([getProfile(), getNotificationPreferences(), listProfileDocuments(), getDashboard()])
       .then(([result, savedPreferences, savedDocuments, summary]) => {
+        if (!active) return;
         setServerProfile(result);
         setPreferences(savedPreferences);
         setDocuments(savedDocuments);
@@ -72,8 +82,16 @@ export default function ProfilePage({ user }: { user: AppUser }) {
         setProfile(savedProfile);
         setDraft(savedProfile);
       })
-      .catch((error) => setProfileError(error instanceof Error ? error.message : "Unable to load profile."));
-  }, [user.email, user.name]);
+      .catch((error) => {
+        if (active) setLoadError(error instanceof Error ? error.message : "Unable to load profile.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [user.email, user.name, retryCount]);
   const updateDraft = (key: keyof typeof draft, value: string) =>
     setDraft((current) => ({ ...current, [key]: value }));
   const handleEditProfile = () => {
@@ -136,6 +154,7 @@ export default function ProfilePage({ user }: { user: AppUser }) {
   };
 
   const saveSkills = async (next: string[]) => {
+    setSkillsSaving(true);
     try {
       const saved = await updateProfile({ skills: next.join(", ") });
       setServerProfile(saved);
@@ -143,6 +162,8 @@ export default function ProfilePage({ user }: { user: AppUser }) {
       setProfileError("");
     } catch (error) {
       setProfileError(error instanceof Error ? error.message : "Unable to save skills.");
+    } finally {
+      setSkillsSaving(false);
     }
   };
 
@@ -159,6 +180,7 @@ export default function ProfilePage({ user }: { user: AppUser }) {
       return;
     }
     const next = [...experiences, experienceDraft];
+    setExperienceSaving(true);
     try {
       const saved = await updateProfile({ experience: next });
       setExperiences(saved.experience || []);
@@ -167,17 +189,22 @@ export default function ProfilePage({ user }: { user: AppUser }) {
       setProfileError("");
     } catch (error) {
       setProfileError(error instanceof Error ? error.message : "Unable to save experience.");
+    } finally {
+      setExperienceSaving(false);
     }
   };
 
   const removeExperience = async (index: number) => {
     const next = experiences.filter((_, itemIndex) => itemIndex !== index);
+    setExperienceSaving(true);
     try {
       const saved = await updateProfile({ experience: next });
       setExperiences(saved.experience || []);
       setServerProfile(saved);
     } catch (error) {
       setProfileError(error instanceof Error ? error.message : "Unable to remove experience.");
+    } finally {
+      setExperienceSaving(false);
     }
   };
 
@@ -221,6 +248,26 @@ export default function ProfilePage({ user }: { user: AppUser }) {
       setDocumentBusy(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="p-4 lg:p-6 max-w-3xl mx-auto">
+        <AsyncState kind="loading" message="Loading your profile..." />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="p-4 lg:p-6 max-w-3xl mx-auto">
+        <AsyncState
+          kind="error"
+          message={loadError}
+          onRetry={() => setRetryCount((count) => count + 1)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 lg:p-6 max-w-3xl mx-auto">
@@ -395,7 +442,7 @@ export default function ProfilePage({ user }: { user: AppUser }) {
                   placeholder="Add a skill"
                   className="w-32 px-2 py-1.5 rounded-lg border border-border text-xs"
                 />
-                <button onClick={addSkill} className="text-xs font-semibold text-primary">Add</button>
+                <button onClick={addSkill} disabled={skillsSaving} className="text-xs font-semibold text-primary disabled:cursor-wait disabled:opacity-60">{skillsSaving ? "Saving..." : "Add"}</button>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -410,7 +457,8 @@ export default function ProfilePage({ user }: { user: AppUser }) {
                     type="button"
                     onClick={() => void saveSkills(skills.filter((item) => item !== skill))}
                     aria-label={`Remove ${skill}`}
-                    className="font-bold"
+                    disabled={skillsSaving}
+                    className="font-bold disabled:cursor-wait disabled:opacity-60"
                   >×</button>
                 </span>
               ))}
@@ -433,7 +481,7 @@ export default function ProfilePage({ user }: { user: AppUser }) {
                 <input key={key} value={experienceDraft[key]} onChange={(event) => setExperienceDraft((current) => ({ ...current, [key]: event.target.value }))} placeholder={label} aria-label={label} className="px-3 py-2 rounded-lg border border-border text-xs" />
               ))}
               <textarea value={experienceDraft.description} onChange={(event) => setExperienceDraft((current) => ({ ...current, description: event.target.value }))} placeholder="Description" aria-label="Experience description" rows={2} className="sm:col-span-2 px-3 py-2 rounded-lg border border-border text-xs resize-y" />
-              <button onClick={() => void saveExperience()} className="sm:col-span-2 justify-self-start px-3 py-2 rounded-lg bg-primary text-white text-xs font-semibold">Add experience</button>
+              <button onClick={() => void saveExperience()} disabled={experienceSaving} className="sm:col-span-2 justify-self-start px-3 py-2 rounded-lg bg-primary text-white text-xs font-semibold disabled:cursor-wait disabled:opacity-60">{experienceSaving ? "Saving..." : "Add experience"}</button>
             </div>
             <div className="space-y-4">
               {experiences.map((experience, index) => (
@@ -465,7 +513,7 @@ export default function ProfilePage({ user }: { user: AppUser }) {
                       {experience.description}
                     </p>
                   </div>
-                  <button onClick={() => void removeExperience(index)} className="ml-auto text-xs text-red-600" aria-label={`Remove ${experience.role}`}>Remove</button>
+                  <button onClick={() => void removeExperience(index)} disabled={experienceSaving} className="ml-auto text-xs text-red-600 disabled:cursor-wait disabled:opacity-60" aria-label={`Remove ${experience.role}`}>Remove</button>
                 </div>
               ))}
               {!experiences.length && <p className="text-xs text-muted-foreground">No experience added yet.</p>}
