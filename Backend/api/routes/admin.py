@@ -5,6 +5,7 @@ import logging
 from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response
+from sqlalchemy import and_, func, or_
 from sqlmodel import Session, select
 
 from Backend.api.deps import get_current_admin
@@ -57,6 +58,25 @@ def parse_deadline(value: str | None):
 		return datetime.fromisoformat(value.replace("Z", "+00:00"))
 	except ValueError:
 		raise HTTPException(status_code=422, detail="Deadline must be a valid ISO date")
+
+
+def _application_reference(session: Session, row: application) -> str:
+	year_start = datetime(row.created_at.year, 1, 1, tzinfo=row.created_at.tzinfo)
+	year_end = datetime(row.created_at.year + 1, 1, 1, tzinfo=row.created_at.tzinfo)
+	previous_applications = session.exec(
+		select(func.count(application.id)).where(
+			application.created_at >= year_start,
+			application.created_at < year_end,
+			or_(
+				application.created_at < row.created_at,
+				and_(
+					application.created_at == row.created_at,
+					application.id < row.id,
+				),
+			),
+		)
+	).one()
+	return f"FIN/{row.created_at.year}/{previous_applications + 1:04d}"
 
 
 @router.get("/users", response_model=list[AdminUserResponse])
@@ -258,7 +278,7 @@ def update_application_status(application_id: str, payload: AdminApplicationStat
 		if not applicant:
 			raise HTTPException(status_code=404, detail="Applicant not found")
 		try:
-			reference_no = str(row.id)
+			reference_no = _application_reference(session, row)
 			letter_pdf = documents.build_recommendation_letter_pdf(
 				student_name=row.applicant_name or applicant.name,
 				institution=row.applicant_institution or "Not specified",

@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlmodel import Session, SQLModel
 
-from Backend.api.routes.admin import update_application_status
+from Backend.api.routes.admin import _application_reference, update_application_status
 from Backend.api.routes.applications import (
     _lock_application_identity,
     create_application,
@@ -477,6 +477,37 @@ class TestUnexpectedErrorMiddleware(unittest.TestCase):
 
 
 class TestAcceptedApplicationDocuments(unittest.TestCase):
+    def test_application_reference_uses_year_and_zero_padded_sequence(self):
+        engine = create_engine("sqlite://")
+        SQLModel.metadata.create_all(engine)
+        previous_year_row = application(
+            user_id=uuid4(),
+            program_id=uuid4(),
+            status="submitted",
+            created_at=datetime(2025, 12, 31, tzinfo=timezone.utc),
+        )
+        earlier_rows = [
+            application(
+                user_id=uuid4(),
+                program_id=uuid4(),
+                status="submitted",
+                created_at=datetime(2026, 10, day, tzinfo=timezone.utc),
+            )
+            for day in (1, 2)
+        ]
+        row = application(
+            user_id=uuid4(),
+            program_id=uuid4(),
+            status="submitted",
+            created_at=datetime(2026, 10, 18, tzinfo=timezone.utc),
+        )
+        with Session(engine) as session:
+            session.add_all([previous_year_row, *earlier_rows, row])
+            session.commit()
+
+            self.assertEqual(_application_reference(session, row), "FIN/2026/0003")
+        engine.dispose()
+
     def test_failed_document_delivery_is_reported_and_can_be_retried(self):
         application_id = uuid4()
         applicant_id = uuid4()
@@ -498,7 +529,7 @@ class TestAcceptedApplicationDocuments(unittest.TestCase):
             applicant_contact=None,
             host_company_name=None,
             host_company_address=None,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime(2026, 10, 18, tzinfo=timezone.utc),
         )
         applicant = SimpleNamespace(
             id=applicant_id,
@@ -524,6 +555,7 @@ class TestAcceptedApplicationDocuments(unittest.TestCase):
             }[model]
 
         session.get.side_effect = get_record
+        session.exec.return_value.one.return_value = 450
 
         with (
             patch("Backend.api.routes.admin.record_audit_event"),
@@ -556,7 +588,7 @@ class TestAcceptedApplicationDocuments(unittest.TestCase):
         self.assertEqual(session.commit.call_count, 1)
         self.assertEqual(
             build_letter_pdf.call_args.kwargs["reference_no"],
-            str(application_id),
+            "FIN/2026/0451",
         )
         self.assertIsNone(build_letter_pdf.call_args.kwargs["index_number"])
 
