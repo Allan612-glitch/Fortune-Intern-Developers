@@ -1,15 +1,29 @@
 """Server-rendered PDF documents (assessment form + recommendation letter) sent to applicants."""
 import re
 from datetime import datetime, timezone
+from html import escape
 from io import BytesIO
+from pathlib import Path
 
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
-from reportlab.graphics.shapes import Drawing, Path, Rect
-from reportlab.platypus import HRFlowable, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.graphics.shapes import Drawing, Path as DrawingPath, Rect
+from reportlab.platypus import (
+    BaseDocTemplate,
+    Flowable,
+    Frame,
+    HRFlowable,
+    KeepTogether,
+    PageTemplate,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 
 NAVY = colors.HexColor("#0A3161")
 GOLD = colors.HexColor("#EDB523")
@@ -71,22 +85,24 @@ def _formatted_date(dt: datetime) -> str:
     return f"{_ordinal(dt.day)} {months[dt.month - 1]}, {dt.year}"
 
 
-def _build_signature_drawing(width: float = 58, height: float = 43.5) -> Drawing:
-    """Render the fixed FIN managing-director signature as vector strokes."""
+def _build_signature_drawing(width: float = 38 * mm, height: float = 25 * mm) -> Drawing:
+    """Render the fixed FIN managing-director signature as vector strokes (same size as the downloaded letter)."""
     view_w, view_h = 200.0, 150.0
-    scale = width / view_w
+    scale = min(width / view_w, height / view_h)
+    x_off = (width - view_w * scale) / 2
+    y_off = (height - view_h * scale) / 2
     drawing = Drawing(width, height)
     for path_data in SIGNATURE_PATHS:
         nums = [float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", path_data)]
-        path = Path(strokeColor=SIGNATURE_INK, strokeWidth=1.3, fillColor=None, strokeLineCap=1, strokeLineJoin=1)
-        path.moveTo(nums[0] * scale, (view_h - nums[1]) * scale)
+        path = DrawingPath(strokeColor=SIGNATURE_INK, strokeWidth=5 * scale, fillColor=None, strokeLineCap=1, strokeLineJoin=1)
+        path.moveTo(x_off + nums[0] * scale, y_off + (view_h - nums[1]) * scale)
         index = 2
         while index + 6 <= len(nums):
             x1, y1, x2, y2, x3, y3 = nums[index:index + 6]
             path.curveTo(
-                x1 * scale, (view_h - y1) * scale,
-                x2 * scale, (view_h - y2) * scale,
-                x3 * scale, (view_h - y3) * scale,
+                x_off + x1 * scale, y_off + (view_h - y1) * scale,
+                x_off + x2 * scale, y_off + (view_h - y2) * scale,
+                x_off + x3 * scale, y_off + (view_h - y3) * scale,
             )
             index += 6
         drawing.add(path)
@@ -213,6 +229,79 @@ def build_assessment_form_pdf() -> bytes:
     return buffer.getvalue()
 
 
+LETTER_GOLD = colors.HexColor("#E9B427")
+LETTER_BACKGROUND = colors.HexColor("#F8FAFC")
+LETTER_FOOTER_TEXT = "LinkedIn · X · WhatsApp · Fortune Intern Network · 0200313672"
+
+
+def _find_logo_path() -> Path | None:
+    """Logo used on the letter. Looks in Backend/assets first, then the frontend assets folder."""
+    core_dir = Path(__file__).resolve().parent
+    for candidate in (
+        core_dir.parent / "assets" / "fin_logo.png",
+        core_dir.parent.parent / "Frontend" / "src" / "assets" / "attach1.png",
+    ):
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+class _LetterLogo(Flowable):
+    """Logo drawn centred inside a fixed box, keeping its shape and transparency (like object-fit: contain)."""
+
+    def __init__(self, path: Path, width: float, height: float):
+        super().__init__()
+        self.path, self.width, self.height = path, width, height
+        self.hAlign = "CENTER"
+
+    def wrap(self, avail_width, avail_height):
+        return self.width, self.height
+
+    def draw(self):
+        self.canv.drawImage(
+            str(self.path), 0, 0, self.width, self.height,
+            mask="auto", preserveAspectRatio=True, anchor="c",
+        )
+
+
+def _draw_letter_page(canvas, doc, logo_path: Path | None) -> None:
+    """Page background, watermark, gold bands, navy corners and footer line (same as the downloaded letter)."""
+    page_w, page_h = A4
+    corner_w, corner_h = 25 * mm, 22 * mm
+    canvas.saveState()
+    canvas.setFillColor(LETTER_BACKGROUND)
+    canvas.rect(0, 0, page_w, page_h, stroke=0, fill=1)
+    if logo_path:
+        size = 95 * mm
+        canvas.saveState()
+        canvas.setFillAlpha(0.1)
+        canvas.drawImage(
+            str(logo_path), page_w / 2 - size / 2, page_h * (1 - 0.52) - size / 2, size, size,
+            mask="auto", preserveAspectRatio=True, anchor="c",
+        )
+        canvas.restoreState()
+    canvas.setFillColor(LETTER_GOLD)
+    canvas.rect(0, page_h - 8 * mm, page_w, 8 * mm, stroke=0, fill=1)
+    canvas.rect(0, 0, page_w, 8 * mm, stroke=0, fill=1)
+    canvas.setFillColor(NAVY)
+    top_right = canvas.beginPath()
+    top_right.moveTo(page_w - corner_w + 0.45 * corner_w, page_h)
+    top_right.lineTo(page_w, page_h)
+    top_right.lineTo(page_w, page_h - corner_h)
+    top_right.close()
+    canvas.drawPath(top_right, stroke=0, fill=1)
+    bottom_left = canvas.beginPath()
+    bottom_left.moveTo(0, corner_h)
+    bottom_left.lineTo(0, 0)
+    bottom_left.lineTo(corner_w, 0)
+    bottom_left.close()
+    canvas.drawPath(bottom_left, stroke=0, fill=1)
+    canvas.setFillColor(INK)
+    canvas.setFont("Helvetica-Bold", 9)
+    canvas.drawCentredString(page_w / 2, 7.9, LETTER_FOOTER_TEXT)
+    canvas.restoreState()
+
+
 def build_recommendation_letter_pdf(
     *,
     student_name: str,
@@ -223,81 +312,119 @@ def build_recommendation_letter_pdf(
     host_company: str,
     host_location: str | None,
     reference_no: str,
+    index_number: str | None = None,
+    opportunity: str | None = None,
+    letter_date: datetime | None = None,
 ) -> bytes:
-    """Build the recommendation letter, filled in with the applicant's own name and institution."""
+    """Build the recommendation letter so it looks like the letter students can print from the app."""
+    logo_path = _find_logo_path()
     buffer = BytesIO()
-    doc = SimpleDocTemplate(
+    doc = BaseDocTemplate(
         buffer, pagesize=A4,
-        topMargin=18 * mm, bottomMargin=14 * mm, leftMargin=20 * mm, rightMargin=20 * mm,
         title="FIN Internship Recommendation Letter",
     )
+    page_w, page_h = A4
+    frame = Frame(
+        18 * mm, 24 * mm, page_w - 36 * mm, page_h - 55 * mm,
+        leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0, id="letter-body",
+    )
+    doc.addPageTemplates([PageTemplate(
+        id="letter", frames=[frame],
+        onPage=lambda canvas, document: _draw_letter_page(canvas, document, logo_path),
+    )])
+
+    base = ParagraphStyle("LetterBase", parent=_styles["Normal"], fontName="Helvetica", textColor=TEXT, alignment=TA_LEFT)
+    ref_left = ParagraphStyle("LetterRefLeft", parent=base, fontName="Helvetica-Bold", fontSize=9.75, leading=11.2, textColor=INK)
+    ref_right = ParagraphStyle("LetterRefRight", parent=ref_left, alignment=TA_RIGHT)
+    row_label = ParagraphStyle("LetterRowLabel", parent=base, fontName="Helvetica-Bold", fontSize=9.75, leading=11.2)
+    row_value = ParagraphStyle("LetterRowValue", parent=base, fontSize=9.75, leading=11.2)
+    address_style = ParagraphStyle("LetterAddress", parent=base, fontName="Helvetica-Bold", fontSize=12, leading=19.2)
+    para_style = ParagraphStyle("LetterPara", parent=base, fontSize=12, leading=20.4, spaceAfter=12)
+    subject_style = ParagraphStyle("LetterSubject", parent=para_style, alignment=TA_CENTER, leading=13.8, spaceBefore=14.7, spaceAfter=19)
+    signature_style = ParagraphStyle("LetterSignature", parent=base, fontName="Helvetica-Bold", fontSize=12, leading=19.2)
+    wordmark_style = ParagraphStyle(
+        "LetterWordmark", parent=base, fontName="Helvetica-Bold", fontSize=19, leading=22,
+        textColor=INK, alignment=TA_CENTER, charSpace=2, spaceAfter=10.5,
+    )
+
     story: list = []
-    _header(story, "Internship / Attachment Letter")
+    if logo_path:
+        logo_w, logo_h = 40 * mm, 34 * mm
+        story.append(_LetterLogo(logo_path, logo_w, logo_h))
+        story.append(Spacer(1, 10.5))
+    else:
+        # Logo file not found: fall back to a text wordmark so the email still goes out.
+        story.append(Paragraph("FORTUNE", wordmark_style))
 
-    today = _formatted_date(datetime.now(timezone.utc))
+    today = _formatted_date(letter_date or datetime.now(timezone.utc))
     ref_table = Table(
-        [[Paragraph(f"<b>Our Ref:</b> {reference_no}", _body_style), Paragraph(f"<b>{today}</b>", _body_style)]],
-        colWidths=[89 * mm, 89 * mm],
+        [[Paragraph(f"Our Ref: {escape(reference_no)}", ref_left), Paragraph(today, ref_right)]],
+        colWidths=[(page_w - 36 * mm) / 2] * 2,
     )
-    ref_table.setStyle(TableStyle([("ALIGN", (1, 0), (1, 0), "RIGHT"), ("BOTTOMPADDING", (0, 0), (-1, -1), 0)]))
+    ref_table.setStyle(TableStyle([
+        ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 16.5),
+    ]))
     story.append(ref_table)
-    story.append(Spacer(1, 4 * mm))
 
-    detail_rows = [
-        ("Name of Student:", student_name.upper()),
-        ("Institution:", institution.upper()),
-        ("Contact:", contact or "N/A"),
-        ("Program / Course of Study:", (program_course or "N/A").upper()),
-        ("Email Address:", email),
+    detail_rows = [("NAME OF STUDENT:", student_name), ("INSTITUTION:", institution)]
+    if index_number:
+        detail_rows.append(("INDEX NUMBER:", index_number))
+    detail_rows += [
+        ("CONTACT:", contact or "N/A"),
+        ("PROGRAM / COURSE OF STUDY:", program_course or "N/A"),
+        ("EMAIL ADDRESS:", email),
     ]
+    label_w, gap_w = 135, 9
+    value_w = page_w - 36 * mm - label_w - gap_w
     detail_table = Table(
-        [[Paragraph(f"<b>{label}</b>", _body_style), Paragraph(value, _body_style)] for label, value in detail_rows],
-        colWidths=[58 * mm, 120 * mm],
+        [[Paragraph(label, row_label), "", Paragraph(escape(value), row_value)] for label, value in detail_rows],
+        colWidths=[label_w, gap_w, value_w],
     )
-    detail_table.setStyle(TableStyle([("TOPPADDING", (0, 0), (-1, -1), 1), ("BOTTOMPADDING", (0, 0), (-1, -1), 1)]))
+    detail_table.setStyle(TableStyle([
+        ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 5.9),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ]))
     story.append(detail_table)
-    story.append(Spacer(1, 5 * mm))
+    story.append(Spacer(1, 17.55))
 
     story.append(Paragraph(
-        f"<b>The Human Resource Manager</b><br/>{host_company.upper()}<br/>{(host_location or '').upper()}",
-        _body_style,
+        f"THE HUMAN RESOURCE MANAGER<br/>{escape(host_company).upper()}<br/>{escape(host_location or '').upper()}",
+        address_style,
     ))
-    story.append(Spacer(1, 2 * mm))
-    story.append(Paragraph("Dear Sir/Madam,", _body_style))
-    story.append(Paragraph("<u><b>Internship / Attachment</b></u>", _subject_style))
+    story.append(Paragraph("Dear Sir/Madam,", para_style))
+    story.append(Paragraph("<u>INTERNSHIP / ATTACHMENT</u>", ParagraphStyle("LetterSubjectBold", parent=subject_style, fontName="Helvetica-Bold")))
 
-    program_phrase = program_course or "their program of study"
+    program_phrase = escape(program_course or "their program of study")
+    opportunity_phrase = f", specifically for <b>{escape(opportunity)}</b>" if opportunity else ""
     story.append(Paragraph(
-        f"We write on behalf of the Fortune Intern Network (FIN) to recommend <b>{student_name}</b>, "
-        f"a student of {institution} reading {program_phrase}, for an internship/industrial attachment "
-        f"opportunity in your esteemed organization.",
-        _body_style,
+        f"We write on behalf of the Fortune Intern Network (FIN) to recommend <b>{escape(student_name)}</b>, "
+        f"a student of {escape(institution)} reading {program_phrase}, for an internship/industrial attachment "
+        f"opportunity in your esteemed organization{opportunity_phrase}.",
+        para_style,
     ))
     story.append(Paragraph(
         "We believe this internship will provide valuable practical experience, strengthen professional "
         "skills, and complement the applicant's academic training. We are confident that the applicant "
         "will demonstrate discipline, professionalism, and a strong commitment throughout the internship.",
-        _body_style,
+        para_style,
     ))
     story.append(Paragraph(
         "We kindly request that you consider granting this opportunity for a duration that suits your "
-        "organization's schedule. For any further information, please feel free to contact us on "
-        "<b>fortuneintern.gh@gmail.com</b> or <b>+233 25 703 8948</b>.",
-        _body_style,
+        "organization's schedule. For any further information, please feel free to contact us using the "
+        "organization's official contact information.",
+        para_style,
     ))
-    story.append(Paragraph("Thank you for your support and consideration.", _body_style))
+    story.append(Paragraph("Thank you for your support and consideration.", para_style))
 
-    story.append(Spacer(1, 4 * mm))
-    story.append(Paragraph("Yours sincerely,", _body_style))
-    story.append(Spacer(1, 2 * mm))
-    story.append(_build_signature_drawing())
-    story.append(Spacer(1, 1 * mm))
-    story.append(Paragraph("<b>Emmanuel Amoasi</b>", _body_style))
-    story.append(Paragraph("<b>Managing Director</b><br/>Fortune Intern Network", _body_style))
-
-    story.append(Spacer(1, 8 * mm))
-    story.append(HRFlowable(width="100%", thickness=0.8, color=GOLD, spaceBefore=4, spaceAfter=4))
-    story.append(_footer())
+    signature = _build_signature_drawing()
+    signature.hAlign = "LEFT"
+    story.append(KeepTogether([
+        Paragraph("Yours sincerely,", ParagraphStyle("LetterSignOff", parent=signature_style, spaceBefore=21)),
+        signature,
+        Paragraph("Emmanuel Amoasi<br/>Managing Director<br/>Fortune Intern Network", signature_style),
+    ]))
 
     doc.build(story)
     return buffer.getvalue()
