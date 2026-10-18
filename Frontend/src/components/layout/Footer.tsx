@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import logo from "../../assets/attach1.png";
 import Icon from "../ui/Icon";
 import { openCookieSettings } from "../../services/consent";
@@ -5,16 +6,16 @@ import { openCookieSettings } from "../../services/consent";
 function FooterColumn({ title, links }: { title: string; links: { name: string; href: string }[] }) {
   return (
     <div>
-      <p className="text-sm font-bold">{title}</p>
+      <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">{title}</p>
       <div className="flex flex-col items-start gap-3 mt-4">
         {links.map((link) => (
-          <a
+          <Link
             key={link.name}
-            href={link.href}
+            to={link.href}
             className="text-xs text-white/55 hover:text-white transition-colors"
           >
             {link.name}
-          </a>
+          </Link>
         ))}
       </div>
     </div>
@@ -23,7 +24,7 @@ function FooterColumn({ title, links }: { title: string; links: { name: string; 
 
 export default function Footer() {
   return (
-    <footer className="bg-footer text-white">
+    <footer className="bg-footer text-white border-t-4 border-accent">
       <div className="landing-container py-12 grid sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr] gap-10">
         <div>
           <div className="flex items-center gap-3">
@@ -34,7 +35,7 @@ export default function Footer() {
             />
             <div>
               <p className="font-display text-xl">Fortune Intern Network</p>
-              <p className="text-[10px] tracking-widest uppercase text-emerald-300">
+              <p className="text-[10px] tracking-widest uppercase text-accent">
                 Bridging Dreams and Careers.
               </p>
             </div>
@@ -57,7 +58,7 @@ export default function Footer() {
         <FooterColumn
           title="Company"
           links={[
-            { name: "About FIN", href: "/about" },
+            { name: "About Us", href: "/about" },
             { name: "Contact", href: "/contact" },
             { name: "Privacy Policy", href: "/privacy-policy" },
             { name: "Terms & Conditions", href: "/terms" },
@@ -65,14 +66,14 @@ export default function Footer() {
         />
 
         <div>
-          <p className="text-sm font-bold">Follow Us</p>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">Follow Us</p>
           <div className="flex flex-wrap items-center gap-3 mt-4">
             <a
               href="https://www.linkedin.com/company/fortune-intern-network/"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Fortune Intern on LinkedIn"
-              className="w-10 h-10 rounded-xl bg-white/10 text-white/70 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-colors"
+              className="w-10 h-10 rounded-xl bg-white/10 text-white/70 flex items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors"
             >
               <Icon name="linkedin" className="w-5 h-5" />
             </a>
@@ -81,7 +82,7 @@ export default function Footer() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Fortune Intern WhatsApp Channel"
-              className="w-10 h-10 rounded-xl bg-white/10 text-white/70 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-colors"
+              className="w-10 h-10 rounded-xl bg-white/10 text-white/70 flex items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors"
             >
               <Icon name="whatsapp" className="w-5 h-5" />
             </a>
@@ -90,7 +91,7 @@ export default function Footer() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Fortune Intern on X"
-              className="w-10 h-10 rounded-xl bg-white/10 text-white/70 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-colors"
+              className="w-10 h-10 rounded-xl bg-white/10 text-white/70 flex items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors"
             >
               <Icon name="x" className="w-5 h-5" />
             </a>
@@ -99,7 +100,7 @@ export default function Footer() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Fortune Intern on Instagram"
-              className="w-10 h-10 rounded-xl bg-white/10 text-white/70 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-colors"
+              className="w-10 h-10 rounded-xl bg-white/10 text-white/70 flex items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors"
             >
               <Icon name="instagram" className="w-5 h-5" />
             </a>
@@ -107,9 +108,9 @@ export default function Footer() {
         </div>
 
         <div>
-          <p className="text-sm font-bold">Customer Service</p>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">Customer Service</p>
           <a
-            href="tel:0200313672"
+            href="tel:+233200313672"
             aria-label="Call Fortune Intern Customer Service"
             className="inline-flex mt-4 text-sm text-white/70 hover:text-white transition-colors"
           >
@@ -117,7 +118,7 @@ export default function Footer() {
           </a>
           <br />
           <a
-            href="tel:0257038948"
+            href="tel:+233257038948"
             aria-label="Call Fortune Intern Customer Service"
             className="inline-flex text-sm text-white/70 hover:text-white transition-colors"
           >
