@@ -321,7 +321,7 @@ export default function ProgramsPage({
             </div>
           )}
           <p className="px-4 pt-2 pb-1 text-xs text-muted-foreground">
-            {filtered.length} programs found
+            {loading ? "Loading programs..." : `${filtered.length} programs found`}
           </p>
           {!loading && !error && filtered.length === 0 && (
             <p className="px-4 py-8 text-center text-sm text-muted-foreground">

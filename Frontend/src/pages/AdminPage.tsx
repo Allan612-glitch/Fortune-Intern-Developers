@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import AsyncState from "../components/AsyncState";
 import {
   createAdminProgram,
   listAdminApplications,
@@ -48,39 +49,63 @@ export default function AdminPage() {
   const [annContent, setAnnContent] = useState("");
   const [published, setPublished] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [publishing, setPublishing] = useState(false);
 
   useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setLoadError("");
     Promise.all([listAdminUsers(), listAdminApplications(), listAnnouncements(), listPrograms("", "All", "all")])
       .then(([loadedUsers, loadedApplications, loadedAnnouncements, loadedPrograms]) => {
+        if (!active) return;
         setUsers(loadedUsers);
         setApplications(loadedApplications);
         setAnnouncements(loadedAnnouncements);
         setPrograms(loadedPrograms);
       })
-      .catch((requestError) => setError(requestError instanceof Error ? requestError.message : "Unable to load admin data."));
-  }, []);
+      .catch((requestError) => {
+        if (active) setLoadError(requestError instanceof Error ? requestError.message : "Unable to load admin data.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [retryCount]);
 
   const toggleSuspend = async (account: AdminUser) => {
+    setBusyKey(`user-${account.id}`);
     try {
       const updated = await setUserSuspension(account.id, !account.is_suspended);
       setUsers((current) => current.map((user) => user.id === updated.id ? updated : user));
       setError("");
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to update user status.");
+    } finally {
+      setBusyKey(null);
     }
   };
 
   const updateStatus = async (application: BackendApplication, status: string) => {
+    setBusyKey(`app-${application.id}`);
     try {
       const updated = await setApplicationStatus(application.id, status);
       setApplications((current) => current.map((row) => row.id === updated.id ? updated : row));
       setError("");
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to update application status.");
+    } finally {
+      setBusyKey(null);
     }
   };
 
   const submitAnnouncement = async () => {
+    setPublishing(true);
     try {
       await publishAnnouncement(annTitle, annContent);
       setAnnouncements(await listAnnouncements());
@@ -88,6 +113,8 @@ export default function AdminPage() {
       setError("");
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to publish announcement.");
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -160,6 +187,16 @@ export default function AdminPage() {
 
       {error && <p className="mb-4 text-sm text-red-600" role="alert">{error}</p>}
 
+      {loading ? (
+        <AsyncState kind="loading" message="Loading admin data..." />
+      ) : loadError ? (
+        <AsyncState
+          kind="error"
+          message={loadError}
+          onRetry={() => setRetryCount((count) => count + 1)}
+        />
+      ) : (
+      <>
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {[
@@ -245,9 +282,10 @@ export default function AdminPage() {
                   {!user.is_admin && (
                     <button
                       onClick={() => void toggleSuspend(user)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${user.is_suspended ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-red-100 text-red-700 hover:bg-red-200"}`}
+                      disabled={busyKey === `user-${user.id}`}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:cursor-wait disabled:opacity-60 ${user.is_suspended ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-red-100 text-red-700 hover:bg-red-200"}`}
                     >
-                      {user.is_suspended ? "Unsuspend" : "Suspend"}
+                      {busyKey === `user-${user.id}` ? "Updating..." : user.is_suspended ? "Unsuspend" : "Suspend"}
                     </button>
                   )}
                 </div>
@@ -289,11 +327,11 @@ export default function AdminPage() {
                   {app.resume_filename && <button onClick={() => void saveResumeDownload(app.id, true).catch((requestError) => setError(requestError instanceof Error ? requestError.message : "Unable to download resume."))} className="text-xs font-semibold text-primary underline">Resume</button>}
                   {!(["accepted", "rejected"] as string[]).includes(app.status.toLowerCase()) && (
                     <>
-                      <button onClick={() => void updateStatus(app, "accepted")} className="text-xs px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors font-semibold">
-                        Accept
+                      <button onClick={() => void updateStatus(app, "accepted")} disabled={busyKey === `app-${app.id}`} className="text-xs px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors font-semibold disabled:cursor-wait disabled:opacity-60">
+                        {busyKey === `app-${app.id}` ? "Updating..." : "Accept"}
                       </button>
-                      <button onClick={() => void updateStatus(app, "rejected")} className="text-xs px-3 py-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors font-semibold">
-                        Reject
+                      <button onClick={() => void updateStatus(app, "rejected")} disabled={busyKey === `app-${app.id}`} className="text-xs px-3 py-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors font-semibold disabled:cursor-wait disabled:opacity-60">
+                        {busyKey === `app-${app.id}` ? "Updating..." : "Reject"}
                       </button>
                     </>
                   )}
@@ -502,16 +540,19 @@ export default function AdminPage() {
               </div>
               <button
                 onClick={() => void submitAnnouncement()}
-                className="w-full py-3 rounded-xl text-white font-semibold hover:opacity-90 transition-opacity"
+                disabled={publishing}
+                className="w-full py-3 rounded-xl text-white font-semibold hover:opacity-90 transition-opacity disabled:cursor-wait disabled:opacity-60"
                 style={{
                   background: "linear-gradient(135deg, #2D3561, #3d4a8a)",
                 }}
               >
-                Publish Announcement
+                {publishing ? "Publishing..." : "Publish Announcement"}
               </button>
             </div>
           )}
         </div>
+      )}
+      </>
       )}
     </div>
   );

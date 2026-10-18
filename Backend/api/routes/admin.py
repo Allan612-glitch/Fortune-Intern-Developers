@@ -260,7 +260,7 @@ def update_application_status(application_id: str, payload: AdminApplicationStat
 		try:
 			reference_no = f"FIN/{datetime.now(timezone.utc).year}/{str(row.id)[:8].upper()}"
 			letter_pdf = documents.build_recommendation_letter_pdf(
-				student_name=applicant.name,
+				student_name=row.applicant_name or applicant.name,
 				institution=row.applicant_institution or "Not specified",
 				program_course=row.applicant_course,
 				contact=row.applicant_contact,
@@ -268,6 +268,9 @@ def update_application_status(application_id: str, payload: AdminApplicationStat
 				host_company=row.host_company_name or (program_record.company if program_record else "Fortune Intern Network"),
 				host_location=row.host_company_address or (program_record.location if program_record else None),
 				reference_no=reference_no,
+				index_number=row.student_index_number,
+				opportunity=program_name,
+				letter_date=row.created_at,
 			)
 			assessment_pdf = documents.build_assessment_form_pdf()
 			send_application_documents_email(

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { NotificationItem } from "../../services/platform";
 import logo from "../../assets/attach1.png";
 import {
@@ -38,10 +39,12 @@ export default function TopBar({
   setNotifCount,
   setNotificationError,
 }: TopBarProps) {
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
   const handleToggleNotifications = () => {
     const shouldOpen = !notificationsOpen;
     onToggleNotifications();
     if (shouldOpen) {
+      setLoadingNotifications(true);
       Promise.all([listNotifications(), getUnreadNotificationCount()])
         .then(([items, unread]) => {
           setNotifications(items);
@@ -52,7 +55,8 @@ export default function TopBar({
           setNotificationError(
             error instanceof Error ? error.message : "Unable to load notifications."
           )
-        );
+        )
+        .finally(() => setLoadingNotifications(false));
     }
   };
 
@@ -125,7 +129,19 @@ export default function TopBar({
                 <p className="px-4 py-2 text-xs text-red-600" role="alert">{notificationError}</p>
               )}
               <div className="max-h-80 overflow-y-auto">
-                {notifications.length ? (
+                {loadingNotifications && notifications.length === 0 ? (
+                  <div
+                    className="flex items-center justify-center gap-3 px-4 py-6 text-sm text-muted-foreground"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <span
+                      className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent"
+                      aria-hidden="true"
+                    />
+                    Loading notifications...
+                  </div>
+                ) : notifications.length ? (
                   notifications.slice(0, 8).map((n) => (
                     <button
                       key={n.id}

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Link } from "react-router-dom"
-
 import logo from "../assets/attach1.png"
+
+import Footer from "../components/layout/Footer"
 
 import { listPrograms, type Program } from "../services/platform"
 
@@ -788,122 +788,7 @@ export default function LandingPage({
         </section>
       </main>
 
-      <footer className="bg-footer text-white border-t-4 border-accent">
-        <div className="landing-container py-12 grid sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1fr_1fr] gap-10">
-          <div>
-            <div className="flex items-center gap-3">
-              <img
-                src={logo}
-                alt=""
-                className="w-11 h-11 rounded-xl object-contain bg-white"
-              />
-              <div>
-                <p className="font-display text-xl">Fortune Intern Network</p>
-                <p className="text-[10px] tracking-widest uppercase text-accent">
-                  Bridging Dreams and Careers.
-                </p>
-              </div>
-            </div>
-            <p className="text-sm text-white/55 mt-5 max-w-xs leading-relaxed">
-              Connecting students with opportunities that matter.
-            </p>
-          </div>
-          <FooterColumn
-            title="Platform"
-            links={[
-              "Find Internships",
-
-              "How It Works",
-
-              "Application Tracking",
-
-              "Student Dashboard",
-            ]}
-          />
-          <div>
-            <FooterColumn
-              title="Company"
-              links={[
-                "About Us",
-
-                "Contact",
-
-                "Privacy Policy",
-
-                "Terms of Service",
-              ]}
-            />
-          </div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">
-              Follow Us
-            </p>
-            <div className="flex flex-wrap items-center gap-3 mt-4">
-              <a
-                href="https://www.linkedin.com/company/fortune-intern-network/"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Fortune Intern on LinkedIn"
-                className="w-10 h-10 rounded-xl bg-white/10 text-white/70 flex items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors"
-              >
-                <Icon name="linkedin" className="w-5 h-5" />
-              </a>
-              <a
-                href="https://whatsapp.com/channel/0029Val97zy1yT2BGkOZi511"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Fortune Intern WhatsApp Channel"
-                className="w-10 h-10 rounded-xl bg-white/10 text-white/70 flex items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors"
-              >
-                <Icon name="whatsapp" className="w-5 h-5" />
-              </a>
-              <a
-                href="https://x.com/fortune_intern1"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Fortune Intern on X"
-                className="w-10 h-10 rounded-xl bg-white/10 text-white/70 flex items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors"
-              >
-                <Icon name="x" className="w-5 h-5" />
-              </a>
-              <a
-                href="https://www.instagram.com/fortuneintern/"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Fortune Intern on Instagram"
-                className="w-10 h-10 rounded-xl bg-white/10 text-white/70 flex items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors"
-              >
-                <Icon name="instagram" className="w-5 h-5" />
-              </a>
-            </div>
-          </div>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">
-              Customer Service
-            </p>
-            <a
-              href="tel:+233200313672"
-              aria-label="Call Fortune Intern Customer Service"
-              className="inline-flex mt-4 text-sm text-white/70 hover:text-white transition-colors"
-            >
-              0200313672
-            </a>
-            <br />
-            <a
-              href="tel:+233257038948"
-              aria-label="Call Fortune Intern Customer Service"
-              className="inline-flex text-sm text-white/70 hover:text-white transition-colors"
-            >
-              0257038948
-            </a>
-          </div>
-        </div>
-        <div className="border-t border-white/10">
-          <div className="landing-container py-5 text-xs text-white/40">
-            © 2026 Fortune Intern Network. All rights reserved.
-          </div>
-        </div>
-      </footer>
+      <Footer />
       {selectedProgram && (
         <OpportunityDetailsDialog
           program={selectedProgram}
@@ -1198,57 +1083,6 @@ function OpportunityDetailsDialog({
         </div>
       </div>
     </dialog>
-  )
-}
-
-interface FooterColumnProps {
-  title: string
-  links: string[]
-}
-
-function FooterColumn({ title, links }: FooterColumnProps) {
-  const routes: Record<string, string> = {
-    "Find Internships": "#internships",
-    "How It Works": "#how-it-works",
-    "Application Tracking": "/app/applications",
-    "Student Dashboard": "/app/dashboard",
-    "About Us": "/about",
-    Contact: "/contact",
-    "Privacy Policy": "/privacy-policy",
-    "Terms of Service": "/terms",
-  }
-
-  return (
-    <div>
-      <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">
-        {title}
-      </p>
-      <div className="flex flex-col items-start gap-3 mt-4">
-        {links.map((label) => {
-          const to = routes[label]
-          const className =
-            "text-xs text-white/55 hover:text-white transition-colors"
-
-          if (!to) {
-            return null
-          }
-
-          if (to.startsWith("#")) {
-            return (
-              <a key={label} href={to} className={className}>
-                {label}
-              </a>
-            )
-          }
-
-          return (
-            <Link key={label} to={to} className={className}>
-              {label}
-            </Link>
-          )
-        })}
-      </div>
-    </div>
   )
 }
 

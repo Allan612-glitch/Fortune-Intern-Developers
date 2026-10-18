@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { AppUser, AppPage } from "../App";
+import AsyncState from "../components/AsyncState";
 import { getDashboard, listPrograms, type DashboardSummary, type Program } from "../services/platform";
 
 const stats = [
@@ -81,14 +82,37 @@ interface HomePageProps {
 export default function HomePage({ user, setPage }: HomePageProps) {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [dashboard, setDashboard] = useState<DashboardSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
   useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError("");
     Promise.all([listPrograms(), getDashboard()])
       .then(([openPrograms, summary]) => {
+        if (!active) return;
         setPrograms(openPrograms);
         setDashboard(summary);
       })
-      .catch(() => undefined);
-  }, []);
+      .catch((requestError) => {
+        if (active) {
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Unable to load your opportunities.",
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [retryCount]);
+
+  const stat = (value?: number) => (loading || error ? "–" : String(value ?? 0));
 
   return (
     <div className="overflow-hidden bg-white">
@@ -140,16 +164,19 @@ export default function HomePage({ user, setPage }: HomePageProps) {
                   </p>
                 </div>
                 <span className="text-[10px] font-bold px-2.5 py-1.5 rounded-full bg-secondary text-primary">
-                  {dashboard?.active_applications ?? 0} active
+                  {loading ? "Loading..." : error ? "Unavailable" : `${dashboard?.active_applications ?? 0} active`}
                 </span>
               </div>
               <div className="p-5">
-                <div className="grid grid-cols-4 gap-2 mb-6">
+                <div
+                  className={`grid grid-cols-4 gap-2 mb-6 ${loading ? "motion-safe:animate-pulse" : ""}`}
+                  aria-busy={loading}
+                >
                   {[
-                    ["Applications", String(dashboard?.total_applications ?? 0)],
-                    ["Active", String(dashboard?.active_applications ?? 0)],
-                    ["Interviews", String(dashboard?.interviews ?? 0)],
-                    ["Offers", String(dashboard?.accepted_applications ?? 0)],
+                    ["Applications", stat(dashboard?.total_applications)],
+                    ["Active", stat(dashboard?.active_applications)],
+                    ["Interviews", stat(dashboard?.interviews)],
+                    ["Offers", stat(dashboard?.accepted_applications)],
                   ].map(([label, value], index) => (
                     <div
                       key={label}
@@ -163,6 +190,12 @@ export default function HomePage({ user, setPage }: HomePageProps) {
                   ))}
                 </div>
                 <div className="space-y-3">
+                  {loading && (
+                    <div
+                      className="h-16 rounded-xl bg-muted motion-safe:animate-pulse"
+                      aria-hidden="true"
+                    />
+                  )}
                   {(dashboard?.recent_applications || []).slice(0, 2).map((application) => (
                     <div
                       key={application.id}
@@ -181,27 +214,6 @@ export default function HomePage({ user, setPage }: HomePageProps) {
                       <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-secondary text-primary">{application.status}</span>
                     </div>
                   ))}
-                </div>
-                <div className="mt-5 bg-primary rounded-2xl p-4 text-white flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-accent text-accent-foreground flex items-center justify-center">
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      {featureIcons[0]}
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold">
-                      Super improved your letter
-                    </p>
-                    <p className="text-[10px] text-white/70 mt-0.5">
-                      Ready to send to Flutterwave
-                    </p>
-                  </div>
-                  <CheckIcon />
                 </div>
               </div>
             </div>
@@ -327,6 +339,31 @@ export default function HomePage({ user, setPage }: HomePageProps) {
             View all roles
           </button>
         </div>
+        {loading && (
+          <div
+            className="grid md:grid-cols-3 gap-4"
+            aria-label="Loading opportunities"
+            aria-live="polite"
+          >
+            <HomeCardSkeleton />
+            <HomeCardSkeleton />
+            <HomeCardSkeleton />
+          </div>
+        )}
+        {!loading && error && (
+          <AsyncState
+            kind="error"
+            message={error}
+            onRetry={() => setRetryCount((count) => count + 1)}
+          />
+        )}
+        {!loading && !error && programs.length === 0 && (
+          <AsyncState
+            kind="empty"
+            message="No open programs right now. Please check back soon."
+          />
+        )}
+        {!loading && !error && programs.length > 0 && (
         <div className="grid md:grid-cols-3 gap-4">
           {programs.slice(0, 3).map((program, index) => (
             <article
@@ -361,6 +398,7 @@ export default function HomePage({ user, setPage }: HomePageProps) {
             </article>
           ))}
         </div>
+        )}
       </section>
 
       <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-14 lg:pb-20">
@@ -405,5 +443,18 @@ function CheckIcon({ className = "text-accent" }: { className?: string }) {
         d="M5 13l4 4L19 7"
       />
     </svg>
+  );
+}
+
+function HomeCardSkeleton() {
+  return (
+    <div className="rounded-2xl border border-border bg-white p-5" aria-hidden="true">
+      <div className="motion-safe:animate-pulse">
+        <div className="h-11 w-11 rounded-xl bg-muted" />
+        <div className="mt-5 h-4 w-4/5 rounded bg-muted" />
+        <div className="mt-3 h-3 w-1/2 rounded bg-muted" />
+        <div className="mt-5 h-10 w-full rounded-xl bg-muted" />
+      </div>
+    </div>
   );
 }

@@ -341,7 +341,7 @@ export default function AuthPage({
       <div className="w-full flex items-center justify-center px-4 py-20 sm:px-6">
         <div className="w-full max-w-md">
           <div className="text-center mb-6">
-            <p className="text-xs uppercase tracking-[0.18em] font-bold text-emerald-700">
+            <p className="text-xs uppercase tracking-[0.18em] font-bold text-[#976a07]">
               Student Portal
             </p>
             <p className="text-sm text-muted-foreground mt-2">
@@ -756,7 +756,7 @@ function PasswordRecoveryModal({
       <div className="w-full max-w-sm bg-white rounded-3xl border border-border shadow-2xl p-6 slide-in">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[10px] uppercase tracking-widest font-bold text-emerald-700">
+            <p className="text-[10px] uppercase tracking-widest font-bold text-[#976a07]">
               Student account
             </p>
             <h2
@@ -788,7 +788,7 @@ function PasswordRecoveryModal({
         </div>
         {sent ? (
           <div className="mt-5">
-            <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+            <div className="w-11 h-11 rounded-xl bg-accent/20 text-[#976a07] flex items-center justify-center">
               <svg
                 className="w-5 h-5"
                 fill="none"
