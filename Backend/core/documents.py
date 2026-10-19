@@ -58,8 +58,13 @@ _subject_style = ParagraphStyle("FinSubject", parent=_body_style, alignment=TA_C
 
 
 def _header(story: list, title: str) -> None:
-    story.append(Paragraph("FORTUNE", _brand_style))
-    story.append(Paragraph('<font color="#EDB523">INTERN</font> <font color="#12365E">NETWORK</font>', _tagline_style))
+    logo_path = _find_logo_path()
+    if logo_path:
+        story.append(_LetterLogo(logo_path, 32 * mm, 25 * mm))
+        story.append(Spacer(1, 4))
+    else:
+        story.append(Paragraph("FORTUNE", _brand_style))
+        story.append(Paragraph('<font color="#EDB523">INTERN</font> <font color="#12365E">NETWORK</font>', _tagline_style))
     story.append(Paragraph(title, _title_style))
     story.append(HRFlowable(width="100%", thickness=1.4, color=NAVY, spaceBefore=4, spaceAfter=10))
 
