@@ -26,6 +26,7 @@ from Backend.api.routes.programs import get_program
 from Backend.api.routes.auth import verify_email
 from Backend.core.captcha import verify_turnstile
 from Backend.core.config import settings
+from Backend.core.documents import build_assessment_form_pdf
 from Backend.core.login_risk import LoginRisk
 from Backend.core.rate_limit import enforce_rate_limit
 from Backend.core.security import (
@@ -477,6 +478,12 @@ class TestUnexpectedErrorMiddleware(unittest.TestCase):
 
 
 class TestAcceptedApplicationDocuments(unittest.TestCase):
+    def test_assessment_form_header_embeds_the_fin_logo(self):
+        assessment_pdf = build_assessment_form_pdf()
+
+        self.assertTrue(assessment_pdf.startswith(b"%PDF-"))
+        self.assertIn(b"/Subtype /Image", assessment_pdf)
+
     def test_application_reference_uses_year_and_zero_padded_sequence(self):
         engine = create_engine("sqlite://")
         SQLModel.metadata.create_all(engine)
