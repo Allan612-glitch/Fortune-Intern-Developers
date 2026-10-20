@@ -11,6 +11,7 @@ import AuthPage from "./pages/AuthPage"
 import MainApp from "./pages/MainApp"
 import AIChatWidget from "./components/AIChatWidget"
 import CookieConsent from "./components/CookieConsent"
+import InstallBanner from "./components/InstallBanner"
 import LandingPage from "./pages/LandingPage"
 import ForgotPasswordPage from "./pages/ForgotPasswordPage"
 import ResetPasswordPage from "./pages/ResetPasswordPage"
@@ -208,7 +209,8 @@ export default function App() {
   return (
     <>
       <Routes>
-        <Route
+       
+       <Route
           path="/"
           element={
             user ? (
@@ -325,6 +327,7 @@ export default function App() {
         />
       </Routes>
       <CookieConsent />
+      <InstallBanner />
     </>
   )
 }
