@@ -20,6 +20,9 @@
 # Keep the runtime logo as a regular Git blob so deployment builds receive the image bytes.
 src/assets/attach1.png -filter -diff -merge -text
 
+# PWA install icons must also be regular Git blobs: the manifest serves them as-is, and Vercel does not fetch LFS files.
+public/icons/*.png -filter -diff -merge -text
+
 # ---------------------------------------------------------------------------
 # Video
 # ---------------------------------------------------------------------------
