@@ -1,0 +1,16 @@
+# Fortune Intern Network
+
+> Fortune Intern Network connects students and internship seekers in Ghana with internship opportunities, and helps them discover, apply for and track internships in one place.
+
+## Main pages
+
+- [Home and open internships](https://fortuneintern.com/): browse current internship opportunities as a guest, then sign in to apply
+- [About us](https://fortuneintern.com/about): who we are
+- [Contact](https://fortuneintern.com/contact): how to reach the team
+- [Privacy policy](https://fortuneintern.com/privacy-policy): how personal data and cookies are handled
+- [Terms and conditions](https://fortuneintern.com/terms): terms of use and refund rules
+
+## Notes
+
+- Applying, tracking applications and student documents need a signed-in student account.
+- Customer service email: fortuneintern.gh@gmail.com

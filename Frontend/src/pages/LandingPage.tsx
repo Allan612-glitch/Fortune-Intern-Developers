@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import logo from "../assets/attach1.png"
+import heroImage from "../assets/Hero.webp"
+import studentImage from "../assets/About.webp"
 
 import Footer from "../components/layout/Footer"
 
@@ -10,12 +12,6 @@ interface LandingPageProps {
 
   onApplyToProgram: (programId: string) => void
 }
-
-const heroImage =
-  "https://images.unsplash.com/photo-1620829813573-7c9e1877706f?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=85&w=1200"
-
-const studentImage =
-  "https://images.unsplash.com/photo-1620829813947-ef4246827355?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=85&w=900"
 
 const navLinks = [
   ["Opportunities", "internships"],
@@ -211,7 +207,6 @@ export default function LandingPage({
           <button
             onClick={() => goTo("home")}
             className="flex items-center gap-2.5"
-            aria-label="Fortune Intern Network home"
           >
             <img
               src={logo}
@@ -325,6 +320,8 @@ export default function LandingPage({
                   src={heroImage}
                   alt="Young Ghanaian professional working on a laptop"
                   className="w-full h-full object-cover"
+                  fetchPriority="high"
+                  decoding="async"
                 />
               </div>
             </div>
@@ -627,6 +624,8 @@ export default function LandingPage({
                   src={studentImage}
                   alt="Ghanaian student preparing for her career"
                   className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
                 />
               </div>
               <div className="absolute -bottom-5 right-5 bg-white rounded-2xl border border-border p-4 max-w-52">
