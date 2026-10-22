@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react"
+import { lazy, Suspense, useEffect, useRef, useState } from "react"
+import { GoogleOAuthProvider } from "@react-oauth/google"
 import {
   Navigate,
   Route,
@@ -7,21 +8,24 @@ import {
   useNavigate,
 } from "react-router-dom"
 
-import AuthPage from "./pages/AuthPage"
-import MainApp from "./pages/MainApp"
-import AIChatWidget from "./components/AIChatWidget"
 import CookieConsent from "./components/CookieConsent"
 import InstallBanner from "./components/InstallBanner"
 import LandingPage from "./pages/LandingPage"
-import ForgotPasswordPage from "./pages/ForgotPasswordPage"
-import ResetPasswordPage from "./pages/ResetPasswordPage"
-import About from "./pages/companypages/About"
-import Contact from "./pages/companypages/ContactUs"
-import PrivacyPolicy from "./pages/companypages/PrivacyPolicy"
-import Terms from "./pages/companypages/TAC"
 import Footer from "./components/layout/Footer"
 import { getCurrentUser, getProfile } from "./services/auth"
 import { getAccessToken, setAccessToken } from "./services/api"
+
+// Performance: these pages load only when a visitor opens them, so the
+// landing page no longer downloads the logged-in app, admin code, etc.
+const AuthPage = lazy(() => import("./pages/AuthPage"))
+const MainApp = lazy(() => import("./pages/MainApp"))
+const AIChatWidget = lazy(() => import("./components/AIChatWidget"))
+const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"))
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"))
+const About = lazy(() => import("./pages/companypages/About"))
+const Contact = lazy(() => import("./pages/companypages/ContactUs"))
+const PrivacyPolicy = lazy(() => import("./pages/companypages/PrivacyPolicy"))
+const Terms = lazy(() => import("./pages/companypages/TAC"))
 
 export type AppUser = {
   name: string
@@ -177,21 +181,24 @@ export default function App() {
     user ? (
       <Navigate to={authenticatedPath} replace />
     ) : (
-      <AuthPage
-        initialMode={mode}
-        onBack={() => {
-          pendingProgramIdRef.current = null
-          setPendingProgramId(null)
-          navigate("/")
-        }}
-        onModeChange={(nextMode) => navigateAuth(`/${nextMode}`)}
-        onLogin={handleLogin}
-        onRegister={handleRegister}
-        showOTP={showOTP}
-        onOTPVerified={handleOTPVerified}
-        pendingEmail={pendingUser?.email || ""}
-        onForgotPassword={() => navigateAuth("/forgot-password")}
-      />
+      // Google's sign-in script now loads only on the login/register pages
+      <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+        <AuthPage
+          initialMode={mode}
+          onBack={() => {
+            pendingProgramIdRef.current = null
+            setPendingProgramId(null)
+            navigate("/")
+          }}
+          onModeChange={(nextMode) => navigateAuth(`/${nextMode}`)}
+          onLogin={handleLogin}
+          onRegister={handleRegister}
+          showOTP={showOTP}
+          onOTPVerified={handleOTPVerified}
+          pendingEmail={pendingUser?.email || ""}
+          onForgotPassword={() => navigateAuth("/forgot-password")}
+        />
+      </GoogleOAuthProvider>
     )
 
   if (authLoading) {
@@ -208,6 +215,17 @@ export default function App() {
 
   return (
     <>
+      <Suspense
+        fallback={
+          <div
+            className="flex min-h-screen items-center justify-center bg-cream text-sm text-muted-foreground"
+            role="status"
+            aria-live="polite"
+          >
+            Loading...
+          </div>
+        }
+      >
       <Routes>
        
        <Route
@@ -314,7 +332,9 @@ export default function App() {
                     setPendingProgramId(null)
                   }}
                 />
-                <AIChatWidget user={user} />
+                <Suspense fallback={null}>
+                  <AIChatWidget user={user} />
+                </Suspense>
               </>
             ) : (
               <Navigate to="/login" replace />
@@ -326,6 +346,7 @@ export default function App() {
           element={<Navigate to={user ? authenticatedPath : "/"} replace />}
         />
       </Routes>
+      </Suspense>
       <CookieConsent />
       <InstallBanner />
     </>
