@@ -877,11 +877,26 @@ function OTPModal({
   }, [resendSeconds]);
 
   const handleInput = (i: number, val: string) => {
-    if (!/^\d*$/.test(val)) return;
+    const digits = val.replace(/\D/g, "");
+    if (val && !digits) return;
+
+    if (digits.length > 1) {
+      const next = ["", "", "", "", "", ""];
+      digits
+        .slice(0, 6)
+        .split("")
+        .forEach((digit, index) => {
+          next[index] = digit;
+        });
+      setOtp(next);
+      refs.current[Math.min(digits.length, 5)]?.focus();
+      return;
+    }
+
     const next = [...otp];
-    next[i] = val.slice(-1);
+    next[i] = digits;
     setOtp(next);
-    if (val && i < 5) refs.current[i + 1]?.focus();
+    if (digits && i < 5) refs.current[i + 1]?.focus();
   };
 
   const handleKeyDown = (i: number, e: React.KeyboardEvent) => {
@@ -985,7 +1000,8 @@ function OTPModal({
               onKeyDown={(e) => handleKeyDown(i, e)}
               onPaste={handlePaste}
               className="otp-input"
-              maxLength={1} autoComplete="one-time-code"
+              maxLength={i === 0 ? 6 : 1}
+              autoComplete={i === 0 ? "one-time-code" : "off"}
               inputMode="numeric"
               style={{ borderColor: v ? "#2D3561" : undefined }}
             />
