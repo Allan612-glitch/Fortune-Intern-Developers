@@ -1,4 +1,4 @@
-import { apiRequest } from "./api";
+import { apiBlob, apiRequest } from "./api";
 
 export interface Program {
   id: string;
@@ -128,6 +128,13 @@ export function setUserSuspension(id: string, suspended: boolean) {
 
 export function listAdminApplications() {
   return apiRequest<BackendApplication[]>("/api/admin/applications");
+}
+
+export function exportAdminApplications(applicationIds: string[]) {
+  return apiBlob("/api/admin/applications/export", {
+    method: "POST",
+    body: JSON.stringify({ application_ids: applicationIds }),
+  });
 }
 
 export function setApplicationStatus(id: string, status: string) {

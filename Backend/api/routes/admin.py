@@ -1,10 +1,13 @@
 from datetime import datetime, timezone
+from io import BytesIO
 from uuid import UUID
 import logging
 
 from botocore.exceptions import BotoCoreError, ClientError
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill
 from sqlalchemy import and_, func, or_
 from sqlmodel import Session, select
 
@@ -145,6 +148,118 @@ def list_admin_applications(
 	record_audit_event(session, request, actor_id=admin.id, action="applications.list", object_type="application", object_id="all")
 	session.commit()
 	return results
+
+
+MAX_APPLICATION_EXPORT_ROWS = 50
+MAX_APPLICATION_EXPORT_BYTES = 20 * 1024 * 1024
+
+
+@router.post("/applications/export")
+def export_admin_applications(
+	request: Request,
+	application_ids: list[UUID] = Body(..., embed=True, min_length=1, max_length=MAX_APPLICATION_EXPORT_ROWS),
+	admin: user = Depends(get_current_admin),
+	session: Session = Depends(get_session),
+):
+	if len(set(application_ids)) != len(application_ids):
+		raise HTTPException(status_code=422, detail="Duplicate application IDs are not allowed")
+
+	rows = session.exec(
+		select(application, user.email, program.name)
+		.join(user, user.id == application.user_id)
+		.outerjoin(program, program.id == application.program_id)
+		.where(application.id.in_(application_ids))
+		.order_by(application.created_at.desc())
+	).all()
+	if len(rows) != len(application_ids):
+		raise HTTPException(status_code=404, detail="One or more selected applications no longer exist")
+
+	workbook = Workbook()
+	worksheet = workbook.active
+	worksheet.title = "Applications"
+	headers = [
+		"Application ID",
+		"Applicant Name",
+		"Email",
+		"Phone",
+		"Gender",
+		"Student Index Number",
+		"Institution",
+		"Course",
+		"Year of Study",
+		"Program",
+		"Company",
+		"Company Address",
+		"Suggested Company",
+		"Status",
+		"Submitted At",
+		"Resume Filename",
+	]
+	worksheet.append(headers)
+	for cell in worksheet[1]:
+		cell.data_type = "s"
+		cell.font = Font(bold=True, color="FFFFFF")
+		cell.fill = PatternFill("solid", fgColor="2D3561")
+
+	exported_text_bytes = 0
+	for row, email, program_name in rows:
+		values = [
+			str(row.id),
+			row.applicant_name or "",
+			email or "",
+			row.applicant_contact or "",
+			row.gender or "",
+			row.student_index_number or "",
+			row.applicant_institution or "",
+			row.applicant_course or "",
+			row.year_of_study or "",
+			program_name or "Program",
+			row.host_company_name or "",
+			row.host_company_address or "",
+			row.suggested_company or "",
+			row.status,
+			row.created_at.isoformat(),
+			row.resume_filename or "",
+		]
+		exported_text_bytes += sum(
+			len(value.encode("utf-8")) for value in values if isinstance(value, str)
+		)
+		if exported_text_bytes > MAX_APPLICATION_EXPORT_BYTES:
+			raise HTTPException(status_code=413, detail="Export exceeds the 20 MB download limit")
+		worksheet.append(values)
+		for cell in worksheet[worksheet.max_row]:
+			if isinstance(cell.value, str):
+				cell.data_type = "s"
+
+	for column in worksheet.columns:
+		worksheet.column_dimensions[column[0].column_letter].width = min(
+			max(max(len(str(cell.value or "")) for cell in column) + 2, 12),
+			40,
+		)
+	worksheet.freeze_panes = "A2"
+	worksheet.auto_filter.ref = worksheet.dimensions
+
+	output = BytesIO()
+	workbook.save(output)
+	content = output.getvalue()
+	if len(content) > MAX_APPLICATION_EXPORT_BYTES:
+		raise HTTPException(status_code=413, detail="Export exceeds the 20 MB download limit")
+
+	record_audit_event(
+		session,
+		request,
+		actor_id=admin.id,
+		action="applications.export",
+		object_type="application",
+		object_id=f"{len(application_ids)} selected",
+	)
+	session.commit()
+	filename = f"applications-{datetime.now(timezone.utc):%Y%m%d-%H%M%S}.xlsx"
+	return Response(
+		content=content,
+		media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+	)
 
 
 @router.get(
