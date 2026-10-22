@@ -59,11 +59,14 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
   return response.json() as Promise<T>;
 }
 
-export async function apiBlob(path: string) {
-  const headers = new Headers();
+export async function apiBlob(path: string, init: RequestInit = {}) {
+  const headers = new Headers(init.headers);
   const token = getAccessToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  const response = await fetch(apiUrl(path), { headers });
+  if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  const response = await fetch(apiUrl(path), { ...init, headers });
   if (!response.ok) {
     let message = `Download failed (${response.status})`;
     let code: string | undefined;
