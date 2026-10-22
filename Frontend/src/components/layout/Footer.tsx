@@ -12,7 +12,7 @@ function FooterColumn({ title, links }: { title: string; links: { name: string; 
           <Link
             key={link.name}
             to={link.href}
-            className="text-xs text-white/55 hover:text-white transition-colors"
+            className="text-xs text-white/75 hover:text-white transition-colors"
           >
             {link.name}
           </Link>
@@ -40,7 +40,7 @@ export default function Footer() {
               </p>
             </div>
           </div>
-          <p className="text-sm text-white/55 mt-5 max-w-xs leading-relaxed">
+          <p className="text-sm text-white/75 mt-5 max-w-xs leading-relaxed">
             Connecting students with opportunities that matter.
           </p>
         </div>
@@ -111,7 +111,7 @@ export default function Footer() {
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">Customer Service</p>
           <a
             href="tel:+233200313672"
-            aria-label="Call Fortune Intern Customer Service"
+            aria-label="Call Fortune Intern Customer Service on 0200313672"
             className="inline-flex mt-4 text-sm text-white/70 hover:text-white transition-colors"
           >
             0200313672
@@ -119,7 +119,7 @@ export default function Footer() {
           <br />
           <a
             href="tel:+233257038948"
-            aria-label="Call Fortune Intern Customer Service"
+            aria-label="Call Fortune Intern Customer Service on 0257038948"
             className="inline-flex text-sm text-white/70 hover:text-white transition-colors"
           >
             0257038948
@@ -128,12 +128,12 @@ export default function Footer() {
       </div>
 
       <div className="border-t border-white/10">
-        <div className="landing-container py-5 text-xs text-white/40 flex flex-wrap items-center justify-between gap-3">
+        <div className="landing-container py-5 text-xs text-white/75 flex flex-wrap items-center justify-between gap-3">
           <span>© 2026 Fortune Intern Network. All rights reserved.</span>
           <button
             type="button"
             onClick={openCookieSettings}
-            className="text-white/55 hover:text-white transition-colors underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 rounded"
+            className="text-white/75 hover:text-white transition-colors underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 rounded"
           >
             Cookie settings
           </button>
