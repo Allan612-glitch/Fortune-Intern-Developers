@@ -1,5 +1,7 @@
 import { useState } from "react";
+import logo from "../assets/attach1.png";
 import { deleteAccount } from "../services/auth";
+import Icon from "./ui/Icon";
 
 type DeletionStep = "confirm" | "feedback" | "final";
 
@@ -39,7 +41,18 @@ export default function AccountDeletionModal({
       aria-modal="true"
       aria-labelledby="delete-account-title"
     >
-      <div className="w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl bg-white border border-border shadow-2xl p-6 slide-in">
+      <div className="w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-3xl bg-white border border-border shadow-2xl p-6 sm:p-7 slide-in">
+        <div className="flex items-center gap-3 border-b border-border pb-4 mb-5">
+          <img
+            src={logo}
+            alt=""
+            className="h-11 w-11 rounded-xl border border-border object-contain"
+          />
+          <div>
+            <p className="font-semibold text-sm text-primary">Fortune Intern Network</p>
+            <p className="text-xs text-muted-foreground">Account settings</p>
+          </div>
+        </div>
         {step === "confirm" && (
           <>
             <h2 id="delete-account-title" className="font-display text-2xl text-primary">
@@ -70,53 +83,87 @@ export default function AccountDeletionModal({
         {step === "feedback" && (
           <>
             <h2 id="delete-account-title" className="font-display text-2xl text-primary">
-              Is there anything we could have done better?
+              We’d love to hear from you
             </h2>
-            <p className="text-sm text-muted-foreground leading-relaxed mt-3">
-              We’re sorry to see you go. If something went wrong, we’d appreciate hearing from you. You can contact us at any time:
+            <p className="text-sm text-muted-foreground leading-relaxed mt-2">
+              Is there anything we could have done better? If something went wrong, our team is happy to help.
             </p>
-            <div className="mt-4 space-y-2 text-sm">
-              <a className="block text-blue-700 underline" href="mailto:fortuneintern.gh@gmail.com">
-                fortuneintern.gh@gmail.com
-              </a>
-              <a className="block text-blue-700 underline" href="tel:+233200313672">
-                +233 20 031 3672
-              </a>
-              <a className="block text-blue-700 underline" href="tel:+233257038948">
-                +233 25 703 8948
-              </a>
-              <a
-                className="block text-blue-700 underline"
-                href="https://whatsapp.com/channel/0029Val97zy1yT2BGkOZi511"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                WhatsApp
-              </a>
-              <a
-                className="block text-blue-700 underline"
-                href="https://www.linkedin.com/company/fortune-intern-network/"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                LinkedIn
-              </a>
-              <a
-                className="block text-blue-700 underline"
-                href="https://x.com/fortune_intern1"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                X (@fortune_intern1)
-              </a>
-              <a
-                className="block text-blue-700 underline"
-                href="https://www.instagram.com/fortuneintern/"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Instagram (@fortuneintern)
-              </a>
+            <div className="mt-5 rounded-2xl border border-border bg-muted/20 p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Get in touch
+              </p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <a
+                  href="mailto:fortuneintern.gh@gmail.com"
+                  className="flex min-w-0 items-center gap-3 rounded-xl border border-border bg-white p-3 text-sm font-medium text-primary transition-colors hover:border-primary/30 hover:bg-secondary/50"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
+                    <Icon name="email" className="h-4 w-4" />
+                  </span>
+                  <span className="truncate">Email our team</span>
+                </a>
+                <a
+                  href="tel:+233200313672"
+                  className="flex items-center gap-3 rounded-xl border border-border bg-white p-3 text-sm font-medium text-primary transition-colors hover:border-primary/30 hover:bg-secondary/50"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                    <Icon name="phone" className="h-4 w-4" />
+                  </span>
+                  <span>+233 20 031 3672</span>
+                </a>
+                <a
+                  href="tel:+233257038948"
+                  className="flex items-center gap-3 rounded-xl border border-border bg-white p-3 text-sm font-medium text-primary transition-colors hover:border-primary/30 hover:bg-secondary/50 sm:col-span-2"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                    <Icon name="phone" className="h-4 w-4" />
+                  </span>
+                  <span>+233 25 703 8948</span>
+                </a>
+              </div>
+              <p className="mt-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Follow us
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {([
+                  {
+                    name: "WhatsApp",
+                    icon: "whatsapp",
+                    href: "https://whatsapp.com/channel/0029Val97zy1yT2BGkOZi511",
+                    color: "text-emerald-700 hover:bg-emerald-50",
+                  },
+                  {
+                    name: "LinkedIn",
+                    icon: "linkedin",
+                    href: "https://www.linkedin.com/company/fortune-intern-network/",
+                    color: "text-blue-700 hover:bg-blue-50",
+                  },
+                  {
+                    name: "X",
+                    icon: "x",
+                    href: "https://x.com/fortune_intern1",
+                    color: "text-slate-800 hover:bg-slate-100",
+                  },
+                  {
+                    name: "Instagram",
+                    icon: "instagram",
+                    href: "https://www.instagram.com/fortuneintern/",
+                    color: "text-pink-700 hover:bg-pink-50",
+                  },
+                ] as const).map((social) => (
+                  <a
+                    key={social.name}
+                    href={social.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Fortune Intern on ${social.name}`}
+                    title={social.name}
+                    className={`flex h-10 w-10 items-center justify-center rounded-xl border border-border transition-colors ${social.color}`}
+                  >
+                    <Icon name={social.icon} className="h-5 w-5" />
+                  </a>
+                ))}
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3 mt-6">
               <button
