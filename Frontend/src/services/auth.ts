@@ -112,6 +112,13 @@ export function getCurrentUser() {
   return apiRequest<ApiUser>("/api/auth/me");
 }
 
+export function deleteAccount(confirmation: string) {
+  return apiRequest<void>("/api/auth/me", {
+    method: "DELETE",
+    body: JSON.stringify({ confirmation }),
+  });
+}
+
 export function getProfile() {
   return apiRequest<ProfileData>("/api/profile");
 }

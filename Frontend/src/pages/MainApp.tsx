@@ -166,7 +166,9 @@ export default function MainApp({
             />
           )}
           {page === "apply" && <ApplyPage user={user} />}
-          {page === "profile" && <ProfilePage user={user} />}
+          {page === "profile" && (
+            <ProfilePage user={user} onAccountDeleted={onLogout} />
+          )}
           {page === "admin" && user.isAdmin && <AdminPage />}
         </div>
       </main>

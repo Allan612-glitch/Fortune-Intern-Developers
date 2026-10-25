@@ -3,7 +3,7 @@ import logging
 from secrets import randbelow, token_urlsafe
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 import resend
@@ -12,6 +12,7 @@ from sqlmodel import Session, select
 from Backend.api.deps import get_current_user
 from Backend.core.captcha import verify_turnstile
 from Backend.core.config import settings
+from Backend.core.audit import record_audit_event
 from Backend.core.login_risk import (
     LoginRisk,
     get_login_risk,
@@ -44,9 +45,14 @@ from Database.schemas import (
     VerificationStartResponse,
     VerifyEmailRequest,
 )
+from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 logger = logging.getLogger(__name__)
+
+
+class AccountDeletionRequest(BaseModel):
+    confirmation: str = Field(min_length=1, max_length=20)
 
 
 def _as_utc(value: datetime) -> datetime:
@@ -178,6 +184,11 @@ def login(
             },
         )
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended")
+    if account.deletion_requested_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This account is scheduled for deletion",
+        )
 
     return create_auth_response(account, fingerprint)
 
@@ -242,6 +253,11 @@ def google_login(
                 google_sub=subject,
             )
             session.add(account)
+    elif account.deletion_requested_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This account is scheduled for deletion",
+        )
 
     session.add(account)
     session.commit()
@@ -506,3 +522,33 @@ def reset_password(
 @router.get("/me", response_model=UserResponse)
 def me(account: user = Depends(get_current_user)):
     return serialize_user(account)
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+def delete_account(
+    payload: AccountDeletionRequest,
+    request: Request,
+    account: user = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    if payload.confirmation != "delete":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail='Type "delete" to confirm account deletion',
+        )
+
+    now = datetime.now(timezone.utc)
+    account.deletion_requested_at = now
+    account.updated_at = now
+    account.token_version += 1
+    session.add(account)
+    record_audit_event(
+        session,
+        request,
+        actor_id=account.id,
+        action="account.delete",
+        object_type="user",
+        object_id=None,
+    )
+    session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

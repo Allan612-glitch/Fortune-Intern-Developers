@@ -14,6 +14,7 @@ class user(SQLModel, table=True):
     is_admin: bool = Field(default=False, sa_column=Column("is_admin", Boolean, nullable=False, default=False))
     is_suspended: bool = Field(default=False, sa_column=Column("is_suspended", Boolean, nullable=False, default=False))
     token_version: int = Field(default=0, sa_column=Column("token_version", Integer, nullable=False, default=0))
+    deletion_requested_at: datetime | None = Field(default=None, sa_column=Column("deletion_requested_at", DateTime(timezone=True), nullable=True, index=True))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
 

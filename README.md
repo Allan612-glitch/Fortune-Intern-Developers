@@ -116,6 +116,7 @@ At minimum, configure:
 DATABASE_URL=postgresql+psycopg://fortune:fortune@localhost/fortune
 JWT_SECRET=use-a-random-secret-at-least-32-characters
 ADMIN_EMAIL=admin@example.com
+CRON_SECRET=use-a-random-secret-for-scheduled-account-cleanup
 CONTACT_EMAIL=fortuneintern.gh@gmail.com
 CORS_ORIGINS=http://localhost:5500,http://127.0.0.1:5500
 RESEND_API_KEY=re_your_resend_api_key
@@ -124,6 +125,7 @@ TURNSTILE_SECRET_KEY=your_cloudflare_turnstile_secret_key
 ```
 
 `JWT_SECRET` must be at least 32 characters. The backend will refuse to start with the example placeholder or an insecure short value.
+Account deletion disables access immediately and retains account data for 30 days before scheduled permanent deletion. Configure `CRON_SECRET` in the production deployment; the daily Vercel Cron job uses it to authenticate the cleanup endpoint. Run the database migration after deployment so the deletion schedule can be stored.
 Set `TURNSTILE_SECRET_KEY` in the backend environment and `VITE_TURNSTILE_SITE_KEY` in the frontend build environment. Signup presents a Cloudflare Turnstile challenge when an IP exceeds 500 signup requests per minute. Password login also challenges elevated-risk client groups; configure both keys so users can complete those challenges.
 
 Verify the sender domain in Resend before registering accounts. Registration emails contain a six-digit OTP that expires after 10 minutes and is locked after five incorrect guesses; the user can request a new code. `POST /api/auth/register` sends the OTP and `POST /api/auth/verify-email` accepts the email and OTP before the account is created.

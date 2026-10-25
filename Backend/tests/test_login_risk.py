@@ -330,6 +330,7 @@ class TestLoginRiskGates(unittest.TestCase):
             name="Test Person",
             is_admin=False,
             is_suspended=False,
+            deletion_requested_at=None,
             password_hash="stored-hash",
         )
         session = Mock()

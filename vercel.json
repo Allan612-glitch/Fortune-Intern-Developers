@@ -4,5 +4,11 @@
   ],
   "routes": [
     { "src": "/(.*)", "dest": "Backend/app.py" }
+  ],
+  "crons": [
+    {
+      "path": "/api/maintenance/purge-deleted-accounts",
+      "schedule": "0 3 * * *"
+    }
   ]
 }
