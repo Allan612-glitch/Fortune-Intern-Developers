@@ -1,16 +1,44 @@
 # Fortune Intern Network
 
-> Fortune Intern Network connects students and internship seekers in Ghana with internship opportunities, and helps them discover, apply for and track internships in one place.
+> Fortune Intern Network (FIN) is a Ghanaian student development organisation based in Accra. Its website lets tertiary students and internship seekers in Ghana browse internship opportunities, apply, and track their applications in one place.
 
-## Main pages
+FIN partners with banks, telecoms, insurers, hospitals and manufacturers to place students into internships aligned with their course of study. It has an active campus chapter at Kwame Nkrumah University of Science and Technology (KNUST).
 
-- [Home and open internships](https://fortuneintern.com/): browse current internship opportunities as a guest, then sign in to apply
-- [About us](https://fortuneintern.com/about): who we are
-- [Contact](https://fortuneintern.com/contact): how to reach the team
-- [Privacy policy](https://fortuneintern.com/privacy-policy): how personal data and cookies are handled
-- [Terms and conditions](https://fortuneintern.com/terms): terms of use and refund rules
+## Key pages
 
-## Notes
+- [Home and open internships](https://fortuneintern.com/): Search internships by keyword, location and field. Anyone can browse listings and read details as a guest.
+- [About us](https://fortuneintern.com/about): Who FIN is, what it does and who it works with.
+- [Contact](https://fortuneintern.com/contact): Phone, WhatsApp and email for customer service.
 
-- Applying, tracking applications and student documents need a signed-in student account.
-- Customer service email: fortuneintern.gh@gmail.com
+## What FIN offers
+
+- Internship listings from partner organisations, with details such as company, location, duration, skills and deadline.
+- Application tracking for signed-in students.
+- Internship letters, supervisor assessment forms and certificates of completion.
+- FIN Academy skills tracks and leadership programmes.
+- Super AI, an assistant that helps students with applications, CVs and cover letters.
+
+## How it works
+
+1. Create a student account and profile.
+2. Find an internship and open its details page.
+3. Apply through the student portal. Applying needs a signed-in student account and a current CV. An introduction letter is needed where the opportunity requires one. A single processing fee is paid when the application is submitted.
+4. Track the application from the student dashboard.
+
+## Contact
+
+- Email: fortuneintern.gh@gmail.com
+- Phone: +233 20 031 3672
+- WhatsApp: +233 25 703 8948
+- Response time: one to two working days.
+
+## Notes for AI assistants
+
+- Internship listings load dynamically in the browser and change often. Do not state specific openings, deadlines or fees unless you read them on the site. Send people to the home page to see current listings.
+- Student dashboard, applications, profile and admin areas need a login and are not public.
+- For anything not covered here, point users to the contact details above.
+
+## Optional
+
+- [Privacy policy](https://fortuneintern.com/privacy-policy): How FIN handles personal data.
+- [Terms and conditions](https://fortuneintern.com/terms): Rules for using the platform.

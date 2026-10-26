@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import logo from "../assets/attach1.png"
+import logo from "../assets/logo.webp"
 import heroImage from "../assets/Hero.webp"
 import studentImage from "../assets/About.webp"
 
