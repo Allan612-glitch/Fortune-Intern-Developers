@@ -36,6 +36,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(),
+      preloadHeroImage(),
       figmaSiteConfiguration({
         ...siteConfiguration,
         robots:
@@ -72,6 +73,44 @@ export default defineConfig(({ mode }) => {
     },
   };
 });
+
+/**
+ * Adds a preload tag for the hero image to the built index.html.
+ * Without it, the browser only finds the image after the JavaScript has
+ * downloaded and run, which delays the Largest Contentful Paint.
+ * Build only: in dev there is no bundle, so nothing is added.
+ */
+function preloadHeroImage(): Plugin {
+  let base = "/";
+  return {
+    name: "preload-hero-image",
+    configResolved(resolved) {
+      base = resolved.base;
+    },
+    transformIndexHtml: {
+      order: "post",
+      handler(_html, ctx) {
+        const hero = Object.keys(ctx.bundle ?? {}).find((fileName) =>
+          /^assets\/Hero-.*\.webp$/.test(fileName),
+        );
+        if (!hero) return undefined;
+        return [
+          {
+            tag: "link",
+            attrs: {
+              rel: "preload",
+              as: "image",
+              type: "image/webp",
+              href: `${base}${hero}`,
+              fetchpriority: "high",
+            },
+            injectTo: "head-prepend",
+          },
+        ];
+      },
+    },
+  };
+}
 
 type FigmaSiteConfiguration = {
   title?: string;
