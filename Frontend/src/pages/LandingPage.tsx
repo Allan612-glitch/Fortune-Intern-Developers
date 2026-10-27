@@ -1,5 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react"
-import logo from "../assets/attach1.png"
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
+import logo from "../assets/logo.webp"
 import heroImage from "../assets/Hero.webp"
 import studentImage from "../assets/About.webp"
 
@@ -83,6 +90,151 @@ const steps = [
   },
 ]
 
+// These four sections never change, so they are created once here instead of
+// on every render. React skips re-rendering an unchanged element, so typing in
+// the search box or opening the menu no longer re-renders them.
+const whyFinSection = (
+  <section id="about" className="section-space bg-white">
+    <div className="landing-container">
+      <SectionHeading
+        eyebrow="Why Fortune Intern Network?"
+        title="Everything You Need to Start Your Career Journey"
+        text="A focused platform built to help emerging professionals move from discovery to meaningful experience."
+      />
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-10">
+        {benefits.map((item) => (
+          <article
+            key={item.title}
+            className="group rounded-2xl border border-border p-6 bg-white hover-lift hover:border-primary/30"
+          >
+            <div className="w-11 h-11 rounded-xl bg-secondary text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+              <Icon name={item.icon} className="w-5 h-5" />
+            </div>
+            <h3 className="font-display text-xl text-primary mt-6">
+              {item.title}
+            </h3>
+            <p className="text-sm text-muted-foreground leading-relaxed mt-3">
+              {item.text}
+            </p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+)
+
+const stepsSection = (
+  <section id="how-it-works" className="section-space bg-surface">
+    <div className="landing-container">
+      <SectionHeading
+        eyebrow="Simple to apply"
+        title="Your Internship Journey Starts Here"
+        text="Three clear steps take you from creating your profile to beginning your professional journey."
+      />
+      <div className="grid md:grid-cols-3 gap-5 mt-12 relative">
+        <div className="hidden md:block absolute top-8 left-[16%] right-[16%] h-px bg-border" />
+        {steps.map((step) => (
+          <article key={step.number} className="relative text-center">
+            <div className="relative z-10 w-16 h-16 rounded-full bg-white border-2 border-accent text-primary mx-auto flex items-center justify-center font-mono font-bold shadow-sm">
+              {step.number}
+            </div>
+            <h3 className="font-display text-xl text-primary mt-5">
+              {step.title}
+            </h3>
+            <p className="text-sm text-muted-foreground leading-relaxed mt-3 max-w-xs mx-auto">
+              {step.text}
+            </p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+)
+
+const aboutUsSection = (
+  <section id="about-us" className="section-space bg-white">
+    <div className="landing-container">
+      <div className="max-w-3xl">
+        <p className="section-eyebrow">About us</p>
+        <h2 className="section-title">Bridging Dreams and Careers</h2>
+        <p className="section-copy">
+          Fortune Intern Network is a Ghanaian student development
+          organisation headquartered in Accra, with an active campus
+          chapter at Kwame Nkrumah University of Science and Technology.
+          We partner with leading banks, telecoms, insurers, hospitals
+          and manufacturers to place tertiary students into internships
+          aligned with their course of study.
+        </p>
+        <p className="section-copy">
+          Beyond placement, we issue verified internship letters,
+          supervisor assessment forms and certificates of completion, and
+          we run FIN Academy skills tracks and leadership programmes. Our
+          Super AI assistant supports students with applications, CVs and
+          cover letters every day of the year.
+        </p>
+      </div>
+    </div>
+  </section>
+)
+
+const contactSection = (
+  <section id="contact" className="section-space bg-surface">
+    <div className="landing-container">
+      <SectionHeading
+        eyebrow="Customer service"
+        title="Talk to Us Today"
+        text="Our team in Accra responds within one to two working days."
+      />
+      <div className="grid md:grid-cols-3 gap-4 mt-10 max-w-4xl mx-auto">
+        {[
+          {
+            label: "Call us",
+            value: "020 031 3672",
+            href: "tel:+233200313672",
+            icon: "phone",
+            external: false,
+          },
+          {
+            label: "WhatsApp",
+            value: "025 703 8948",
+            href: "https://wa.me/233257038948",
+            icon: "whatsapp",
+            external: true,
+          },
+          {
+            label: "Email",
+            value: "fortuneintern.gh@gmail.com",
+            href: "mailto:fortuneintern.gh@gmail.com",
+            icon: "mail",
+            external: false,
+          },
+        ].map((item) => (
+          <a
+            key={item.label}
+            href={item.href}
+            {...(item.external
+              ? { target: "_blank", rel: "noopener noreferrer" }
+              : {})}
+            className="group flex items-center gap-4 rounded-2xl border border-border p-5 bg-white transition-colors hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          >
+            <span className="w-11 h-11 flex-shrink-0 rounded-xl bg-secondary text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+              <Icon name={item.icon} className="w-5 h-5" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-primary">
+                {item.label}
+              </span>
+              <span className="block text-sm text-muted-foreground break-words">
+                {item.value}
+              </span>
+            </span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+)
+
 export default function LandingPage({
   onStudentPortal,
 
@@ -107,6 +259,13 @@ export default function LandingPage({
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null)
 
   const detailsTriggerRef = useRef<HTMLElement | null>(null)
+
+  // Stable function, so the memoized cards do not re-render when it is passed down.
+  const openDetails = useCallback((program: Program, trigger: HTMLElement) => {
+    detailsTriggerRef.current = trigger
+
+    setSelectedProgram(program)
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -318,7 +477,7 @@ export default function LandingPage({
               <div className="rounded-[2rem] overflow-hidden aspect-[4/4.3] bg-muted">
                 <img
                   src={heroImage}
-                  alt="Young Ghanaian professional working on a laptop"
+                  alt="Fortune Intern Network's testimonials flyer"
                   className="w-full h-full object-cover"
                   fetchPriority="high"
                   decoding="async"
@@ -494,127 +653,20 @@ export default function LandingPage({
               visiblePrograms.length > 0 && (
                 <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5 mt-6">
                   {visiblePrograms.map((program) => (
-                    <article
+                    <OpportunityCard
                       key={program.id}
-                      className="rounded-2xl border border-border p-5 bg-white hover-lift hover:border-primary/30"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span
-                          className="w-11 h-11 rounded-xl bg-secondary text-primary flex items-center justify-center text-xs font-bold"
-                          aria-hidden="true"
-                        >
-                          {program.company
-
-                            .split(/\s+/)
-
-                            .map((part) => part[0])
-
-                            .join("")
-
-                            .slice(0, 2)
-
-                            .toUpperCase()}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                            {program.category}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {program.company}
-                          </p>
-                        </div>
-                      </div>
-                      <h3 className="font-semibold text-base text-primary mt-5">
-                        {program.name}
-                      </h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {program.location || "Location not specified"}
-                      </p>
-                      <div className="flex flex-wrap gap-2 mt-4">
-                        {program.duration && (
-                          <span className="job-chip">
-                            <Icon name="briefcase" className="w-3.5 h-3.5" />
-                            {program.duration}
-                          </span>
-                        )}
-                      </div>
-                      {program.deadline && (
-                        <p className="mt-4 text-xs text-muted-foreground">
-                          Apply by{" "}
-                          {new Date(program.deadline).toLocaleDateString()}
-                        </p>
-                      )}
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          detailsTriggerRef.current = event.currentTarget
-
-                          setSelectedProgram(program)
-                        }}
-                        className="w-full mt-4 min-h-11 py-2.5 rounded-xl bg-secondary text-primary text-sm font-bold hover:bg-primary hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                      >
-                        View details
-                      </button>
-                    </article>
+                      program={program}
+                      onView={openDetails}
+                    />
                   ))}
                 </div>
               )}
           </div>
         </section>
 
-        <section id="about" className="section-space bg-white">
-          <div className="landing-container">
-            <SectionHeading
-              eyebrow="Why Fortune Intern Network?"
-              title="Everything You Need to Start Your Career Journey"
-              text="A focused platform built to help emerging professionals move from discovery to meaningful experience."
-            />
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-10">
-              {benefits.map((item) => (
-                <article
-                  key={item.title}
-                  className="group rounded-2xl border border-border p-6 bg-white hover-lift hover:border-primary/30"
-                >
-                  <div className="w-11 h-11 rounded-xl bg-secondary text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
-                    <Icon name={item.icon} className="w-5 h-5" />
-                  </div>
-                  <h3 className="font-display text-xl text-primary mt-6">
-                    {item.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed mt-3">
-                    {item.text}
-                  </p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
+        {whyFinSection}
 
-        <section id="how-it-works" className="section-space bg-surface">
-          <div className="landing-container">
-            <SectionHeading
-              eyebrow="Simple to apply"
-              title="Your Internship Journey Starts Here"
-              text="Three clear steps take you from creating your profile to beginning your professional journey."
-            />
-            <div className="grid md:grid-cols-3 gap-5 mt-12 relative">
-              <div className="hidden md:block absolute top-8 left-[16%] right-[16%] h-px bg-border" />
-              {steps.map((step) => (
-                <article key={step.number} className="relative text-center">
-                  <div className="relative z-10 w-16 h-16 rounded-full bg-white border-2 border-accent text-primary mx-auto flex items-center justify-center font-mono font-bold shadow-sm">
-                    {step.number}
-                  </div>
-                  <h3 className="font-display text-xl text-primary mt-5">
-                    {step.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed mt-3 max-w-xs mx-auto">
-                    {step.text}
-                  </p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
+        {stepsSection}
 
         <section className="section-space bg-surface">
           <div className="landing-container grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
@@ -622,7 +674,7 @@ export default function LandingPage({
               <div className="rounded-3xl overflow-hidden aspect-[4/3]">
                 <img
                   src={studentImage}
-                  alt="Ghanaian student preparing for her career"
+                  alt="Fortune Intern Network's Public Speaking Program Flyer"
                   className="w-full h-full object-cover"
                   loading="lazy"
                   decoding="async"
@@ -680,29 +732,7 @@ export default function LandingPage({
           </div>
         </section>
 
-        <section id="about-us" className="section-space bg-white">
-          <div className="landing-container">
-            <div className="max-w-3xl">
-              <p className="section-eyebrow">About us</p>
-              <h2 className="section-title">Bridging Dreams and Careers</h2>
-              <p className="section-copy">
-                Fortune Intern Network is a Ghanaian student development
-                organisation headquartered in Accra, with an active campus
-                chapter at Kwame Nkrumah University of Science and Technology.
-                We partner with leading banks, telecoms, insurers, hospitals
-                and manufacturers to place tertiary students into internships
-                aligned with their course of study.
-              </p>
-              <p className="section-copy">
-                Beyond placement, we issue verified internship letters,
-                supervisor assessment forms and certificates of completion, and
-                we run FIN Academy skills tracks and leadership programmes. Our
-                Super AI assistant supports students with applications, CVs and
-                cover letters every day of the year.
-              </p>
-            </div>
-          </div>
-        </section>
+        {aboutUsSection}
 
         <section className="px-4 sm:px-6 pb-16 bg-white">
           <div className="max-w-7xl mx-auto rounded-3xl bg-surface border border-border px-6 py-12 sm:p-14 text-center">
@@ -730,61 +760,7 @@ export default function LandingPage({
           </div>
         </section>
 
-        <section id="contact" className="section-space bg-surface">
-          <div className="landing-container">
-            <SectionHeading
-              eyebrow="Customer service"
-              title="Talk to Us Today"
-              text="Our team in Accra responds within one to two working days."
-            />
-            <div className="grid md:grid-cols-3 gap-4 mt-10 max-w-4xl mx-auto">
-              {[
-                {
-                  label: "Call us",
-                  value: "020 031 3672",
-                  href: "tel:+233200313672",
-                  icon: "phone",
-                  external: false,
-                },
-                {
-                  label: "WhatsApp",
-                  value: "025 703 8948",
-                  href: "https://wa.me/233257038948",
-                  icon: "whatsapp",
-                  external: true,
-                },
-                {
-                  label: "Email",
-                  value: "fortuneintern.gh@gmail.com",
-                  href: "mailto:fortuneintern.gh@gmail.com",
-                  icon: "mail",
-                  external: false,
-                },
-              ].map((item) => (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  {...(item.external
-                    ? { target: "_blank", rel: "noopener noreferrer" }
-                    : {})}
-                  className="group flex items-center gap-4 rounded-2xl border border-border p-5 bg-white transition-colors hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-                >
-                  <span className="w-11 h-11 flex-shrink-0 rounded-xl bg-secondary text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
-                    <Icon name={item.icon} className="w-5 h-5" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-semibold text-primary">
-                      {item.label}
-                    </span>
-                    <span className="block text-sm text-muted-foreground break-words">
-                      {item.value}
-                    </span>
-                  </span>
-                </a>
-              ))}
-            </div>
-          </div>
-        </section>
+        {contactSection}
       </main>
 
       <Footer />
@@ -913,6 +889,68 @@ function SearchSelect({
     </label>
   )
 }
+
+// memo: a card only re-renders when its own program changes, not on every
+// keystroke in the search box.
+const OpportunityCard = memo(function OpportunityCard({
+  program,
+  onView,
+}: {
+  program: Program
+  onView: (program: Program, trigger: HTMLElement) => void
+}) {
+  return (
+    <article className="rounded-2xl border border-border p-5 bg-white hover-lift hover:border-primary/30">
+      <div className="flex items-center gap-3">
+        <span
+          className="w-11 h-11 rounded-xl bg-secondary text-primary flex items-center justify-center text-xs font-bold"
+          aria-hidden="true"
+        >
+          {program.company
+            .split(/\s+/)
+            .map((part) => part[0])
+            .join("")
+            .slice(0, 2)
+            .toUpperCase()}
+        </span>
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+            {program.category}
+          </p>
+          <p className="text-xs text-muted-foreground truncate">
+            {program.company}
+          </p>
+        </div>
+      </div>
+      <h3 className="font-semibold text-base text-primary mt-5">
+        {program.name}
+      </h3>
+      <p className="text-sm text-muted-foreground mt-1">
+        {program.location || "Location not specified"}
+      </p>
+      <div className="flex flex-wrap gap-2 mt-4">
+        {program.duration && (
+          <span className="job-chip">
+            <Icon name="briefcase" className="w-3.5 h-3.5" />
+            {program.duration}
+          </span>
+        )}
+      </div>
+      {program.deadline && (
+        <p className="mt-4 text-xs text-muted-foreground">
+          Apply by {new Date(program.deadline).toLocaleDateString()}
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={(event) => onView(program, event.currentTarget)}
+        className="w-full mt-4 min-h-11 py-2.5 rounded-xl bg-secondary text-primary text-sm font-bold hover:bg-primary hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+      >
+        View details
+      </button>
+    </article>
+  )
+})
 
 function OpportunitySkeleton() {
   return (

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import logo from "../../assets/attach1.png";
+import logo from "../../assets/logo.webp";
 import Icon from "../ui/Icon";
 import { openCookieSettings } from "../../services/consent";
 

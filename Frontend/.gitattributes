@@ -20,6 +20,8 @@
 # Keep the runtime logo as a regular Git blob so deployment builds receive the image bytes.
 src/assets/attach1.png -filter -diff -merge -text
 
+# The landing page images (Hero, About, logo) are imported by the code, so Vercel's build needs the real image bytes, not LFS pointer text.
+src/assets/*.webp -filter -diff -merge -text
 # Landing-page images must be regular Git blobs because Vercel does not fetch Git LFS files.
 src/assets/Hero.webp -filter -diff -merge -text
 src/assets/About.webp -filter -diff -merge -text
