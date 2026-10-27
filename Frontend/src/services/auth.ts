@@ -11,6 +11,13 @@ interface TokenResponse {
   access_token: string;
   token_type: string;
   user: ApiUser;
+  device_token?: string;
+}
+
+const trustedDeviceStorageKey = "fortune-intern-trusted-device";
+
+function saveDeviceToken(token: string | undefined) {
+  if (token) localStorage.setItem(trustedDeviceStorageKey, token);
 }
 
 export interface ProfileData {
@@ -47,12 +54,18 @@ export interface ProfileDocument {
   created_at: string;
 }
 
-export async function login(email: string, password: string) {
+export async function login(email: string, password: string, captchaToken?: string) {
   const result = await apiRequest<TokenResponse>("/api/auth/login", {
     method: "POST",
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({
+      email,
+      password,
+      captcha_token: captchaToken,
+      trusted_device_token: localStorage.getItem(trustedDeviceStorageKey),
+    }),
   });
   setAccessToken(result.access_token);
+  saveDeviceToken(result.device_token);
   return result.user;
 }
 
@@ -62,6 +75,7 @@ export async function loginWithGoogle(credential: string) {
     body: JSON.stringify({ credential }),
   });
   setAccessToken(result.access_token);
+  saveDeviceToken(result.device_token);
   return result.user;
 }
 
@@ -90,11 +104,19 @@ export async function verifyEmail(email: string, code: string) {
     body: JSON.stringify({ email, code }),
   });
   setAccessToken(result.access_token);
+  saveDeviceToken(result.device_token);
   return result.user;
 }
 
 export function getCurrentUser() {
   return apiRequest<ApiUser>("/api/auth/me");
+}
+
+export function deleteAccount(confirmation: string) {
+  return apiRequest<void>("/api/auth/me", {
+    method: "DELETE",
+    body: JSON.stringify({ confirmation }),
+  });
 }
 
 export function getProfile() {

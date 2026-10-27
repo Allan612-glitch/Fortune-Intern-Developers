@@ -4,6 +4,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
+from urllib.error import URLError
 from urllib.parse import parse_qs, urlsplit
 from uuid import uuid4
 
@@ -12,8 +13,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlmodel import Session, SQLModel
 
-from Backend.api.routes.admin import update_application_status
-from Backend.api.routes.applications import create_application
+from Backend.api.routes.admin import _application_reference, update_application_status
+from Backend.api.routes.applications import (
+    _lock_application_identity,
+    create_application,
+)
 from Backend.api.routes.auth import login, send_password_reset_email
 from Backend.api.routes.dashboard import get_dashboard
 from Backend.api.routes.notifications import list_notifications, mark_all_notifications_read, unread_count
@@ -22,6 +26,8 @@ from Backend.api.routes.programs import get_program
 from Backend.api.routes.auth import verify_email
 from Backend.core.captcha import verify_turnstile
 from Backend.core.config import settings
+from Backend.core.documents import build_assessment_form_pdf
+from Backend.core.login_risk import LoginRisk
 from Backend.core.rate_limit import enforce_rate_limit
 from Backend.core.security import (
     hash_one_time_secret,
@@ -141,6 +147,33 @@ class TestProfileDocumentUploadThreading(unittest.TestCase):
         self.assertTrue(
             all(thread_id != event_loop_thread for thread_id in worker_threads)
         )
+
+
+class TestApplicationDuplicateLock(unittest.TestCase):
+    def test_postgres_lock_key_is_stable_for_user_and_program_pair(self):
+        user_id = uuid4()
+        program_id = uuid4()
+        first_session = Mock()
+        first_session.get_bind.return_value.dialect.name = "postgresql"
+        second_session = Mock()
+        second_session.get_bind.return_value.dialect.name = "postgresql"
+
+        _lock_application_identity(first_session, user_id, program_id)
+        _lock_application_identity(second_session, user_id, program_id)
+
+        first_call = first_session.execute.call_args
+        second_call = second_session.execute.call_args
+        self.assertIn("pg_advisory_xact_lock", str(first_call.args[0]))
+        self.assertEqual(first_call.args[1], second_call.args[1])
+        self.assertIsInstance(first_call.args[1]["lock_key"], int)
+
+    def test_non_postgres_database_does_not_execute_advisory_lock(self):
+        session = Mock()
+        session.get_bind.return_value.dialect.name = "sqlite"
+
+        _lock_application_identity(session, uuid4(), uuid4())
+
+        session.execute.assert_not_called()
 
 
 class TestPersistentRateLimit(unittest.TestCase):
@@ -334,6 +367,9 @@ class TestLoginRateLimitScope(unittest.TestCase):
         session.exec.return_value.first.return_value = None
         with (
             patch("Backend.api.routes.auth.enforce_rate_limit") as rate_limit,
+            patch("Backend.api.routes.auth.get_login_risk", return_value=LoginRisk(0, 0)),
+            patch("Backend.api.routes.auth.record_login_outcome"),
+            patch("Backend.api.routes.auth.request_client_fingerprint", return_value="test-fingerprint"),
             self.assertRaises(HTTPException),
         ):
             login(
@@ -442,6 +478,43 @@ class TestUnexpectedErrorMiddleware(unittest.TestCase):
 
 
 class TestAcceptedApplicationDocuments(unittest.TestCase):
+    def test_assessment_form_header_embeds_the_fin_logo(self):
+        assessment_pdf = build_assessment_form_pdf()
+
+        self.assertTrue(assessment_pdf.startswith(b"%PDF-"))
+        self.assertIn(b"/Subtype /Image", assessment_pdf)
+
+    def test_application_reference_uses_year_and_zero_padded_sequence(self):
+        engine = create_engine("sqlite://")
+        SQLModel.metadata.create_all(engine)
+        previous_year_row = application(
+            user_id=uuid4(),
+            program_id=uuid4(),
+            status="submitted",
+            created_at=datetime(2025, 12, 31, tzinfo=timezone.utc),
+        )
+        earlier_rows = [
+            application(
+                user_id=uuid4(),
+                program_id=uuid4(),
+                status="submitted",
+                created_at=datetime(2026, 10, day, tzinfo=timezone.utc),
+            )
+            for day in (1, 2)
+        ]
+        row = application(
+            user_id=uuid4(),
+            program_id=uuid4(),
+            status="submitted",
+            created_at=datetime(2026, 10, 18, tzinfo=timezone.utc),
+        )
+        with Session(engine) as session:
+            session.add_all([previous_year_row, *earlier_rows, row])
+            session.commit()
+
+            self.assertEqual(_application_reference(session, row), "FIN/2026/0003")
+        engine.dispose()
+
     def test_failed_document_delivery_is_reported_and_can_be_retried(self):
         application_id = uuid4()
         applicant_id = uuid4()
@@ -463,7 +536,7 @@ class TestAcceptedApplicationDocuments(unittest.TestCase):
             applicant_contact=None,
             host_company_name=None,
             host_company_address=None,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime(2026, 10, 18, tzinfo=timezone.utc),
         )
         applicant = SimpleNamespace(
             id=applicant_id,
@@ -489,13 +562,14 @@ class TestAcceptedApplicationDocuments(unittest.TestCase):
             }[model]
 
         session.get.side_effect = get_record
+        session.exec.return_value.one.return_value = 450
 
         with (
             patch("Backend.api.routes.admin.record_audit_event"),
             patch(
                 "Backend.api.routes.admin.documents.build_recommendation_letter_pdf",
                 return_value=b"letter",
-            ),
+            ) as build_letter_pdf,
             patch(
                 "Backend.api.routes.admin.documents.build_assessment_form_pdf",
                 return_value=b"assessment",
@@ -519,6 +593,11 @@ class TestAcceptedApplicationDocuments(unittest.TestCase):
         self.assertEqual(row.status, "accepted")
         self.assertFalse(row.documents_sent)
         self.assertEqual(session.commit.call_count, 1)
+        self.assertEqual(
+            build_letter_pdf.call_args.kwargs["reference_no"],
+            "FIN/2026/0451",
+        )
+        self.assertIsNone(build_letter_pdf.call_args.kwargs["index_number"])
 
         with (
             patch("Backend.api.routes.admin.record_audit_event"),
@@ -562,6 +641,29 @@ class TestTurnstileVerification(unittest.TestCase):
 
         self.assertEqual(raised.exception.status_code, 403)
         self.assertEqual(raised.exception.detail["code"], "captcha_required")
+
+    @patch("Backend.core.captcha.urlopen")
+    @patch("Backend.core.captcha.settings.turnstile_secret_key", "test-secret")
+    def test_rejects_a_turnstile_token_the_provider_does_not_accept(self, urlopen):
+        response = Mock()
+        response.__enter__ = Mock(return_value=response)
+        response.__exit__ = Mock(return_value=None)
+        response.read.return_value = b'{"success": false}'
+        urlopen.return_value = response
+
+        with self.assertRaises(HTTPException) as raised:
+            verify_turnstile("invalid-token", "127.0.0.1")
+
+        self.assertEqual(raised.exception.status_code, 403)
+        self.assertEqual(raised.exception.detail["code"], "captcha_invalid")
+
+    @patch("Backend.core.captcha.urlopen", side_effect=URLError("offline"))
+    @patch("Backend.core.captcha.settings.turnstile_secret_key", "test-secret")
+    def test_fails_closed_when_turnstile_is_unavailable(self, _urlopen):
+        with self.assertRaises(HTTPException) as raised:
+            verify_turnstile("challenge-token", "127.0.0.1")
+
+        self.assertEqual(raised.exception.status_code, 503)
 
 
 class TestApplicationProgramSelection(unittest.TestCase):

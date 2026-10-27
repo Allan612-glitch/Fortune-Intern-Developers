@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import AsyncState from "../components/AsyncState";
 import {
   createAdminProgram,
+  exportAdminApplications,
   listAdminApplications,
   listAdminUsers,
   listAnnouncements,
@@ -54,6 +55,9 @@ export default function AdminPage() {
   const [retryCount, setRetryCount] = useState(0);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
+  const [selectedApplicationIds, setSelectedApplicationIds] = useState<string[]>([]);
+  const [exportLimit, setExportLimit] = useState<10 | 25 | 50>(50);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -101,6 +105,34 @@ export default function AdminPage() {
       setError(requestError instanceof Error ? requestError.message : "Unable to update application status.");
     } finally {
       setBusyKey(null);
+    }
+  };
+
+  const toggleApplicationSelection = (id: string) => {
+    setSelectedApplicationIds((current) => {
+      if (current.includes(id)) return current.filter((selectedId) => selectedId !== id);
+      if (current.length >= exportLimit) return current;
+      return [...current, id];
+    });
+  };
+
+  const exportSelectedApplications = async () => {
+    setExporting(true);
+    setError("");
+    try {
+      const file = await exportAdminApplications(selectedApplicationIds);
+      const url = URL.createObjectURL(file);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "applications.xlsx";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to export applications.");
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -298,10 +330,55 @@ export default function AdminPage() {
       {/* Applications */}
       {tab === "applications" && (
         <div className="bg-white border border-border rounded-2xl overflow-hidden shadow-sm">
-          <div className="px-5 py-3 border-b border-border bg-muted/30">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Applications ({applications.length})
-            </p>
+          <div className="px-5 py-3 border-b border-border bg-muted/30 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Applications ({applications.length})
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Select up to {exportLimit} records per Excel export (maximum 20 MB).
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setSelectedApplicationIds(applications.slice(0, exportLimit).map((app) => app.id))}
+                disabled={applications.length === 0}
+                className="px-3 py-2 rounded-lg border border-border text-xs font-semibold disabled:opacity-50"
+              >
+                Select first {Math.min(applications.length, exportLimit)}
+              </button>
+              <button
+                onClick={() => setSelectedApplicationIds([])}
+                disabled={selectedApplicationIds.length === 0}
+                className="px-3 py-2 rounded-lg border border-border text-xs font-semibold disabled:opacity-50"
+              >
+                Clear
+              </button>
+              <label className="text-xs text-muted-foreground">
+                Limit
+                <select
+                  value={exportLimit}
+                  onChange={(event) => {
+                    const nextLimit = Number(event.target.value) as 10 | 25 | 50;
+                    setExportLimit(nextLimit);
+                    setSelectedApplicationIds((current) => current.slice(0, nextLimit));
+                  }}
+                  className="ml-2 px-2 py-2 rounded-lg border border-border bg-white text-foreground"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                </select>
+              </label>
+              <button
+                onClick={() => void exportSelectedApplications()}
+                disabled={selectedApplicationIds.length === 0 || exporting}
+                className="px-3 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
+                style={{ background: "linear-gradient(135deg, #2D3561, #3d4a8a)" }}
+              >
+                {exporting ? "Exporting..." : `Export ${selectedApplicationIds.length} to Excel`}
+              </button>
+            </div>
           </div>
           <div className="divide-y divide-border">
             {applications.map((app) => (
@@ -309,14 +386,24 @@ export default function AdminPage() {
                 key={app.id}
                 className="flex items-center justify-between px-5 py-4 hover:bg-muted/20 transition-colors"
               >
-                <div>
-                  <p className="font-semibold text-sm">{app.applicant_name || `Applicant ${app.user_id.slice(0, 8)}`}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {app.program_name} · {new Date(app.created_at).toLocaleDateString()}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {[app.student_index_number, app.gender, app.year_of_study].filter(Boolean).join(" · ") || "No academic details"}
-                  </p>
+                <div className="flex min-w-0 items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedApplicationIds.includes(app.id)}
+                    disabled={!selectedApplicationIds.includes(app.id) && selectedApplicationIds.length >= exportLimit}
+                    onChange={() => toggleApplicationSelection(app.id)}
+                    aria-label={`Select application from ${app.applicant_name || `applicant ${app.user_id.slice(0, 8)}`}`}
+                    className="mt-1 h-4 w-4 shrink-0 accent-[#2D3561]"
+                  />
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm">{app.applicant_name || `Applicant ${app.user_id.slice(0, 8)}`}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {app.program_name} · {new Date(app.created_at).toLocaleDateString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {[app.student_index_number, app.gender, app.year_of_study].filter(Boolean).join(" · ") || "No academic details"}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span

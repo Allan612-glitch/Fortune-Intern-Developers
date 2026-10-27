@@ -5,6 +5,8 @@ from pydantic import BaseModel, Field
 class LoginRequest(BaseModel):
     email: str
     password: str
+    captcha_token: str | None = Field(default=None, max_length=8192)
+    trusted_device_token: str | None = Field(default=None, max_length=8192)
 
 
 class GoogleLoginRequest(BaseModel):
@@ -330,3 +332,4 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str
     user: UserResponse
+    device_token: str | None = None

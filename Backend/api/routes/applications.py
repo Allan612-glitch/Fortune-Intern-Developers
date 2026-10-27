@@ -1,4 +1,5 @@
 from dataclasses import dataclass, replace
+from hashlib import blake2b
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -6,6 +7,7 @@ from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import Response
+from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, or_, select
 
@@ -89,6 +91,26 @@ def serialize_application(row: application, program_name: str) -> ApplicationRes
     )
 
 
+def _lock_application_identity(
+    session: Session,
+    user_id: UUID,
+    program_id: UUID,
+) -> None:
+    if session.get_bind().dialect.name != "postgresql":
+        return
+
+    lock_material = f"application\0{user_id}\0{program_id}".encode()
+    lock_key = int.from_bytes(
+        blake2b(lock_material, digest_size=8).digest(),
+        byteorder="big",
+        signed=True,
+    )
+    session.execute(
+        text("SELECT pg_advisory_xact_lock(:lock_key)"),
+        {"lock_key": lock_key},
+    )
+
+
 def _prepare_application(
     session: Session,
     account: user,
@@ -150,6 +172,7 @@ def _prepare_application(
             detail="Program not found",
         )
 
+    _lock_application_identity(session, account.id, program_record.id)
     duplicate_identity = application.applicant_name == fields.applicant_name
     if fields.student_index_number:
         duplicate_identity = or_(

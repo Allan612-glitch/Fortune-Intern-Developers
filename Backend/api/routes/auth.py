@@ -3,7 +3,7 @@ import logging
 from secrets import randbelow, token_urlsafe
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 import resend
@@ -12,12 +12,22 @@ from sqlmodel import Session, select
 from Backend.api.deps import get_current_user
 from Backend.core.captcha import verify_turnstile
 from Backend.core.config import settings
+from Backend.core.audit import record_audit_event
+from Backend.core.login_risk import (
+    LoginRisk,
+    get_login_risk,
+    record_login_outcome,
+    request_client_fingerprint,
+    request_risk_keys,
+)
 from Backend.core.security import (
     create_access_token,
+    create_trusted_device_token,
     hash_one_time_secret,
     hash_password,
     verify_one_time_secret,
     verify_password,
+    verify_trusted_device_token,
 )
 from Backend.core.rate_limit import enforce_rate_limit
 from Backend.database import get_session
@@ -35,9 +45,14 @@ from Database.schemas import (
     VerificationStartResponse,
     VerifyEmailRequest,
 )
+from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 logger = logging.getLogger(__name__)
+
+
+class AccountDeletionRequest(BaseModel):
+    confirmation: str = Field(min_length=1, max_length=20)
 
 
 def _as_utc(value: datetime) -> datetime:
@@ -90,6 +105,15 @@ def serialize_user(account: user) -> UserResponse:
     return UserResponse(id=str(account.id), name=account.name, email=account.email, is_admin=account.is_admin)
 
 
+def create_auth_response(account: user, client_fingerprint: str) -> TokenResponse:
+    return TokenResponse(
+        access_token=create_access_token(account.id, account.token_version),
+        token_type="bearer",
+        user=serialize_user(account),
+        device_token=create_trusted_device_token(account.email, client_fingerprint),
+    )
+
+
 def validate_email(email: str) -> str:
     normalized_email = email.strip().lower()
     if "@" not in normalized_email:
@@ -115,19 +139,42 @@ def login(
         window_seconds=60,
         identity_window_seconds=900,
     )
+    fingerprint = request_client_fingerprint(request)
+    risk_keys = request_risk_keys(request, fingerprint)
+    risk = get_login_risk(session, risk_keys)
+    trusted_device = verify_trusted_device_token(
+        credentials.trusted_device_token,
+        email,
+        fingerprint,
+    )
+    if (risk.medium or risk.high) and not trusted_device:
+        verify_turnstile(credentials.captcha_token, client_ip)
+
     account = session.exec(select(user).where(user.email == email)).first()
     if not account or not account.password_hash or not verify_password(credentials.password, account.password_hash):
-        logger.warning(
-            "login rejected",
-            extra={
-                "auth_action": "login",
-                "source_ip": request.client.host if request.client else None,
-            },
+        record_login_outcome(session, risk_keys, failed=True)
+        next_risk = LoginRisk(
+            attempts=risk.attempts + 1,
+            failures=risk.failures + 1,
         )
+        if (
+            (not risk.medium and next_risk.medium)
+            or (not risk.high and next_risk.high)
+        ):
+            logger.warning(
+                "login cohort now requires an additional verification step",
+                extra={
+                    "auth_action": "login",
+                    "source_ip": client_ip,
+                    "risk_attempts": next_risk.attempts,
+                    "risk_failures": next_risk.failures,
+                },
+            )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
+    record_login_outcome(session, risk_keys, failed=False)
     if account.is_suspended:
         logger.warning(
             "suspended account login rejected",
@@ -137,12 +184,13 @@ def login(
             },
         )
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended")
+    if account.deletion_requested_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This account is scheduled for deletion",
+        )
 
-    return TokenResponse(
-        access_token=create_access_token(account.id, account.token_version),
-        token_type="bearer",
-        user=serialize_user(account),
-    )
+    return create_auth_response(account, fingerprint)
 
 
 @router.post("/google", response_model=TokenResponse)
@@ -205,17 +253,18 @@ def google_login(
                 google_sub=subject,
             )
             session.add(account)
+    elif account.deletion_requested_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This account is scheduled for deletion",
+        )
 
     session.add(account)
     session.commit()
     session.refresh(account)
     if account.is_suspended:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended")
-    return TokenResponse(
-        access_token=create_access_token(account.id, account.token_version),
-        token_type="bearer",
-        user=serialize_user(account),
-    )
+    return create_auth_response(account, request_client_fingerprint(request))
 
 
 @router.post("/register", response_model=VerificationStartResponse, status_code=status.HTTP_202_ACCEPTED)
@@ -375,11 +424,7 @@ def verify_email(
     session.delete(pending_registration)
     session.commit()
     session.refresh(account)
-    return TokenResponse(
-        access_token=create_access_token(account.id, account.token_version),
-        token_type="bearer",
-        user=serialize_user(account),
-    )
+    return create_auth_response(account, request_client_fingerprint(request))
 
 
 @router.post("/forgot-password", response_model=MessageResponse)
@@ -477,3 +522,33 @@ def reset_password(
 @router.get("/me", response_model=UserResponse)
 def me(account: user = Depends(get_current_user)):
     return serialize_user(account)
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+def delete_account(
+    payload: AccountDeletionRequest,
+    request: Request,
+    account: user = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    if payload.confirmation != "delete":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail='Type "delete" to confirm account deletion',
+        )
+
+    now = datetime.now(timezone.utc)
+    account.deletion_requested_at = now
+    account.updated_at = now
+    account.token_version += 1
+    session.add(account)
+    record_audit_event(
+        session,
+        request,
+        actor_id=account.id,
+        action="account.delete",
+        object_type="user",
+        object_id=None,
+    )
+    session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

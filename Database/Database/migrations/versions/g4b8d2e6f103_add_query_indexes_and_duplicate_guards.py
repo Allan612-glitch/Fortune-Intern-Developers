@@ -1,4 +1,4 @@
-"""Add query indexes and guards for duplicate profiles/applications.
+"""Add query indexes and a guard for duplicate profiles.
 
 Revision ID: g4b8d2e6f103
 Revises: f3a7c1d9e502
@@ -32,58 +32,30 @@ def upgrade() -> None:
             "Cannot add unique user profile constraint: duplicate user_profiles.user_id values exist. "
             "Resolve the duplicate records manually, preserving required data, then rerun the migration."
         )
-    if _duplicate_exists(
-        "applications",
-        ("user_id", "program_id", "applicant_name"),
-        "status <> 'withdrawn' AND applicant_name IS NOT NULL",
-    ):
-        raise RuntimeError(
-            "Cannot guard active applications: duplicate user/program/applicant-name records exist. "
-            "Resolve the duplicate records manually, preserving required data, then rerun the migration."
-        )
-    if _duplicate_exists(
-        "applications",
-        ("user_id", "program_id", "student_index_number"),
-        "status <> 'withdrawn' AND student_index_number IS NOT NULL",
-    ):
-        raise RuntimeError(
-            "Cannot guard active applications: duplicate user/program/student-index records exist. "
-            "Resolve the duplicate records manually, preserving required data, then rerun the migration."
-        )
-    if _duplicate_exists(
-        "applications",
-        ("user_id", "program_id"),
-        "status <> 'withdrawn' AND applicant_name IS NULL AND student_index_number IS NULL",
-    ):
-        raise RuntimeError(
-            "Cannot guard identity-free applications: duplicate active user/program records exist. "
-            "Resolve the duplicate records manually, preserving required data, then rerun the migration."
-        )
-
     op.create_index("ix_user_profiles_user_id", "user_profiles", ["user_id"], unique=True)
     op.create_index("ix_applications_user_id", "applications", ["user_id"])
     op.create_index("ix_notifications_user_id", "notifications", ["user_id"])
     op.create_index(
-        "uq_applications_active_user_program_applicant",
+        "ix_applications_active_user_program_applicant",
         "applications",
         ["user_id", "program_id", "applicant_name"],
-        unique=True,
+        unique=False,
         postgresql_where=sa.text("status <> 'withdrawn' AND applicant_name IS NOT NULL"),
         sqlite_where=sa.text("status <> 'withdrawn' AND applicant_name IS NOT NULL"),
     )
     op.create_index(
-        "uq_applications_active_user_program_student_index",
+        "ix_applications_active_user_program_student_index",
         "applications",
         ["user_id", "program_id", "student_index_number"],
-        unique=True,
+        unique=False,
         postgresql_where=sa.text("status <> 'withdrawn' AND student_index_number IS NOT NULL"),
         sqlite_where=sa.text("status <> 'withdrawn' AND student_index_number IS NOT NULL"),
     )
     op.create_index(
-        "uq_applications_active_user_program_without_identity",
+        "ix_applications_active_user_program_without_identity",
         "applications",
         ["user_id", "program_id"],
-        unique=True,
+        unique=False,
         postgresql_where=sa.text(
             "status <> 'withdrawn' AND applicant_name IS NULL AND student_index_number IS NULL"
         ),
@@ -94,9 +66,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_index("uq_applications_active_user_program_without_identity", table_name="applications")
-    op.drop_index("uq_applications_active_user_program_student_index", table_name="applications")
-    op.drop_index("uq_applications_active_user_program_applicant", table_name="applications")
+    op.drop_index("ix_applications_active_user_program_without_identity", table_name="applications")
+    op.drop_index("ix_applications_active_user_program_student_index", table_name="applications")
+    op.drop_index("ix_applications_active_user_program_applicant", table_name="applications")
     op.drop_index("ix_notifications_user_id", table_name="notifications")
     op.drop_index("ix_applications_user_id", table_name="applications")
     op.drop_index("ix_user_profiles_user_id", table_name="user_profiles")

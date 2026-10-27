@@ -58,8 +58,13 @@ _subject_style = ParagraphStyle("FinSubject", parent=_body_style, alignment=TA_C
 
 
 def _header(story: list, title: str) -> None:
-    story.append(Paragraph("FORTUNE", _brand_style))
-    story.append(Paragraph('<font color="#EDB523">INTERN</font> <font color="#12365E">NETWORK</font>', _tagline_style))
+    logo_path = _find_logo_path()
+    if logo_path:
+        story.append(_LetterLogo(logo_path, 32 * mm, 25 * mm))
+        story.append(Spacer(1, 4))
+    else:
+        story.append(Paragraph("FORTUNE", _brand_style))
+        story.append(Paragraph('<font color="#EDB523">INTERN</font> <font color="#12365E">NETWORK</font>', _tagline_style))
     story.append(Paragraph(title, _title_style))
     story.append(HRFlowable(width="100%", thickness=1.4, color=NAVY, spaceBefore=4, spaceAfter=10))
 
@@ -73,16 +78,12 @@ def _footer() -> Paragraph:
 
 
 def _ordinal(day: int) -> str:
-    suffix = "th" if 11 <= (day % 100) <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
+    suffix = "th" if 11 <= day % 100 <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
     return f"{day}{suffix}"
 
 
 def _formatted_date(dt: datetime) -> str:
-    months = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December",
-    ]
-    return f"{_ordinal(dt.day)} {months[dt.month - 1]}, {dt.year}"
+    return f"{_ordinal(dt.day)} {dt.strftime('%B')}, {dt.year}"
 
 
 def _build_signature_drawing(width: float = 38 * mm, height: float = 25 * mm) -> Drawing:
@@ -325,7 +326,7 @@ def build_recommendation_letter_pdf(
     )
     page_w, page_h = A4
     frame = Frame(
-        18 * mm, 24 * mm, page_w - 36 * mm, page_h - 55 * mm,
+        18 * mm, 18 * mm, page_w - 36 * mm, page_h - 36 * mm,
         leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0, id="letter-body",
     )
     doc.addPageTemplates([PageTemplate(
@@ -334,24 +335,24 @@ def build_recommendation_letter_pdf(
     )])
 
     base = ParagraphStyle("LetterBase", parent=_styles["Normal"], fontName="Helvetica", textColor=TEXT, alignment=TA_LEFT)
-    ref_left = ParagraphStyle("LetterRefLeft", parent=base, fontName="Helvetica-Bold", fontSize=9.75, leading=11.2, textColor=INK)
+    ref_left = ParagraphStyle("LetterRefLeft", parent=base, fontSize=9.75, leading=11.2, textColor=INK)
     ref_right = ParagraphStyle("LetterRefRight", parent=ref_left, alignment=TA_RIGHT)
-    row_label = ParagraphStyle("LetterRowLabel", parent=base, fontName="Helvetica-Bold", fontSize=9.75, leading=11.2)
-    row_value = ParagraphStyle("LetterRowValue", parent=base, fontSize=9.75, leading=11.2)
-    address_style = ParagraphStyle("LetterAddress", parent=base, fontName="Helvetica-Bold", fontSize=12, leading=19.2)
-    para_style = ParagraphStyle("LetterPara", parent=base, fontSize=12, leading=20.4, spaceAfter=12)
-    subject_style = ParagraphStyle("LetterSubject", parent=para_style, alignment=TA_CENTER, leading=13.8, spaceBefore=14.7, spaceAfter=19)
-    signature_style = ParagraphStyle("LetterSignature", parent=base, fontName="Helvetica-Bold", fontSize=12, leading=19.2)
+    row_label = ParagraphStyle("LetterRowLabel", parent=base, fontName="Helvetica-Bold", fontSize=9.5, leading=11)
+    row_value = ParagraphStyle("LetterRowValue", parent=base, fontSize=9.5, leading=11)
+    address_style = ParagraphStyle("LetterAddress", parent=base, fontName="Helvetica-Bold", fontSize=10.5, leading=15)
+    para_style = ParagraphStyle("LetterPara", parent=base, fontSize=10, leading=15, spaceAfter=7)
+    subject_style = ParagraphStyle("LetterSubject", parent=para_style, alignment=TA_CENTER, leading=12, spaceBefore=8, spaceAfter=10)
+    signature_style = ParagraphStyle("LetterSignature", parent=base, fontSize=10, leading=14)
     wordmark_style = ParagraphStyle(
-        "LetterWordmark", parent=base, fontName="Helvetica-Bold", fontSize=19, leading=22,
-        textColor=INK, alignment=TA_CENTER, charSpace=2, spaceAfter=10.5,
+        "LetterWordmark", parent=base, fontName="Helvetica-Bold", fontSize=16, leading=18,
+        textColor=INK, alignment=TA_CENTER, charSpace=2, spaceAfter=8,
     )
 
     story: list = []
     if logo_path:
-        logo_w, logo_h = 40 * mm, 34 * mm
+        logo_w, logo_h = 36 * mm, 29 * mm
         story.append(_LetterLogo(logo_path, logo_w, logo_h))
-        story.append(Spacer(1, 10.5))
+        story.append(Spacer(1, 6))
     else:
         # Logo file not found: fall back to a text wordmark so the email still goes out.
         story.append(Paragraph("FORTUNE", wordmark_style))
@@ -363,13 +364,15 @@ def build_recommendation_letter_pdf(
     )
     ref_table.setStyle(TableStyle([
         ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 16.5),
+        ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 9),
     ]))
     story.append(ref_table)
 
-    detail_rows = [("NAME OF STUDENT:", student_name), ("INSTITUTION:", institution)]
-    if index_number:
-        detail_rows.append(("INDEX NUMBER:", index_number))
+    detail_rows = [
+        ("NAME OF STUDENT:", student_name),
+        ("INSTITUTION:", institution),
+        ("INDEX NUMBER:", index_number or "N/A"),
+    ]
     detail_rows += [
         ("CONTACT:", contact or "N/A"),
         ("PROGRAM / COURSE OF STUDY:", program_course or "N/A"),
@@ -383,11 +386,11 @@ def build_recommendation_letter_pdf(
     )
     detail_table.setStyle(TableStyle([
         ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 5.9),
+        ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
     ]))
     story.append(detail_table)
-    story.append(Spacer(1, 17.55))
+    story.append(Spacer(1, 8))
 
     story.append(Paragraph(
         f"THE HUMAN RESOURCE MANAGER<br/>{escape(host_company).upper()}<br/>{escape(host_location or '').upper()}",
@@ -412,8 +415,8 @@ def build_recommendation_letter_pdf(
     ))
     story.append(Paragraph(
         "We kindly request that you consider granting this opportunity for a duration that suits your "
-        "organization's schedule. For any further information, please feel free to contact us using the "
-        "organization's official contact information.",
+        "organization's schedule. For any further information, please feel free to contact us on "
+        "<b>fortuneintern.gh@gmail.com</b> or <b>+233 25 703 8948</b>.",
         para_style,
     ))
     story.append(Paragraph("Thank you for your support and consideration.", para_style))
@@ -421,9 +424,12 @@ def build_recommendation_letter_pdf(
     signature = _build_signature_drawing()
     signature.hAlign = "LEFT"
     story.append(KeepTogether([
-        Paragraph("Yours sincerely,", ParagraphStyle("LetterSignOff", parent=signature_style, spaceBefore=21)),
+        Paragraph("Yours sincerely,", ParagraphStyle("LetterSignOff", parent=signature_style, spaceBefore=13)),
         signature,
-        Paragraph("Emmanuel Amoasi<br/>Managing Director<br/>Fortune Intern Network", signature_style),
+        Paragraph(
+            "<b>Emmanuel Amoasi</b><br/>Managing Director<br/>Fortune Intern Network",
+            signature_style,
+        ),
     ]))
 
     doc.build(story)

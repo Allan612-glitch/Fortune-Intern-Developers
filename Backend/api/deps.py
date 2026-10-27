@@ -29,6 +29,13 @@ def get_current_user(
         from fastapi import HTTPException, status
 
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended")
+    if account.deletion_requested_at is not None:
+        from fastapi import HTTPException, status
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This account is scheduled for deletion",
+        )
     if account.token_version != token_version:
         from fastapi import HTTPException, status
 
