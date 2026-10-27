@@ -477,7 +477,7 @@ export default function LandingPage({
               <div className="rounded-[2rem] overflow-hidden aspect-[4/4.3] bg-muted">
                 <img
                   src={heroImage}
-                  alt="Young Ghanaian professional working on a laptop"
+                  alt="Fortune Intern Network's testimonials flyer"
                   className="w-full h-full object-cover"
                   fetchPriority="high"
                   decoding="async"
@@ -674,7 +674,7 @@ export default function LandingPage({
               <div className="rounded-3xl overflow-hidden aspect-[4/3]">
                 <img
                   src={studentImage}
-                  alt="Ghanaian student preparing for her career"
+                  alt="Fortune Intern Network's Public Speaking Program Flyer"
                   className="w-full h-full object-cover"
                   loading="lazy"
                   decoding="async"
