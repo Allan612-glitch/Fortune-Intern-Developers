@@ -595,7 +595,7 @@ class TestAcceptedApplicationDocuments(unittest.TestCase):
         self.assertEqual(session.commit.call_count, 1)
         self.assertEqual(
             build_letter_pdf.call_args.kwargs["reference_no"],
-            "FIN/2026/0451",
+            f"FIN/2026/{application_id.hex.upper()}",
         )
         self.assertIsNone(build_letter_pdf.call_args.kwargs["index_number"])
 

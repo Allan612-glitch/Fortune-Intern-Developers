@@ -7,6 +7,7 @@ from sqlmodel import Session
 
 from Backend.core.account_deletion import purge_expired_accounts
 from Backend.core.config import settings
+from Backend.core.data_retention import purge_expired_retained_data
 from Backend.database import get_session
 
 router = APIRouter(prefix="/api/maintenance", tags=["maintenance"])
@@ -35,10 +36,15 @@ def purge_deleted_accounts(
 
     try:
         purged = purge_expired_accounts(session)
+        purged_applications, purged_consent_logs = purge_expired_retained_data(session)
     except (BotoCoreError, ClientError, RuntimeError) as error:
         logger.exception("scheduled account deletion purge failed")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Account cleanup could not complete",
         ) from error
-    return {"purged": purged}
+    return {
+        "purged": purged,
+        "applications_purged": purged_applications,
+        "consent_logs_purged": purged_consent_logs,
+    }
