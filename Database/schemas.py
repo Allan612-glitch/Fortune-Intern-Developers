@@ -208,6 +208,7 @@ class ApplicationResponse(BaseModel):
     student_index_number: str | None = None
     year_of_study: str | None = None
     suggested_company: str | None = None
+    requires_minor_review: bool = False
     applicant_institution: str | None = None
     applicant_course: str | None = None
     applicant_contact: str | None = None

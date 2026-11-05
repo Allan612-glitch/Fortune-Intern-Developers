@@ -142,8 +142,8 @@ export default function ApplyFormModal({
       ((today.getUTCMonth() < birthDate.getUTCMonth() ||
       (today.getUTCMonth() === birthDate.getUTCMonth() &&
         today.getUTCDate() < birthDate.getUTCDate())) ? 1 : 0);
-    if (applicantAge < 18)
-      return "Applicants under 18 require guardian or institution approval. Applications are not currently accepted for minors.";
+    if (applicantAge < 16)
+      return "Applicants under 16 cannot submit applications.";
     if (form.institution === "Other" && !form.otherInstitution.trim())
       return "Please specify your institution.";
     if (!/^0\d{9}$/.test(form.phone))
@@ -262,7 +262,9 @@ export default function ApplyFormModal({
             Application Submitted Successfully
           </h2>
           <p className="text-sm text-muted-foreground mt-3">
-            Your internship application has been submitted successfully.
+            {submittedApplication?.status === "Under Review"
+              ? "Because you are under 18, your application is under review before a decision; a reviewer will check guardian or institution approval."
+              : "Your internship application has been submitted successfully."}
           </p>
           <p className="text-sm font-semibold text-amber-700 mt-3">
             {submittedApplication?.paymentStatus === "Payment Successful"
@@ -273,7 +275,7 @@ export default function ApplyFormModal({
             <p>Opportunity: {prefilledRole || "Internship Application"}</p>
             <p>Reference: {reference}</p>
             <p>Submission date: {new Date().toLocaleDateString()}</p>
-            <p>Application status: Submitted</p>
+            <p>Application status: {submittedApplication?.status || "Submitted"}</p>
             <p>Payment status: {submittedApplication?.paymentStatus}</p>
           </div>
           <div className="mt-4 space-y-2 text-left">
@@ -354,7 +356,7 @@ export default function ApplyFormModal({
                 className="mt-2 w-full rounded-xl border border-border px-4 py-3 text-sm"
               />
               <span className="mt-1 block text-xs text-muted-foreground">
-                Applicants must be at least 18 until guardian or institution approval is available.
+                Applicants under 16 cannot apply. Students under 18 must have guardian or institution approval; applications are held for review before a decision.
               </span>
             </label>
             <div>

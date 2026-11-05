@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, or_, select
 
 from Backend.api.deps import get_current_user
-from Backend.core import storage
+from Backend.core import age, storage
 from Backend.core.audit import record_audit_event
 from Backend.core.mailer import send_application_received_email
 from Backend.core.rate_limit import enforce_rate_limit
@@ -60,6 +60,7 @@ class _PreparedApplication:
     program_name: str
     program_company: str | None
     date_of_birth: date
+    initial_status: str
 
 
 @dataclass(frozen=True)
@@ -86,6 +87,10 @@ def serialize_application(row: application, program_name: str) -> ApplicationRes
         student_index_number=row.student_index_number,
         year_of_study=row.year_of_study,
         suggested_company=row.suggested_company,
+        requires_minor_review=age.requires_minor_review(
+            row.date_of_birth,
+            row.created_at,
+        ),
         applicant_institution=row.applicant_institution,
         applicant_course=row.applicant_course,
         applicant_contact=row.applicant_contact,
@@ -95,7 +100,7 @@ def serialize_application(row: application, program_name: str) -> ApplicationRes
     )
 
 
-def _validated_date_of_birth(value: object) -> date:
+def _validated_date_of_birth(value: object, today: date | None = None) -> date:
     if not isinstance(value, str) or not value.strip():
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -109,24 +114,17 @@ def _validated_date_of_birth(value: object) -> date:
             detail="Date of birth must be a valid ISO date",
         ) from error
 
-    today = datetime.now(timezone.utc).date()
+    today = today or datetime.now(timezone.utc).date()
     if birth_date > today:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Date of birth cannot be in the future",
         )
-    age = today.year - birth_date.year - (
-        (today.month, today.day) < (birth_date.month, birth_date.day)
-    )
-    if age < 16:
+    applicant_age = age.age_on(birth_date, today)
+    if applicant_age < 16:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Applicants under 16 cannot submit applications",
-        )
-    if age < 18:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Applicants under 18 require guardian or institution approval; applications are not currently accepted for minors",
         )
     return birth_date
 
@@ -232,7 +230,13 @@ def _prepare_application(
             status_code=status.HTTP_409_CONFLICT,
             detail="Applications for this internship cycle are closed",
         )
-    date_of_birth = _validated_date_of_birth(fields.date_of_birth)
+    today = datetime.now(timezone.utc).date()
+    date_of_birth = _validated_date_of_birth(fields.date_of_birth, today)
+    initial_status = (
+        "review"
+        if age.age_on(date_of_birth, today) < 18
+        else "submitted"
+    )
 
     _lock_application_identity(session, account.id, program_record.id)
     duplicate_identity = application.applicant_name == fields.applicant_name
@@ -266,6 +270,7 @@ def _prepare_application(
         program_name=program_name,
         program_company=program_record.company,
         date_of_birth=date_of_birth,
+        initial_status=initial_status,
     )
 
 
@@ -298,7 +303,7 @@ def _save_application(
     new_application = application(
         user_id=account.id,
         program_id=prepared.program_id,
-        status="submitted",
+        status=prepared.initial_status,
         resume_filename=resume_filename,
         resume_path=resume_path,
         applicant_institution=fields.institution or None,
@@ -317,7 +322,11 @@ def _save_application(
     session.add(
         notification(
             user_id=account.id,
-            message=f"Your application for {prepared.program_name} was submitted successfully.",
+            message=(
+                f"Your application for {prepared.program_name} was submitted and is under review."
+                if prepared.initial_status == "review"
+                else f"Your application for {prepared.program_name} was submitted successfully."
+            ),
             target_type="application",
             target_id=str(new_application.id),
             read=False,
