@@ -7,7 +7,10 @@ from sqlmodel import Session
 
 from Backend.core.account_deletion import purge_expired_accounts
 from Backend.core.config import settings
-from Backend.core.data_retention import purge_expired_retained_data
+from Backend.core.data_retention import (
+    close_expired_program_cycles,
+    purge_expired_retained_data,
+)
 from Backend.database import get_session
 
 router = APIRouter(prefix="/api/maintenance", tags=["maintenance"])
@@ -35,6 +38,7 @@ def purge_deleted_accounts(
         )
 
     try:
+        closed_programs = close_expired_program_cycles(session)
         purged = purge_expired_accounts(session)
         purged_applications, purged_consent_logs = purge_expired_retained_data(session)
     except (BotoCoreError, ClientError, RuntimeError) as error:
@@ -45,6 +49,7 @@ def purge_deleted_accounts(
         ) from error
     return {
         "purged": purged,
+        "programs_closed": closed_programs,
         "applications_purged": purged_applications,
         "consent_logs_purged": purged_consent_logs,
     }

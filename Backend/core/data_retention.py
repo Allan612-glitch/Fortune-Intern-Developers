@@ -16,6 +16,7 @@ from Database.models import (
 APPLICATION_RETENTION_YEARS = 3
 CONSENT_RETENTION_YEARS = 3
 RETENTION_BATCH_SIZE = 100
+PROGRAM_CLOSURE_BATCH_SIZE = 500
 
 
 def add_calendar_years(value: datetime, years: int) -> datetime:
@@ -23,6 +24,39 @@ def add_calendar_years(value: datetime, years: int) -> datetime:
         return value.replace(year=value.year + years)
     except ValueError:
         return value.replace(year=value.year + years, day=28)
+
+
+def close_expired_program_cycles(
+    session: Session,
+    *,
+    now: datetime | None = None,
+    limit: int = PROGRAM_CLOSURE_BATCH_SIZE,
+) -> int:
+    current_time = now or datetime.now(timezone.utc)
+    expired_programs = session.exec(
+        select(program)
+        .where(
+            program.deadline <= current_time,
+            program.cycle_closed_at.is_(None),
+            program.status == "open",
+        )
+        .order_by(program.deadline)
+        .limit(limit)
+    ).all()
+    for row in expired_programs:
+        deadline = row.deadline
+        if deadline is None:
+            continue
+        row.cycle_closed_at = (
+            deadline.replace(tzinfo=timezone.utc)
+            if deadline.tzinfo is None
+            else deadline
+        )
+        row.status = "closed"
+        session.add(row)
+    if expired_programs:
+        session.commit()
+    return len(expired_programs)
 
 
 def purge_expired_retained_data(

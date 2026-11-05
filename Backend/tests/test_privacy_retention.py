@@ -12,7 +12,6 @@ from fastapi import HTTPException
 from sqlalchemy import create_engine, inspect, text
 from sqlmodel import Session, SQLModel, select
 
-from Backend.api.routes.admin import close_program_cycle
 from Backend.api.routes.applications import (
     _ApplicationFields,
     _prepare_application,
@@ -22,6 +21,7 @@ from Backend.api.routes.applications import (
 from Backend.api.routes.auth import register, verify_email
 from Backend.core.data_retention import (
     add_calendar_years,
+    close_expired_program_cycles,
     purge_expired_retained_data,
 )
 from Database.models import (
@@ -192,29 +192,79 @@ class TestApplicationAgeAndLetterVerification(unittest.TestCase):
             self.assertEqual(raised.exception.status_code, 404)
         engine.dispose()
 
-    def test_admin_cycle_closure_blocks_new_applications(self):
+    def test_deadline_automatically_closes_program_and_blocks_applications(self):
         engine = create_engine("sqlite://")
         SQLModel.metadata.create_all(engine)
         with Session(engine) as session:
-            admin = user(name="Admin User", email="admin@example.test", is_admin=True)
             applicant = user(name="Test Applicant", email="applicant@example.test")
-            internship = program(name="Summer Internship", description="Test program")
-            session.add_all([admin, applicant, internship])
-            session.commit()
-            request = SimpleNamespace(client=SimpleNamespace(host="127.0.0.1"))
-
-            response = close_program_cycle(
-                str(internship.id),
-                request,
-                admin,
-                session,
+            now = datetime.now(timezone.utc)
+            expired_program = program(
+                name="Expired Internship",
+                description="Deadline has passed",
+                deadline=now - timedelta(seconds=1),
             )
-            self.assertEqual(response.status, "closed")
-            self.assertIsNotNone(response.cycle_closed_at)
+            future_program = program(
+                name="Future Internship",
+                description="Deadline has not passed",
+                deadline=now + timedelta(days=1),
+            )
+            no_deadline_program = program(
+                name="Open-ended Internship",
+                description="No deadline",
+            )
+            session.add_all(
+                [applicant, expired_program, future_program, no_deadline_program]
+            )
+            session.commit()
+
+            self.assertEqual(close_expired_program_cycles(session, now=now), 1)
+            session.refresh(expired_program)
+            session.refresh(future_program)
+            session.refresh(no_deadline_program)
+            self.assertEqual(expired_program.status, "closed")
+            self.assertEqual(
+                expired_program.cycle_closed_at.replace(tzinfo=timezone.utc),
+                now - timedelta(seconds=1),
+            )
+            self.assertEqual(future_program.status, "open")
+            self.assertIsNone(future_program.cycle_closed_at)
+            self.assertEqual(no_deadline_program.status, "open")
+            self.assertIsNone(no_deadline_program.cycle_closed_at)
 
             fields = _ApplicationFields(
-                program_id=str(internship.id),
-                program_name=internship.name,
+                program_id=str(expired_program.id),
+                program_name=expired_program.name,
+                institution="Test University",
+                course="Computing",
+                contact="",
+                company_name="",
+                company_address="",
+                applicant_name=applicant.name,
+                gender="",
+                student_index_number="",
+                year_of_study="",
+                suggested_company="",
+                date_of_birth="2000-01-01",
+            )
+            with self.assertRaises(HTTPException) as raised:
+                _prepare_application(session, applicant, fields)
+            self.assertEqual(raised.exception.status_code, 409)
+
+    def test_deadline_blocks_application_even_before_scheduled_job_runs(self):
+        engine = create_engine("sqlite://")
+        SQLModel.metadata.create_all(engine)
+        with Session(engine) as session:
+            applicant = user(name="Test Applicant", email="applicant@example.test")
+            expired_program = program(
+                name="Expired Internship",
+                description="Deadline has passed",
+                deadline=datetime.now(timezone.utc) - timedelta(seconds=1),
+            )
+            session.add_all([applicant, expired_program])
+            session.commit()
+            fields = _ApplicationFields(
+                program_id=str(expired_program.id),
+                program_name=expired_program.name,
                 institution="Test University",
                 course="Computing",
                 contact="",

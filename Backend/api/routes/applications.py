@@ -131,6 +131,17 @@ def _validated_date_of_birth(value: object) -> date:
     return birth_date
 
 
+def _program_cycle_is_closed(row: program) -> bool:
+    if row.cycle_closed_at is not None or row.status != "open":
+        return True
+    if row.deadline is None:
+        return False
+    deadline = row.deadline
+    if deadline.tzinfo is None:
+        deadline = deadline.replace(tzinfo=timezone.utc)
+    return deadline <= datetime.now(timezone.utc)
+
+
 def _lock_application_identity(
     session: Session,
     user_id: UUID,
@@ -193,7 +204,7 @@ def _prepare_application(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Program not found",
             )
-    if program_record and program_record.cycle_closed_at is not None:
+    if program_record and _program_cycle_is_closed(program_record):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Applications for this internship cycle are closed",
@@ -216,7 +227,7 @@ def _prepare_application(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Program not found",
         )
-    if program_record.cycle_closed_at is not None:
+    if _program_cycle_is_closed(program_record):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Applications for this internship cycle are closed",

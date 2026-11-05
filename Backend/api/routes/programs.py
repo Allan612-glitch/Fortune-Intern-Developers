@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -22,6 +23,7 @@ def serialize_program(row: program) -> ProgramResponse:
 		duration=row.duration,
 		skills=[skill.strip() for skill in (row.skills or "").split(",") if skill.strip()],
 		deadline=row.deadline.isoformat() if row.deadline else None,
+		cycle_closed_at=row.cycle_closed_at.isoformat() if row.cycle_closed_at else None,
 	)
 
 
@@ -37,6 +39,12 @@ def list_programs(
 	statement = select(program).order_by(program.created_at.desc())
 	if status != "all":
 		statement = statement.where(program.status == status)
+		if status == "open":
+			now = datetime.now(timezone.utc)
+			statement = statement.where(
+				program.cycle_closed_at.is_(None),
+				(program.deadline.is_(None)) | (program.deadline > now),
+			)
 	if category and category.lower() != "all":
 		statement = statement.where(program.category == category)
 	if search:

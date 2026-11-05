@@ -59,9 +59,10 @@ def parse_deadline(value: str | None):
 	if not value:
 		return None
 	try:
-		return datetime.fromisoformat(value.replace("Z", "+00:00"))
+		deadline = datetime.fromisoformat(value.replace("Z", "+00:00"))
 	except ValueError:
 		raise HTTPException(status_code=422, detail="Deadline must be a valid ISO date")
+	return deadline.replace(tzinfo=timezone.utc) if deadline.tzinfo is None else deadline
 
 
 def _application_reference(session: Session, row: application) -> str:
@@ -307,7 +308,9 @@ def get_admin_application_status_history(
 def create_program(payload: AdminProgramCreateRequest, request: Request, admin: user = Depends(get_current_admin), session: Session = Depends(get_session)):
 	if not payload.name.strip():
 		raise HTTPException(status_code=422, detail="Program name is required")
-	row = program(name=payload.name.strip(), description=payload.description.strip(), company=payload.company.strip(), category=payload.category.strip(), status=payload.status.strip(), location=payload.location.strip(), duration=payload.duration.strip(), skills=", ".join(payload.skills), deadline=parse_deadline(payload.deadline))
+	if payload.status.strip().lower() != "open":
+		raise HTTPException(status_code=422, detail="Program cycles close automatically at their deadline")
+	row = program(name=payload.name.strip(), description=payload.description.strip(), company=payload.company.strip(), category=payload.category.strip(), status="open", location=payload.location.strip(), duration=payload.duration.strip(), skills=", ".join(payload.skills), deadline=parse_deadline(payload.deadline))
 	session.add(row)
 	record_audit_event(session, request, actor_id=admin.id, action="program.create", object_type="program", object_id=str(row.id))
 	session.commit()
@@ -323,48 +326,16 @@ def update_program(program_id: str, payload: AdminProgramUpdateRequest, request:
 		row = None
 	if not row:
 		raise HTTPException(status_code=404, detail="Program not found")
+	if payload.status.strip().lower() == "closed":
+		raise HTTPException(status_code=422, detail="Program cycles close automatically at their deadline")
 	if row.cycle_closed_at is not None and payload.status.strip().lower() == "open":
 		raise HTTPException(status_code=409, detail="A closed internship cycle cannot be reopened")
-	if payload.status.strip().lower() == "closed" and row.cycle_closed_at is None:
-		row.cycle_closed_at = datetime.now(timezone.utc)
 	for field in ("name", "description", "company", "category", "status", "location", "duration"):
 		setattr(row, field, getattr(payload, field).strip())
 	row.skills = ", ".join(payload.skills)
 	row.deadline = parse_deadline(payload.deadline)
 	session.add(row)
 	record_audit_event(session, request, actor_id=admin.id, action="program.update", object_type="program", object_id=str(row.id))
-	session.commit()
-	session.refresh(row)
-	return program_response(row)
-
-
-@router.post("/programs/{program_id}/close-cycle", response_model=ProgramResponse)
-def close_program_cycle(
-	program_id: str,
-	request: Request,
-	admin: user = Depends(get_current_admin),
-	session: Session = Depends(get_session),
-):
-	try:
-		row = session.get(program, UUID(program_id))
-	except ValueError:
-		row = None
-	if not row:
-		raise HTTPException(status_code=404, detail="Program not found")
-	if row.cycle_closed_at is not None:
-		raise HTTPException(status_code=409, detail="This internship cycle is already closed")
-
-	row.cycle_closed_at = datetime.now(timezone.utc)
-	row.status = "closed"
-	session.add(row)
-	record_audit_event(
-		session,
-		request,
-		actor_id=admin.id,
-		action="program.cycle.close",
-		object_type="program",
-		object_id=str(row.id),
-	)
 	session.commit()
 	session.refresh(row)
 	return program_response(row)
