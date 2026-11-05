@@ -140,7 +140,7 @@ Create the PostgreSQL database and user referenced by `DATABASE_URL`, then run m
 .\.venv\Scripts\python.exe -m alembic -c Database/alembic.ini upgrade head
 ```
 
-The migrations create the users, profiles, programs, applications, notifications, mentors, mentorships, announcements, admin role, moderation flags, and registration-verification support tables. The latest migrations add lookup indexes, preserve existing application rows even if they contain active duplicates, and add login-failure counts to the rate-limit buckets. The privacy-retention migration adds consent records, date of birth on applications, program-cycle closure timestamps, and persistent letter references. Application records and uploaded resumes are purged three years after an administrator closes the program cycle; consent logs are retained until three years after account deletion. Application submissions are checked in the API and serialized with a PostgreSQL transaction-scoped advisory lock so concurrent API requests cannot create a duplicate for the same user and program. The profile index remains unique and the migration stops if duplicate profiles need manual review.
+The migrations create the users, profiles, programs, applications, notifications, mentors, mentorships, announcements, admin role, moderation flags, and registration-verification support tables. The latest migrations add lookup indexes, preserve existing application rows even if they contain active duplicates, and add login-failure counts to the rate-limit buckets. The privacy-retention migration adds consent records, date of birth on applications, program-cycle closure timestamps, and persistent letter references. The daily scheduled maintenance job closes programs when their application deadline has passed. Application records and uploaded resumes are purged three years after that recorded closure; consent logs are retained until three years after account deletion. Application submissions are checked in the API and serialized with a PostgreSQL transaction-scoped advisory lock so concurrent API requests cannot create a duplicate for the same user and program. The profile index remains unique and the migration stops if duplicate profiles need manual review.
 
 ## Run the Backend
 
@@ -184,7 +184,7 @@ WHERE email = 'your-email@example.com';
 3. Log out and log back in so the frontend receives the updated `is_admin` value.
 4. The **Admin Dashboard** link will appear in the side panel.
 
-Admins can manage users, mentors, programs, applications, resumes, and announcements. Use `POST /api/admin/programs/{program_id}/close-cycle` to close an internship cycle and start its retention period. Admin endpoints are protected and regular users receive `403 Forbidden`.
+Admins can manage users, mentors, programs, applications, resumes, and announcements. Programs close automatically when their application deadline passes; programs without a deadline remain open until updated with one. Admin endpoints are protected and regular users receive `403 Forbidden`.
 
 ## Authentication and Security
 

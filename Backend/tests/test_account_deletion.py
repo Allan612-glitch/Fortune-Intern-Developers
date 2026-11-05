@@ -239,6 +239,7 @@ class TestAccountDeletion(unittest.TestCase):
             response,
             {
                 "purged": 0,
+                "programs_closed": 0,
                 "applications_purged": 0,
                 "consent_logs_purged": 0,
             },

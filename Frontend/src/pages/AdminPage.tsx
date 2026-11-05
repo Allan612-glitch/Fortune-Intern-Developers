@@ -30,7 +30,6 @@ const emptyProgramForm = {
   description: "",
   company: "Fortune Intern Network",
   category: "Internship",
-  status: "open",
   location: "Remote",
   duration: "3 months",
   skills: "",
@@ -160,7 +159,7 @@ export default function AdminPage() {
         description: programForm.description.trim(),
         company: programForm.company.trim(),
         category: programForm.category.trim(),
-        status: programForm.status,
+        status: "open",
         location: programForm.location.trim(),
         duration: programForm.duration.trim(),
         skills: programForm.skills.split(",").map((skill) => skill.trim()).filter(Boolean),
@@ -483,17 +482,6 @@ export default function AdminPage() {
                   placeholder="e.g. Technology"
                   className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
                 />
-              </label>
-              <label className="block text-xs font-semibold text-muted-foreground">
-                Status
-                <select
-                  value={programForm.status}
-                  onChange={(event) => setProgramForm((current) => ({ ...current, status: event.target.value }))}
-                  className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
-                >
-                  <option value="open">Open</option>
-                  <option value="closed">Closed</option>
-                </select>
               </label>
               <label className="block text-xs font-semibold text-muted-foreground">
                 Location
