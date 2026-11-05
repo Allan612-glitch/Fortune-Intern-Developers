@@ -17,6 +17,7 @@ from Database.models import (
     application,
     application_status_history,
     audit_event,
+    consent_log,
     education_record,
     notification,
     password_reset,
@@ -181,7 +182,14 @@ class TestAccountDeletion(unittest.TestCase):
                 source_ip="127.0.0.1",
             )
         )
+        consent_entry = consent_log(
+            account_id=self.account.id,
+            consent_type="terms",
+            accepted_at=deletion_requested_at - timedelta(days=1),
+        )
+        self.session.add(consent_entry)
         self.session.commit()
+        consent_entry_id = consent_entry.id
 
         with patch("Backend.core.account_deletion.storage.delete_file") as delete_file:
             self.assertEqual(
@@ -209,6 +217,16 @@ class TestAccountDeletion(unittest.TestCase):
         self.assertEqual(self.session.exec(select(application)).all(), [])
         self.assertEqual(self.session.exec(select(profile_document)).all(), [])
         self.assertEqual(self.session.exec(select(audit_event)).all(), [])
+        retained_consent = self.session.get(consent_log, consent_entry_id)
+        self.assertIsNotNone(retained_consent)
+        self.assertIsNotNone(retained_consent.account_closed_at)
+        expires_at = retained_consent.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        self.assertGreater(
+            expires_at,
+            datetime.now(timezone.utc) + timedelta(days=365 * 2),
+        )
 
     def test_authorized_cleanup_endpoint_runs_expiry_purge(self):
         with patch.object(settings, "cron_secret", "test-cron-secret"):
@@ -217,4 +235,11 @@ class TestAccountDeletion(unittest.TestCase):
                 self.session,
             )
 
-        self.assertEqual(response, {"purged": 0})
+        self.assertEqual(
+            response,
+            {
+                "purged": 0,
+                "applications_purged": 0,
+                "consent_logs_purged": 0,
+            },
+        )

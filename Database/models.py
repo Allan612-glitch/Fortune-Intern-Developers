@@ -1,7 +1,7 @@
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, JSON, String, Uuid, text
+from sqlalchemy import Boolean, Column, Date, DateTime, Float, ForeignKey, Index, Integer, JSON, String, Uuid, text
 from sqlmodel import Field, SQLModel
 from uuid import UUID, uuid4
-from datetime import datetime,timezone
+from datetime import date, datetime,timezone
 
 #---------USER AND PROFILE MODELS---------#
 class user(SQLModel, table=True):
@@ -15,6 +15,8 @@ class user(SQLModel, table=True):
     is_suspended: bool = Field(default=False, sa_column=Column("is_suspended", Boolean, nullable=False, default=False))
     token_version: int = Field(default=0, sa_column=Column("token_version", Integer, nullable=False, default=0))
     deletion_requested_at: datetime | None = Field(default=None, sa_column=Column("deletion_requested_at", DateTime(timezone=True), nullable=True, index=True))
+    terms_accepted_at: datetime | None = Field(default=None, sa_column=Column("terms_accepted_at", DateTime(timezone=True), nullable=True))
+    privacy_accepted_at: datetime | None = Field(default=None, sa_column=Column("privacy_accepted_at", DateTime(timezone=True), nullable=True))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
 
@@ -65,6 +67,7 @@ class program(SQLModel, table=True):
     duration: str = Field(default="3 months", sa_column=Column("duration", String, nullable=False, default="3 months"))
     skills: str | None = Field(default=None, sa_column=Column("skills", String))
     deadline: datetime | None = Field(default=None, sa_column=Column("deadline", DateTime(timezone=True)))
+    cycle_closed_at: datetime | None = Field(default=None, sa_column=Column("cycle_closed_at", DateTime(timezone=True), nullable=True))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
 
@@ -86,6 +89,8 @@ class application(SQLModel, table=True):
     student_index_number: str | None = Field(default=None, sa_column=Column("student_index_number", String))
     year_of_study: str | None = Field(default=None, sa_column=Column("year_of_study", String))
     suggested_company: str | None = Field(default=None, sa_column=Column("suggested_company", String))
+    date_of_birth: date | None = Field(default=None, sa_column=Column("date_of_birth", Date, nullable=True))
+    letter_reference: str | None = Field(default=None, sa_column=Column("letter_reference", String, nullable=True, unique=True, index=True))
     documents_sent: bool = Field(default=False, sa_column=Column("documents_sent", Boolean, nullable=False, default=False))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
@@ -157,6 +162,15 @@ class audit_event(SQLModel, table=True):
     source_ip: str | None = Field(default=None, sa_column=Column("source_ip", String))
     result: str = Field(default="success", sa_column=Column("result", String, nullable=False, default="success"))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False, index=True))
+
+class consent_log(SQLModel, table=True):
+    __tablename__ = "consent_logs"
+    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+    account_id: UUID = Field(sa_column=Column("account_id", Uuid, nullable=False, index=True))
+    consent_type: str = Field(sa_column=Column("consent_type", String, nullable=False))
+    accepted_at: datetime = Field(sa_column=Column("accepted_at", DateTime(timezone=True), nullable=False))
+    account_closed_at: datetime | None = Field(default=None, sa_column=Column("account_closed_at", DateTime(timezone=True), nullable=True))
+    expires_at: datetime | None = Field(default=None, sa_column=Column("expires_at", DateTime(timezone=True), nullable=True, index=True))
 
 class rate_limit_bucket(SQLModel, table=True):
     __tablename__ = "rate_limit_buckets"
@@ -273,6 +287,8 @@ class registration_verification(SQLModel, table=True):
     email: str = Field(sa_column=Column("email", String, unique=True, index=True, nullable=False))
     password_hash: str = Field(sa_column=Column("password_hash", String, nullable=False))
     code_hash: str = Field(sa_column=Column("code_hash", String, nullable=False))
+    terms_accepted_at: datetime | None = Field(default=None, sa_column=Column("terms_accepted_at", DateTime(timezone=True), nullable=True))
+    privacy_accepted_at: datetime | None = Field(default=None, sa_column=Column("privacy_accepted_at", DateTime(timezone=True), nullable=True))
     failed_attempts: int = Field(default=0, sa_column=Column("failed_attempts", Integer, nullable=False, default=0, server_default="0"))
     expires_at: datetime = Field(sa_column=Column("expires_at", DateTime(timezone=True), nullable=False))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))

@@ -31,7 +31,7 @@ from Backend.core.security import (
 )
 from Backend.core.rate_limit import enforce_rate_limit
 from Backend.database import get_session
-from Database.models import password_reset, registration_verification, user
+from Database.models import consent_log, password_reset, registration_verification, user
 from Database.schemas import (
     ForgotPasswordRequest,
     GoogleLoginRequest,
@@ -122,6 +122,31 @@ def validate_email(email: str) -> str:
             detail="A valid email address is required",
         )
     return normalized_email
+
+
+def _record_consents(
+    session: Session,
+    account: user,
+    *,
+    terms_accepted_at: datetime,
+    privacy_accepted_at: datetime,
+) -> None:
+    account.terms_accepted_at = terms_accepted_at
+    account.privacy_accepted_at = privacy_accepted_at
+    session.add_all(
+        [
+            consent_log(
+                account_id=account.id,
+                consent_type="terms",
+                accepted_at=terms_accepted_at,
+            ),
+            consent_log(
+                account_id=account.id,
+                consent_type="privacy",
+                accepted_at=privacy_accepted_at,
+            ),
+        ]
+    )
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -243,16 +268,30 @@ def google_login(
                 raise HTTPException(status_code=409, detail="This email is linked to another Google account")
             account.google_sub = subject
         else:
+            if not payload.terms_accepted or not payload.privacy_accepted:
+                raise HTTPException(
+                    status_code=422,
+                    detail="You must accept the Terms and Conditions and Privacy Policy to create an account",
+                )
             name = claims.get("name")
             if not isinstance(name, str) or not name.strip():
                 name = email.partition("@")[0]
+            accepted_at = datetime.now(timezone.utc)
             account = user(
                 name=name.strip(),
                 email=email,
                 password_hash=None,
                 google_sub=subject,
+                terms_accepted_at=accepted_at,
+                privacy_accepted_at=accepted_at,
             )
             session.add(account)
+            _record_consents(
+                session,
+                account,
+                terms_accepted_at=accepted_at,
+                privacy_accepted_at=accepted_at,
+            )
     elif account.deletion_requested_at is not None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -273,6 +312,11 @@ def register(
     request: Request,
     session: Session = Depends(get_session),
 ):
+    if not credentials.terms_accepted or not credentials.privacy_accepted:
+        raise HTTPException(
+            status_code=422,
+            detail="You must accept the Terms and Conditions and Privacy Policy to create an account",
+        )
     email = validate_email(credentials.email)
     client_ip = request.client.host if request.client else None
     enforce_rate_limit(
@@ -297,6 +341,7 @@ def register(
             email=email,
         )
 
+    accepted_at = datetime.now(timezone.utc)
     code = f"{randbelow(1_000_000):06d}"
     pending_registration = session.exec(
         select(registration_verification).where(registration_verification.email == email)
@@ -307,6 +352,8 @@ def register(
             email=email,
             password_hash=hash_password(credentials.password),
             code_hash=hash_one_time_secret(code, "registration-code"),
+            terms_accepted_at=accepted_at,
+            privacy_accepted_at=accepted_at,
             failed_attempts=0,
             expires_at=datetime.now(timezone.utc) + timedelta(minutes=settings.verification_code_expire_minutes),
         )
@@ -314,6 +361,8 @@ def register(
         pending_registration.name = name
         pending_registration.password_hash = hash_password(credentials.password)
         pending_registration.code_hash = hash_one_time_secret(code, "registration-code")
+        pending_registration.terms_accepted_at = accepted_at
+        pending_registration.privacy_accepted_at = accepted_at
         pending_registration.failed_attempts = 0
         pending_registration.expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.verification_code_expire_minutes)
         pending_registration.created_at = datetime.now(timezone.utc)
@@ -410,6 +459,17 @@ def verify_email(
             )
         raise HTTPException(status_code=400, detail="Invalid verification code")
 
+    if (
+        pending_registration.terms_accepted_at is None
+        or pending_registration.privacy_accepted_at is None
+    ):
+        session.delete(pending_registration)
+        session.commit()
+        raise HTTPException(
+            status_code=400,
+            detail="Restart registration and accept the current Terms and Privacy Policy",
+        )
+
     if session.exec(select(user).where(user.email == email)).first():
         session.delete(pending_registration)
         session.commit()
@@ -419,8 +479,16 @@ def verify_email(
         name=pending_registration.name,
         email=pending_registration.email,
         password_hash=pending_registration.password_hash,
+        terms_accepted_at=pending_registration.terms_accepted_at,
+        privacy_accepted_at=pending_registration.privacy_accepted_at,
     )
     session.add(account)
+    _record_consents(
+        session,
+        account,
+        terms_accepted_at=pending_registration.terms_accepted_at,
+        privacy_accepted_at=pending_registration.privacy_accepted_at,
+    )
     session.delete(pending_registration)
     session.commit()
     session.refresh(account)

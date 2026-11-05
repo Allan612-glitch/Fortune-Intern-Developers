@@ -1,4 +1,5 @@
 from dataclasses import dataclass, replace
+from datetime import date, datetime, timezone
 from hashlib import blake2b
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -29,6 +30,7 @@ from Database.models import (
 from Database.schemas import (
     ApplicationResponse,
     ApplicationStatusHistoryResponse,
+    LetterVerificationResponse,
 )
 
 router = APIRouter(prefix="/api/applications", tags=["applications"])
@@ -48,6 +50,7 @@ class _ApplicationFields:
     student_index_number: str
     year_of_study: str
     suggested_company: str
+    date_of_birth: str
 
 
 @dataclass(frozen=True)
@@ -56,6 +59,7 @@ class _PreparedApplication:
     program_id: UUID
     program_name: str
     program_company: str | None
+    date_of_birth: date
 
 
 @dataclass(frozen=True)
@@ -89,6 +93,42 @@ def serialize_application(row: application, program_name: str) -> ApplicationRes
         host_company_address=row.host_company_address,
         created_at=row.created_at.isoformat(),
     )
+
+
+def _validated_date_of_birth(value: object) -> date:
+    if not isinstance(value, str) or not value.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Date of birth is required",
+        )
+    try:
+        birth_date = date.fromisoformat(value)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Date of birth must be a valid ISO date",
+        ) from error
+
+    today = datetime.now(timezone.utc).date()
+    if birth_date > today:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Date of birth cannot be in the future",
+        )
+    age = today.year - birth_date.year - (
+        (today.month, today.day) < (birth_date.month, birth_date.day)
+    )
+    if age < 16:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Applicants under 16 cannot submit applications",
+        )
+    if age < 18:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Applicants under 18 require guardian or institution approval; applications are not currently accepted for minors",
+        )
+    return birth_date
 
 
 def _lock_application_identity(
@@ -153,6 +193,11 @@ def _prepare_application(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Program not found",
             )
+    if program_record and program_record.cycle_closed_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Applications for this internship cycle are closed",
+        )
 
     program_name = (
         program_record.name if program_record else fields.program_name
@@ -171,6 +216,12 @@ def _prepare_application(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Program not found",
         )
+    if program_record.cycle_closed_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Applications for this internship cycle are closed",
+        )
+    date_of_birth = _validated_date_of_birth(fields.date_of_birth)
 
     _lock_application_identity(session, account.id, program_record.id)
     duplicate_identity = application.applicant_name == fields.applicant_name
@@ -203,6 +254,7 @@ def _prepare_application(
         program_id=program_record.id,
         program_name=program_name,
         program_company=program_record.company,
+        date_of_birth=date_of_birth,
     )
 
 
@@ -248,6 +300,7 @@ def _save_application(
         student_index_number=fields.student_index_number or None,
         year_of_study=fields.year_of_study or None,
         suggested_company=fields.suggested_company or None,
+        date_of_birth=prepared.date_of_birth,
     )
     session.add(new_application)
     session.add(
@@ -331,6 +384,40 @@ def list_applications(
         program_record = session.get(program, row.program_id)
         results.append(serialize_application(row, program_record.name if program_record else "Program"))
     return results
+
+
+@router.get("/verify-letter", response_model=LetterVerificationResponse)
+def verify_letter(
+    request: Request,
+    reference: str = Query(min_length=1, max_length=64),
+    session: Session = Depends(get_session),
+):
+    client_ip = request.client.host if request.client else "unknown"
+    enforce_rate_limit(
+        session,
+        request,
+        "letter-verification",
+        client_ip,
+        ip_limit=30,
+        identity_limit=30,
+        window_seconds=60,
+    )
+    row = session.exec(
+        select(application).where(
+            application.letter_reference == reference,
+            application.status == "accepted",
+            application.documents_sent.is_(True),
+        )
+    ).first()
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Letter reference not found",
+        )
+    return LetterVerificationResponse(
+        valid=True,
+        reference=reference,
+    )
 
 
 @router.get("/{application_id}", response_model=ApplicationResponse)
@@ -477,6 +564,7 @@ async def create_application(
             student_index_number=str(form.get("student_index_number") or "").strip(),
             year_of_study=str(form.get("year_of_study") or "").strip(),
             suggested_company=str(form.get("suggested_company") or "").strip(),
+            date_of_birth=str(form.get("date_of_birth") or ""),
         )
         resume = form.get("resume")
     else:
@@ -494,6 +582,7 @@ async def create_application(
             student_index_number=str(payload.get("student_index_number") or "").strip(),
             year_of_study=str(payload.get("year_of_study") or "").strip(),
             suggested_company=str(payload.get("suggested_company") or "").strip(),
+            date_of_birth=str(payload.get("date_of_birth") or ""),
         )
 
     prepared = await run_in_threadpool(

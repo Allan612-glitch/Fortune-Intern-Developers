@@ -64,6 +64,7 @@ export default function AuthPage({
     userType: "student" as const,
   });
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [policiesAccepted, setPoliciesAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [recoveryOpen, setRecoveryOpen] = useState(false);
@@ -97,6 +98,7 @@ export default function AuthPage({
       userType: "student",
     });
     setTouched({});
+    setPoliciesAccepted(false);
     setLoading(false);
     setSubmitError("");
     setRecoveryOpen(false);
@@ -211,11 +213,19 @@ export default function AuthPage({
       setSubmitError("Select your university before signing up with Google.");
       return;
     }
+    if (mode === "register" && !policiesAccepted) {
+      setSubmitError("Accept the Terms and Conditions and Privacy Policy to create an account.");
+      return;
+    }
 
     setLoading(true);
     setSubmitError("");
     try {
-      const account = await loginWithGoogle(response.credential);
+      const account = await loginWithGoogle(
+        response.credential,
+        mode === "register" && policiesAccepted,
+        mode === "register" && policiesAccepted,
+      );
       const profile = await getProfile();
       if (mode === "register") {
         await updateProfile({ university: form.school, major: form.major });
@@ -264,6 +274,10 @@ export default function AuthPage({
       !form.school
     )
       return;
+    if (!policiesAccepted) {
+      setSubmitError("Accept the Terms and Conditions and Privacy Policy to create an account.");
+      return;
+    }
     setLoading(true);
     try {
       await register(
@@ -271,6 +285,8 @@ export default function AuthPage({
         form.email.trim(),
         form.password,
         captchaToken || undefined,
+        true,
+        true,
       );
       onRegister({
       name: form.name,
@@ -308,6 +324,7 @@ export default function AuthPage({
   const switchMode = (m: "login" | "register") => {
     setTouched({});
     setSubmitError("");
+    setPoliciesAccepted(false);
     setForm({
       name: "",
       email: "",
@@ -602,6 +619,29 @@ export default function AuthPage({
                     />
                   }
                 />
+
+                <label className="flex items-start gap-2 text-xs text-muted-foreground leading-relaxed">
+                  <input
+                    type="checkbox"
+                    checked={policiesAccepted}
+                    onChange={(event) => {
+                      setPoliciesAccepted(event.target.checked);
+                      setSubmitError("");
+                    }}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    I agree to the{" "}
+                    <a href="/terms" target="_blank" rel="noreferrer" className="underline">
+                      Terms and Conditions
+                    </a>{" "}
+                    and{" "}
+                    <a href="/privacy-policy" target="_blank" rel="noreferrer" className="underline">
+                      Privacy Policy
+                    </a>
+                    .
+                  </span>
+                </label>
 
                 {captchaRequired && (
                   <div className="space-y-2">

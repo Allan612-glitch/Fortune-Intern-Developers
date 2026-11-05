@@ -102,6 +102,7 @@ export default function ApplyFormModal({
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
+    dateOfBirth: "",
     gender: "",
     phone: "",
     email: ownerEmail,
@@ -120,6 +121,7 @@ export default function ApplyFormModal({
     const required: Array<keyof typeof form> = [
       "firstName",
       "lastName",
+      "dateOfBirth",
       "gender",
       "phone",
       "email",
@@ -132,6 +134,16 @@ export default function ApplyFormModal({
     ];
     if (required.some((key) => !form[key].trim()))
       return "Please complete all required fields.";
+    const birthDate = new Date(`${form.dateOfBirth}T00:00:00.000Z`);
+    const today = new Date();
+    const applicantAge =
+      today.getUTCFullYear() -
+      birthDate.getUTCFullYear() -
+      ((today.getUTCMonth() < birthDate.getUTCMonth() ||
+      (today.getUTCMonth() === birthDate.getUTCMonth() &&
+        today.getUTCDate() < birthDate.getUTCDate())) ? 1 : 0);
+    if (applicantAge < 18)
+      return "Applicants under 18 require guardian or institution approval. Applications are not currently accepted for minors.";
     if (form.institution === "Other" && !form.otherInstitution.trim())
       return "Please specify your institution.";
     if (!/^0\d{9}$/.test(form.phone))
@@ -156,6 +168,7 @@ export default function ApplyFormModal({
     payload.append("companyName", form.companyName);
     payload.append("companyAddress", form.companyAddress);
     payload.append("applicant_name", `${form.firstName} ${form.lastName}`.trim());
+    payload.append("date_of_birth", form.dateOfBirth);
     payload.append("gender", form.gender);
     payload.append("student_index_number", form.indexNumber.trim());
     payload.append("year_of_study", form.year);
@@ -330,6 +343,20 @@ export default function ApplyFormModal({
               value={form.lastName}
               onChange={(value) => set("lastName", value)}
             />
+            <label className="block">
+              <span className="text-sm font-semibold">Date of Birth *</span>
+              <input
+                type="date"
+                required
+                value={form.dateOfBirth}
+                onChange={(event) => set("dateOfBirth", event.target.value)}
+                max={new Date().toISOString().slice(0, 10)}
+                className="mt-2 w-full rounded-xl border border-border px-4 py-3 text-sm"
+              />
+              <span className="mt-1 block text-xs text-muted-foreground">
+                Applicants must be at least 18 until guardian or institution approval is available.
+              </span>
+            </label>
             <div>
               <span className="text-sm font-semibold">Gender *</span>
               <p className="text-xs text-muted-foreground mt-1">

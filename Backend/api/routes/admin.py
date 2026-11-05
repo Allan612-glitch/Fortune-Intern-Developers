@@ -51,6 +51,7 @@ def program_response(row: program) -> ProgramResponse:
 		category=row.category, status=row.status, location=row.location, duration=row.duration,
 		skills=[item.strip() for item in (row.skills or "").split(",") if item.strip()],
 		deadline=row.deadline.isoformat() if row.deadline else None,
+		cycle_closed_at=row.cycle_closed_at.isoformat() if row.cycle_closed_at else None,
 	)
 
 
@@ -80,6 +81,10 @@ def _application_reference(session: Session, row: application) -> str:
 		)
 	).one()
 	return f"FIN/{row.created_at.year}/{previous_applications + 1:04d}"
+
+
+def _stable_letter_reference(row: application) -> str:
+	return f"FIN/{row.created_at.year}/{row.id.hex.upper()}"
 
 
 @router.get("/users", response_model=list[AdminUserResponse])
@@ -318,12 +323,48 @@ def update_program(program_id: str, payload: AdminProgramUpdateRequest, request:
 		row = None
 	if not row:
 		raise HTTPException(status_code=404, detail="Program not found")
+	if row.cycle_closed_at is not None and payload.status.strip().lower() == "open":
+		raise HTTPException(status_code=409, detail="A closed internship cycle cannot be reopened")
+	if payload.status.strip().lower() == "closed" and row.cycle_closed_at is None:
+		row.cycle_closed_at = datetime.now(timezone.utc)
 	for field in ("name", "description", "company", "category", "status", "location", "duration"):
 		setattr(row, field, getattr(payload, field).strip())
 	row.skills = ", ".join(payload.skills)
 	row.deadline = parse_deadline(payload.deadline)
 	session.add(row)
 	record_audit_event(session, request, actor_id=admin.id, action="program.update", object_type="program", object_id=str(row.id))
+	session.commit()
+	session.refresh(row)
+	return program_response(row)
+
+
+@router.post("/programs/{program_id}/close-cycle", response_model=ProgramResponse)
+def close_program_cycle(
+	program_id: str,
+	request: Request,
+	admin: user = Depends(get_current_admin),
+	session: Session = Depends(get_session),
+):
+	try:
+		row = session.get(program, UUID(program_id))
+	except ValueError:
+		row = None
+	if not row:
+		raise HTTPException(status_code=404, detail="Program not found")
+	if row.cycle_closed_at is not None:
+		raise HTTPException(status_code=409, detail="This internship cycle is already closed")
+
+	row.cycle_closed_at = datetime.now(timezone.utc)
+	row.status = "closed"
+	session.add(row)
+	record_audit_event(
+		session,
+		request,
+		actor_id=admin.id,
+		action="program.cycle.close",
+		object_type="program",
+		object_id=str(row.id),
+	)
 	session.commit()
 	session.refresh(row)
 	return program_response(row)
@@ -364,6 +405,8 @@ def update_application_status(application_id: str, payload: AdminApplicationStat
 	if not retrying_documents:
 		previous_status = row.status
 		row.status = requested_status
+		if requested_status == "accepted" and getattr(row, "letter_reference", None) is None:
+			row.letter_reference = _stable_letter_reference(row)
 		session.add(row)
 		session.add(application_status_history(
 			application_id=row.id,
@@ -393,7 +436,11 @@ def update_application_status(application_id: str, payload: AdminApplicationStat
 		if not applicant:
 			raise HTTPException(status_code=404, detail="Applicant not found")
 		try:
-			reference_no = _application_reference(session, row)
+			reference_no = getattr(row, "letter_reference", None) or _stable_letter_reference(row)
+			if getattr(row, "letter_reference", None) is None:
+				row.letter_reference = reference_no
+				session.add(row)
+				session.commit()
 			letter_pdf = documents.build_recommendation_letter_pdf(
 				student_name=row.applicant_name or applicant.name,
 				institution=row.applicant_institution or "Not specified",

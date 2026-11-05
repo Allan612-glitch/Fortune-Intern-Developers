@@ -69,10 +69,18 @@ export async function login(email: string, password: string, captchaToken?: stri
   return result.user;
 }
 
-export async function loginWithGoogle(credential: string) {
+export async function loginWithGoogle(
+  credential: string,
+  termsAccepted = false,
+  privacyAccepted = false,
+) {
   const result = await apiRequest<TokenResponse>("/api/auth/google", {
     method: "POST",
-    body: JSON.stringify({ credential }),
+    body: JSON.stringify({
+      credential,
+      terms_accepted: termsAccepted,
+      privacy_accepted: privacyAccepted,
+    }),
   });
   setAccessToken(result.access_token);
   saveDeviceToken(result.device_token);
@@ -84,10 +92,19 @@ export function register(
   email: string,
   password: string,
   captchaToken?: string,
+  termsAccepted = false,
+  privacyAccepted = false,
 ) {
   return apiRequest<{ message: string; email: string }>("/api/auth/register", {
     method: "POST",
-    body: JSON.stringify({ name, email, password, captcha_token: captchaToken }),
+    body: JSON.stringify({
+      name,
+      email,
+      password,
+      captcha_token: captchaToken,
+      terms_accepted: termsAccepted,
+      privacy_accepted: privacyAccepted,
+    }),
   });
 }
 
