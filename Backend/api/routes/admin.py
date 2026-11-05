@@ -12,7 +12,7 @@ from sqlalchemy import and_, func, or_
 from sqlmodel import Session, select
 
 from Backend.api.deps import get_current_admin
-from Backend.core import documents, storage
+from Backend.core import age, documents, storage
 from Backend.core.audit import record_audit_event
 from Backend.core.mailer import send_application_documents_email
 from Backend.database import get_session
@@ -146,6 +146,10 @@ def list_admin_applications(
 			applicant_name=row.applicant_name, gender=row.gender,
 			student_index_number=row.student_index_number, year_of_study=row.year_of_study,
 			suggested_company=row.suggested_company,
+			requires_minor_review=age.requires_minor_review(
+				getattr(row, "date_of_birth", None),
+				row.created_at,
+			),
 			applicant_institution=row.applicant_institution, applicant_course=row.applicant_course,
 			applicant_contact=row.applicant_contact, host_company_name=row.host_company_name,
 			host_company_address=row.host_company_address,
@@ -452,6 +456,10 @@ def update_application_status(application_id: str, payload: AdminApplicationStat
 		applicant_name=row.applicant_name, gender=row.gender,
 		student_index_number=row.student_index_number, year_of_study=row.year_of_study,
 		suggested_company=row.suggested_company,
+		requires_minor_review=age.requires_minor_review(
+			getattr(row, "date_of_birth", None),
+			row.created_at,
+		),
 		applicant_institution=row.applicant_institution, applicant_course=row.applicant_course,
 		applicant_contact=row.applicant_contact, host_company_name=row.host_company_name,
 		host_company_address=row.host_company_address, created_at=row.created_at.isoformat(),

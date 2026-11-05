@@ -25,6 +25,7 @@ export interface BackendApplication {
   student_index_number: string | null;
   year_of_study: string | null;
   suggested_company: string | null;
+  requires_minor_review: boolean;
   applicant_institution: string | null;
   applicant_course: string | null;
   applicant_contact: string | null;

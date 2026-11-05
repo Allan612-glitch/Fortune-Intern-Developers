@@ -402,6 +402,11 @@ export default function AdminPage() {
                     <p className="text-xs text-muted-foreground mt-1">
                       {[app.student_index_number, app.gender, app.year_of_study].filter(Boolean).join(" · ") || "No academic details"}
                     </p>
+                    {app.requires_minor_review && (
+                      <p className="text-xs font-semibold text-amber-700 mt-1">
+                        Under 18: verify guardian or institution approval
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

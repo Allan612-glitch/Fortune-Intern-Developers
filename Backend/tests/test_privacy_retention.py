@@ -1,4 +1,5 @@
 import importlib.util
+from dataclasses import replace
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -16,6 +17,7 @@ from Backend.api.routes.applications import (
     _ApplicationFields,
     _prepare_application,
     _validated_date_of_birth,
+    serialize_application,
     verify_letter,
 )
 from Backend.api.routes.auth import register, verify_email
@@ -140,9 +142,7 @@ class TestApplicationAgeAndLetterVerification(unittest.TestCase):
         self.assertEqual(_validated_date_of_birth(adult), date.fromisoformat(adult))
 
         minor = date(today.year - 17, 1, 1).isoformat()
-        with self.assertRaises(HTTPException) as raised:
-            _validated_date_of_birth(minor)
-        self.assertEqual(raised.exception.status_code, 403)
+        self.assertEqual(_validated_date_of_birth(minor), date.fromisoformat(minor))
 
         child = date(today.year - 15, 1, 1).isoformat()
         with self.assertRaises(HTTPException) as raised:
@@ -153,6 +153,55 @@ class TestApplicationAgeAndLetterVerification(unittest.TestCase):
         with self.assertRaises(HTTPException) as raised:
             _validated_date_of_birth(tomorrow)
         self.assertEqual(raised.exception.status_code, 422)
+
+    def test_minor_application_enters_review(self):
+        engine = create_engine("sqlite://")
+        SQLModel.metadata.create_all(engine)
+        today = datetime.now(timezone.utc).date()
+        minor_birth_date = date(today.year - 17, 1, 1).isoformat()
+        with Session(engine) as session:
+            applicant = user(name="Test Applicant", email="applicant@example.test")
+            internship = program(name="Summer Internship", description="Test program")
+            session.add_all([applicant, internship])
+            session.commit()
+            fields = _ApplicationFields(
+                program_id=str(internship.id),
+                program_name=internship.name,
+                institution="Test University",
+                course="Computing",
+                contact="",
+                company_name="",
+                company_address="",
+                applicant_name=applicant.name,
+                gender="",
+                student_index_number="",
+                year_of_study="",
+                suggested_company="",
+                date_of_birth=minor_birth_date,
+            )
+
+            prepared = _prepare_application(session, applicant, fields)
+
+            self.assertEqual(prepared.initial_status, "review")
+            response = serialize_application(
+                application(
+                    user_id=applicant.id,
+                    program_id=internship.id,
+                    status=prepared.initial_status,
+                    date_of_birth=prepared.date_of_birth,
+                    created_at=datetime.now(timezone.utc),
+                ),
+                internship.name,
+            )
+            self.assertTrue(response.requires_minor_review)
+            adult_birth_date = date(today.year - 18, 1, 1).isoformat()
+            adult_prepared = _prepare_application(
+                session,
+                applicant,
+                replace(fields, date_of_birth=adult_birth_date),
+            )
+            self.assertEqual(adult_prepared.initial_status, "submitted")
+        engine.dispose()
 
     def test_public_letter_lookup_verifies_only_sent_accepted_documents(self):
         engine = create_engine("sqlite://")
