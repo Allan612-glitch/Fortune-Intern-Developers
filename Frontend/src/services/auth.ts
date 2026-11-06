@@ -54,17 +54,23 @@ export interface ProfileDocument {
   created_at: string;
 }
 
-export async function login(email: string, password: string, captchaToken?: string) {
+export async function login(
+  email: string,
+  password: string,
+  captchaToken?: string,
+  rememberMe = false,
+) {
   const result = await apiRequest<TokenResponse>("/api/auth/login", {
     method: "POST",
     body: JSON.stringify({
       email,
       password,
+      remember_me: rememberMe,
       captcha_token: captchaToken,
       trusted_device_token: localStorage.getItem(trustedDeviceStorageKey),
     }),
   });
-  setAccessToken(result.access_token);
+  setAccessToken(result.access_token, rememberMe);
   saveDeviceToken(result.device_token);
   return result.user;
 }
@@ -73,6 +79,7 @@ export async function loginWithGoogle(
   credential: string,
   termsAccepted = false,
   privacyAccepted = false,
+  rememberMe = false,
 ) {
   const result = await apiRequest<TokenResponse>("/api/auth/google", {
     method: "POST",
@@ -80,9 +87,10 @@ export async function loginWithGoogle(
       credential,
       terms_accepted: termsAccepted,
       privacy_accepted: privacyAccepted,
+      remember_me: rememberMe,
     }),
   });
-  setAccessToken(result.access_token);
+  setAccessToken(result.access_token, rememberMe);
   saveDeviceToken(result.device_token);
   return result.user;
 }

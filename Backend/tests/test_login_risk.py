@@ -351,13 +351,22 @@ class TestLoginRiskGates(unittest.TestCase):
             patch("Backend.api.routes.auth.verify_password", return_value=True),
             patch("Backend.api.routes.auth.record_login_outcome") as record_outcome,
             patch("Backend.api.routes.auth.create_access_token", return_value="access-token"),
-            patch("Backend.api.routes.auth.create_refresh_token", return_value="refresh-token"),
+            patch(
+                "Backend.api.routes.auth.create_refresh_token",
+                return_value="refresh-token",
+            ) as refresh_token_factory,
         ):
             response = Response()
-            result = login(self.credentials, self.request, response, session)
+            credentials = self.credentials.model_copy(update={"remember_me": True})
+            result = login(credentials, self.request, response, session)
 
         self.assertEqual(result.access_token, "access-token")
         self.assertIn("fortune-intern-refresh-token=refresh-token", response.headers["set-cookie"])
+        self.assertIn("Max-Age=2592000", response.headers["set-cookie"])
+        self.assertEqual(
+            refresh_token_factory.call_args.args,
+            (account.id, account.token_version, True),
+        )
         self.assertTrue(
             verify_trusted_device_token(
                 result.device_token,

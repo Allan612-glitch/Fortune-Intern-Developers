@@ -109,12 +109,24 @@ def serialize_user(account: user) -> UserResponse:
     return UserResponse(id=str(account.id), name=account.name, email=account.email, is_admin=account.is_admin)
 
 
-def _set_refresh_cookie(response: Response, account: user) -> None:
+def _set_refresh_cookie(
+    response: Response,
+    account: user,
+    remember_me: bool = False,
+) -> None:
     is_secure = settings.environment != "development"
     response.set_cookie(
         key=REFRESH_COOKIE_NAME,
-        value=create_refresh_token(account.id, account.token_version),
-        max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
+        value=create_refresh_token(
+            account.id,
+            account.token_version,
+            remember_me,
+        ),
+        max_age=(
+            settings.refresh_token_expire_days * 24 * 60 * 60
+            if remember_me
+            else None
+        ),
         httponly=True,
         secure=is_secure,
         samesite="none" if is_secure else "lax",
@@ -137,8 +149,9 @@ def create_auth_response(
     account: user,
     client_fingerprint: str,
     response: Response,
+    remember_me: bool = False,
 ) -> TokenResponse:
-    _set_refresh_cookie(response, account)
+    _set_refresh_cookie(response, account, remember_me)
     return TokenResponse(
         access_token=create_access_token(account.id, account.token_version),
         token_type="bearer",
@@ -249,7 +262,12 @@ def login(
             detail="This account is scheduled for deletion",
         )
 
-    return create_auth_response(account, fingerprint, response)
+    return create_auth_response(
+        account,
+        fingerprint,
+        response,
+        credentials.remember_me,
+    )
 
 
 @router.post("/refresh", response_model=AccessTokenResponse)
@@ -267,7 +285,7 @@ def refresh_access_token(
         )
 
     try:
-        account_id, token_version = get_user_id_from_refresh_token(refresh_token)
+        account_id, token_version, remember_me = get_user_id_from_refresh_token(refresh_token)
     except HTTPException:
         _clear_refresh_cookie(response)
         raise
@@ -294,10 +312,11 @@ def refresh_access_token(
         identity_limit=60,
         window_seconds=60,
     )
-    _set_refresh_cookie(response, account)
+    _set_refresh_cookie(response, account, remember_me)
     return AccessTokenResponse(
         access_token=create_access_token(account.id, account.token_version),
         token_type="bearer",
+        remember_me=remember_me,
     )
 
 
@@ -394,7 +413,12 @@ def google_login(
     session.refresh(account)
     if account.is_suspended:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended")
-    return create_auth_response(account, request_client_fingerprint(request), response)
+    return create_auth_response(
+        account,
+        request_client_fingerprint(request),
+        response,
+        payload.remember_me,
+    )
 
 
 @router.post("/register", response_model=VerificationStartResponse, status_code=status.HTTP_202_ACCEPTED)
