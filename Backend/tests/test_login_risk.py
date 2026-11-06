@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 from uuid import uuid4
 
-from fastapi import HTTPException
+from fastapi import HTTPException, Response
 from sqlalchemy import create_engine
 from sqlmodel import Session
 
@@ -255,7 +255,7 @@ class TestLoginRiskGates(unittest.TestCase):
             patch("Backend.api.routes.auth.verify_password") as password_check,
             self.assertRaises(HTTPException) as raised,
         ):
-            login(self.credentials, self.request, session)
+            login(self.credentials, self.request, Response(), session)
 
         self.assertIs(raised.exception, challenge)
         verify_captcha.assert_called_once_with(None, "192.0.2.20")
@@ -284,7 +284,7 @@ class TestLoginRiskGates(unittest.TestCase):
             patch("Backend.api.routes.auth.verify_password") as password_check,
             self.assertRaises(HTTPException) as raised,
         ):
-            login(self.credentials, self.request, session)
+            login(self.credentials, self.request, Response(), session)
 
         self.assertIs(raised.exception, challenge)
         verify_captcha.assert_called_once_with(None, "192.0.2.20")
@@ -316,7 +316,7 @@ class TestLoginRiskGates(unittest.TestCase):
             patch("Backend.api.routes.auth.verify_password"),
         ):
             with self.assertRaises(HTTPException) as raised:
-                login(credentials, self.request, session)
+                login(credentials, self.request, Response(), session)
 
         self.assertEqual(raised.exception.status_code, 401)
         verify_captcha.assert_not_called()
@@ -351,13 +351,16 @@ class TestLoginRiskGates(unittest.TestCase):
             patch("Backend.api.routes.auth.verify_password", return_value=True),
             patch("Backend.api.routes.auth.record_login_outcome") as record_outcome,
             patch("Backend.api.routes.auth.create_access_token", return_value="access-token"),
+            patch("Backend.api.routes.auth.create_refresh_token", return_value="refresh-token"),
         ):
-            response = login(self.credentials, self.request, session)
+            response = Response()
+            result = login(self.credentials, self.request, response, session)
 
-        self.assertEqual(response.access_token, "access-token")
+        self.assertEqual(result.access_token, "access-token")
+        self.assertIn("fortune-intern-refresh-token=refresh-token", response.headers["set-cookie"])
         self.assertTrue(
             verify_trusted_device_token(
-                response.device_token,
+                result.device_token,
                 account.email,
                 "client",
             )
