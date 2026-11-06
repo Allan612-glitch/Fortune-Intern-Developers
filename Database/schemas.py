@@ -7,12 +7,14 @@ class LoginRequest(BaseModel):
     password: str
     captcha_token: str | None = Field(default=None, max_length=8192)
     trusted_device_token: str | None = Field(default=None, max_length=8192)
+    remember_me: bool = False
 
 
 class GoogleLoginRequest(BaseModel):
     credential: str = Field(min_length=1, max_length=8192)
     terms_accepted: bool = False
     privacy_accepted: bool = False
+    remember_me: bool = False
 
 
 class RegisterRequest(BaseModel):
@@ -349,3 +351,4 @@ class TokenResponse(BaseModel):
 class AccessTokenResponse(BaseModel):
     access_token: str
     token_type: str
+    remember_me: bool = False

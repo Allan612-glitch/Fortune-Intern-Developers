@@ -20,9 +20,17 @@ from Backend.core.security import (
 )
 from Backend.database import get_session
 from Backend.main import create_app
+from Database.schemas import LoginRequest
 
 
 class TestRefreshTokenValidation(unittest.TestCase):
+    def test_remember_me_defaults_to_disabled(self):
+        credentials = LoginRequest(
+            email="person@example.test",
+            password="secure-password",
+        )
+        self.assertFalse(credentials.remember_me)
+
     def test_refresh_and_access_tokens_cannot_be_used_interchangeably(self):
         account_id = uuid4()
         refresh_token = create_refresh_token(account_id, token_version=4)
@@ -30,7 +38,16 @@ class TestRefreshTokenValidation(unittest.TestCase):
 
         self.assertEqual(
             get_user_id_from_refresh_token(refresh_token),
-            (account_id, 4),
+            (account_id, 4, False),
+        )
+        remembered_token = create_refresh_token(
+            account_id,
+            token_version=4,
+            remember_me=True,
+        )
+        self.assertEqual(
+            get_user_id_from_refresh_token(remembered_token),
+            (account_id, 4, True),
         )
         with self.assertRaises(HTTPException) as raised:
             get_user_id_from_refresh_token(access_token)
@@ -62,7 +79,7 @@ class TestRefreshEndpoint(unittest.TestCase):
         with (
             patch(
                 "Backend.api.routes.auth.get_user_id_from_refresh_token",
-                return_value=(account.id, account.token_version),
+                return_value=(account.id, account.token_version, True),
             ),
             patch("Backend.api.routes.auth.enforce_rate_limit"),
             patch(
@@ -83,7 +100,9 @@ class TestRefreshEndpoint(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["access_token"], "new-access-token")
+        self.assertTrue(response.json()["remember_me"])
         self.assertIn(f"{REFRESH_COOKIE_NAME}=new-refresh-token", response.headers["set-cookie"])
+        self.assertIn("Max-Age=2592000", response.headers["set-cookie"])
         self.assertEqual(
             response.headers["access-control-allow-credentials"],
             "true",
@@ -107,7 +126,7 @@ class TestRefreshEndpoint(unittest.TestCase):
         with (
             patch(
                 "Backend.api.routes.auth.get_user_id_from_refresh_token",
-                return_value=(account.id, account.token_version),
+                return_value=(account.id, account.token_version, False),
             ),
             patch("Backend.api.routes.auth.enforce_rate_limit"),
             patch(
@@ -127,6 +146,7 @@ class TestRefreshEndpoint(unittest.TestCase):
         self.assertIn(f"{REFRESH_COOKIE_NAME}=new-refresh-token", cookie)
         self.assertIn("HttpOnly", cookie)
         self.assertIn("Path=/api/auth", cookie)
+        self.assertNotIn("Max-Age=", cookie)
 
     def test_logout_clears_refresh_cookie(self):
         with TestClient(create_app()) as client:

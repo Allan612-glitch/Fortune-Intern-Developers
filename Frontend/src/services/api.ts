@@ -10,12 +10,15 @@ function apiUrl(path: string) {
 }
 
 export function getAccessToken() {
-  return localStorage.getItem(tokenStorageKey);
+  return localStorage.getItem(tokenStorageKey) || sessionStorage.getItem(tokenStorageKey);
 }
 
-export function setAccessToken(token: string | null) {
-  if (token) localStorage.setItem(tokenStorageKey, token);
-  else localStorage.removeItem(tokenStorageKey);
+export function setAccessToken(token: string | null, rememberMe = true) {
+  localStorage.removeItem(tokenStorageKey);
+  sessionStorage.removeItem(tokenStorageKey);
+  if (!token) return;
+  const storage = rememberMe ? localStorage : sessionStorage;
+  storage.setItem(tokenStorageKey, token);
 }
 
 export class ApiError extends Error {
@@ -63,8 +66,8 @@ export function refreshAccessToken(): Promise<string | null> {
           return null;
         }
         if (!response.ok) throw await toApiError(response, "Token refresh failed");
-        const result: { access_token: string } = await response.json();
-        setAccessToken(result.access_token);
+        const result: { access_token: string; remember_me: boolean } = await response.json();
+        setAccessToken(result.access_token, result.remember_me);
         return result.access_token;
       } finally {
         refreshPromise = null;

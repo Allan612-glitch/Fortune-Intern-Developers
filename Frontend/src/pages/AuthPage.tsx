@@ -65,6 +65,7 @@ export default function AuthPage({
   });
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [policiesAccepted, setPoliciesAccepted] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [recoveryOpen, setRecoveryOpen] = useState(false);
@@ -99,6 +100,7 @@ export default function AuthPage({
     });
     setTouched({});
     setPoliciesAccepted(false);
+    setRememberMe(false);
     setLoading(false);
     setSubmitError("");
     setRecoveryOpen(false);
@@ -162,6 +164,7 @@ export default function AuthPage({
         form.email.trim(),
         form.password,
         captchaToken || undefined,
+        rememberMe,
       );
       const profile = await getProfile();
       onLogin(
@@ -225,6 +228,7 @@ export default function AuthPage({
         response.credential,
         mode === "register" && policiesAccepted,
         mode === "register" && policiesAccepted,
+        mode === "login" && rememberMe,
       );
       const profile = await getProfile();
       if (mode === "register") {
@@ -466,8 +470,14 @@ export default function AuthPage({
                 )}
 
                 <div className="flex items-center justify-between">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" className="rounded border-border" />
+                  <label htmlFor="remember-me" className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      id="remember-me"
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(event) => setRememberMe(event.target.checked)}
+                      className="rounded border-border"
+                    />
                     <span className="text-xs text-muted-foreground">
                       Remember me
                     </span>
