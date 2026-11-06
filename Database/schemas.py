@@ -344,3 +344,8 @@ class TokenResponse(BaseModel):
     token_type: str
     user: UserResponse
     device_token: str | None = None
+
+
+class AccessTokenResponse(BaseModel):
+    access_token: str
+    token_type: str

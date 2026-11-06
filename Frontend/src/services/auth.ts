@@ -129,6 +129,10 @@ export function getCurrentUser() {
   return apiRequest<ApiUser>("/api/auth/me");
 }
 
+export function logout() {
+  return apiRequest<void>("/api/auth/logout", { method: "POST" });
+}
+
 export function deleteAccount(confirmation: string) {
   return apiRequest<void>("/api/auth/me", {
     method: "DELETE",

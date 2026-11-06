@@ -9,7 +9,7 @@ from uuid import uuid4
 
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
-from fastapi import HTTPException
+from fastapi import HTTPException, Response
 from sqlalchemy import create_engine, inspect, text
 from sqlmodel import Session, SQLModel, select
 
@@ -101,6 +101,7 @@ class TestConsentRecording(unittest.TestCase):
                         code="123456",
                     ),
                     request,
+                    Response(),
                     session,
                 )
 

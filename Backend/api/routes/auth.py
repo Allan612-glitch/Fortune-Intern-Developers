@@ -22,7 +22,9 @@ from Backend.core.login_risk import (
 )
 from Backend.core.security import (
     create_access_token,
+    create_refresh_token,
     create_trusted_device_token,
+    get_user_id_from_refresh_token,
     hash_one_time_secret,
     hash_password,
     verify_one_time_secret,
@@ -33,6 +35,7 @@ from Backend.core.rate_limit import enforce_rate_limit
 from Backend.database import get_session
 from Database.models import consent_log, password_reset, registration_verification, user
 from Database.schemas import (
+    AccessTokenResponse,
     ForgotPasswordRequest,
     GoogleLoginRequest,
     LoginRequest,
@@ -49,6 +52,7 @@ from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 logger = logging.getLogger(__name__)
+REFRESH_COOKIE_NAME = "fortune-intern-refresh-token"
 
 
 class AccountDeletionRequest(BaseModel):
@@ -105,7 +109,36 @@ def serialize_user(account: user) -> UserResponse:
     return UserResponse(id=str(account.id), name=account.name, email=account.email, is_admin=account.is_admin)
 
 
-def create_auth_response(account: user, client_fingerprint: str) -> TokenResponse:
+def _set_refresh_cookie(response: Response, account: user) -> None:
+    is_secure = settings.environment != "development"
+    response.set_cookie(
+        key=REFRESH_COOKIE_NAME,
+        value=create_refresh_token(account.id, account.token_version),
+        max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
+        httponly=True,
+        secure=is_secure,
+        samesite="none" if is_secure else "lax",
+        path="/api/auth",
+    )
+
+
+def _clear_refresh_cookie(response: Response) -> None:
+    is_secure = settings.environment != "development"
+    response.delete_cookie(
+        key=REFRESH_COOKIE_NAME,
+        httponly=True,
+        secure=is_secure,
+        samesite="none" if is_secure else "lax",
+        path="/api/auth",
+    )
+
+
+def create_auth_response(
+    account: user,
+    client_fingerprint: str,
+    response: Response,
+) -> TokenResponse:
+    _set_refresh_cookie(response, account)
     return TokenResponse(
         access_token=create_access_token(account.id, account.token_version),
         token_type="bearer",
@@ -153,6 +186,7 @@ def _record_consents(
 def login(
     credentials: LoginRequest,
     request: Request,
+    response: Response,
     session: Session = Depends(get_session),
 ):
     email = validate_email(credentials.email)
@@ -215,13 +249,70 @@ def login(
             detail="This account is scheduled for deletion",
         )
 
-    return create_auth_response(account, fingerprint)
+    return create_auth_response(account, fingerprint, response)
+
+
+@router.post("/refresh", response_model=AccessTokenResponse)
+def refresh_access_token(
+    request: Request,
+    response: Response,
+    session: Session = Depends(get_session),
+):
+    refresh_token = request.cookies.get(REFRESH_COOKIE_NAME)
+    if not refresh_token:
+        _clear_refresh_cookie(response)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token is required",
+        )
+
+    try:
+        account_id, token_version = get_user_id_from_refresh_token(refresh_token)
+    except HTTPException:
+        _clear_refresh_cookie(response)
+        raise
+
+    account = session.get(user, account_id)
+    if (
+        not account
+        or account.is_suspended
+        or account.deletion_requested_at is not None
+        or account.token_version != token_version
+    ):
+        _clear_refresh_cookie(response)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session has expired",
+        )
+
+    enforce_rate_limit(
+        session,
+        request,
+        "token-refresh",
+        str(account.id),
+        ip_limit=500,
+        identity_limit=60,
+        window_seconds=60,
+    )
+    _set_refresh_cookie(response, account)
+    return AccessTokenResponse(
+        access_token=create_access_token(account.id, account.token_version),
+        token_type="bearer",
+    )
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(response: Response):
+    _clear_refresh_cookie(response)
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return response
 
 
 @router.post("/google", response_model=TokenResponse)
 def google_login(
     payload: GoogleLoginRequest,
     request: Request,
+    response: Response,
     session: Session = Depends(get_session),
 ):
     client_ip = request.client.host if request.client else "unknown"
@@ -303,7 +394,7 @@ def google_login(
     session.refresh(account)
     if account.is_suspended:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended")
-    return create_auth_response(account, request_client_fingerprint(request))
+    return create_auth_response(account, request_client_fingerprint(request), response)
 
 
 @router.post("/register", response_model=VerificationStartResponse, status_code=status.HTTP_202_ACCEPTED)
@@ -417,6 +508,7 @@ def resend_verification(
 def verify_email(
     payload: VerifyEmailRequest,
     request: Request,
+    response: Response,
     session: Session = Depends(get_session),
 ):
     email = validate_email(payload.email)
@@ -492,7 +584,7 @@ def verify_email(
     session.delete(pending_registration)
     session.commit()
     session.refresh(account)
-    return create_auth_response(account, request_client_fingerprint(request))
+    return create_auth_response(account, request_client_fingerprint(request), response)
 
 
 @router.post("/forgot-password", response_model=MessageResponse)

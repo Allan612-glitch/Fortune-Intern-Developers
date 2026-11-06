@@ -57,6 +57,7 @@ export default function AdminPage() {
   const [selectedApplicationIds, setSelectedApplicationIds] = useState<string[]>([]);
   const [exportLimit, setExportLimit] = useState<10 | 25 | 50>(50);
   const [exporting, setExporting] = useState(false);
+  const [previewApplication, setPreviewApplication] = useState<BackendApplication | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -409,12 +410,19 @@ export default function AdminPage() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-end gap-2">
                   <span
                     className={`text-xs px-2.5 py-1 rounded-full font-medium capitalize ${statusBadge[app.status] || "status-applied"}`}
                   >
                     {app.status}
                   </span>
+                  <button
+                    onClick={() => setPreviewApplication(app)}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-border font-semibold hover:bg-muted/50 transition-colors"
+                    aria-label={`Preview application from ${app.applicant_name || `applicant ${app.user_id.slice(0, 8)}`}`}
+                  >
+                    Preview
+                  </button>
                   {app.resume_filename && <button onClick={() => void saveResumeDownload(app.id, true).catch((requestError) => setError(requestError instanceof Error ? requestError.message : "Unable to download resume."))} className="text-xs font-semibold text-primary underline">Resume</button>}
                   {!(["accepted", "rejected"] as string[]).includes(app.status.toLowerCase()) && (
                     <>
@@ -634,6 +642,110 @@ export default function AdminPage() {
       )}
       </>
       )}
+      {previewApplication && (
+        <ApplicationPreviewModal
+          application={previewApplication}
+          onClose={() => setPreviewApplication(null)}
+          onDownloadResume={() => void saveResumeDownload(previewApplication.id, true).catch((requestError) => setError(requestError instanceof Error ? requestError.message : "Unable to download resume."))}
+        />
+      )}
+    </div>
+  );
+}
+
+function ApplicationPreviewModal({
+  application,
+  onClose,
+  onDownloadResume,
+}: {
+  application: BackendApplication;
+  onClose: () => void;
+  onDownloadResume: () => void;
+}) {
+  const formatValue = (value: string | null) => value || "Not provided";
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] bg-black/55 backdrop-blur-sm p-4 flex items-center justify-center"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="application-preview-title"
+    >
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b border-border p-5 flex items-center justify-between z-10">
+          <div className="min-w-0">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground font-bold">
+              Application preview
+            </p>
+            <h2 id="application-preview-title" className="font-bold text-lg mt-1 truncate">
+              {application.applicant_name || `Applicant ${application.user_id.slice(0, 8)}`}
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-9 h-9 shrink-0 rounded-xl hover:bg-secondary"
+            aria-label="Close application preview"
+          >
+            ×
+          </button>
+        </div>
+        <div className="p-5 sm:p-7 space-y-6">
+          {application.requires_minor_review && (
+            <p className="text-sm font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-3">
+              Under 18: verify guardian or institution approval.
+            </p>
+          )}
+          <section>
+            <h3 className="font-semibold text-sm mb-2">Application</h3>
+            <ApplicationPreviewField label="Program" value={application.program_name} />
+            <ApplicationPreviewField label="Status" value={application.status} />
+            <ApplicationPreviewField label="Date submitted" value={new Date(application.created_at).toLocaleString()} />
+            <ApplicationPreviewField label="Applicant account ID" value={application.user_id} />
+          </section>
+          <section>
+            <h3 className="font-semibold text-sm mb-2">Applicant details</h3>
+            <ApplicationPreviewField label="Name" value={formatValue(application.applicant_name)} />
+            <ApplicationPreviewField label="Contact" value={formatValue(application.applicant_contact)} />
+            <ApplicationPreviewField label="Gender" value={formatValue(application.gender)} />
+            <ApplicationPreviewField label="Institution" value={formatValue(application.applicant_institution)} />
+            <ApplicationPreviewField label="Course" value={formatValue(application.applicant_course)} />
+            <ApplicationPreviewField label="Student index number" value={formatValue(application.student_index_number)} />
+            <ApplicationPreviewField label="Year of study" value={formatValue(application.year_of_study)} />
+          </section>
+          <section>
+            <h3 className="font-semibold text-sm mb-2">Placement details</h3>
+            <ApplicationPreviewField label="Suggested company" value={formatValue(application.suggested_company)} />
+            <ApplicationPreviewField label="Host company" value={formatValue(application.host_company_name)} />
+            <ApplicationPreviewField label="Host company address" value={formatValue(application.host_company_address)} />
+          </section>
+          <section className="flex items-center justify-between gap-3 border-t border-border pt-4">
+            <div className="min-w-0">
+              <h3 className="font-semibold text-sm">Resume</h3>
+              <p className="text-xs text-muted-foreground mt-1 truncate">
+                {application.resume_filename || "No resume attached"}
+              </p>
+            </div>
+            {application.resume_filename && (
+              <button
+                onClick={onDownloadResume}
+                className="shrink-0 px-3 py-2 rounded-lg text-xs font-semibold text-white"
+                style={{ background: "linear-gradient(135deg, #2D3561, #3d4a8a)" }}
+              >
+                Download resume
+              </button>
+            )}
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ApplicationPreviewField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 py-2 border-b border-border last:border-0">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-sm font-medium sm:text-right break-all">{value}</span>
     </div>
   );
 }
