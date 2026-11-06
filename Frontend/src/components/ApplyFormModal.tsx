@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  printApplicationLetter,
   fromBackendApplication,
   type ApplicationRecord,
 } from "../services/applications";
@@ -176,11 +175,9 @@ export default function ApplyFormModal({
     try {
       const result = await submitApplication(payload);
       const application = {
-        ...fromBackendApplication(result, ownerEmail || form.email.trim().toLowerCase()),
+        ...fromBackendApplication(result),
         company: form.companyName,
-        companyAddress: form.companyAddress,
         applicantName: `${form.firstName} ${form.lastName}`.trim(),
-        applicantEmail: form.email,
         studentIndexNumber: form.indexNumber.trim(),
         paymentStatus: paymentReference.startsWith("FIN-DEMO")
           ? "Payment Pending" as const
@@ -188,8 +185,6 @@ export default function ApplyFormModal({
         paymentReference,
         applicationDate: now,
         lastUpdated: now,
-        applicationLetterAvailable: false,
-        details: { personalInformation: form },
       };
       setSubmittedApplication(application);
       setReference(result.id);
@@ -241,9 +236,6 @@ export default function ApplyFormModal({
     }
     void complete(`FIN-DEMO-${Date.now().toString().slice(-6)}`);
   };
-  const letter = () => {
-    if (submittedApplication) printApplicationLetter(submittedApplication);
-  };
   if (step === "success")
     return (
       <div className="fixed inset-0 z-50 bg-black/60 p-4 flex items-center justify-center">
@@ -288,12 +280,6 @@ export default function ApplyFormModal({
               complete as part of the internship evaluation process.
             </div>
           </div>
-          <button
-            onClick={letter}
-            className="w-full mt-5 py-3 rounded-xl bg-accent text-primary font-bold"
-          >
-            Print Application
-          </button>
           <button
             onClick={onViewApplications || onClose}
             className="w-full mt-3 py-3 rounded-xl bg-primary text-white font-semibold"

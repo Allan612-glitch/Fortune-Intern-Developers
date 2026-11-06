@@ -151,7 +151,7 @@ export default function MainApp({
               onApplications={() => goTo("applications")}
             />
           )}
-          {page === "applications" && <ApplicationsPage email={user.email} />}
+          {page === "applications" && <ApplicationsPage />}
           {page === "announcements" && <AnnouncementsPage user={user} />}
           {page === "programs" && (
             <ProgramsPage

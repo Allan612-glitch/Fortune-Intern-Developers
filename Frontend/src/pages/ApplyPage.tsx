@@ -18,7 +18,7 @@ export default function ApplyPage({ user }: { user: AppUser }) {
             ← Apply for an Internship
           </button>
         </div>
-        <ApplicationsPage email={user.email} />
+        <ApplicationsPage />
       </div>
     );
   }
@@ -82,8 +82,8 @@ export default function ApplyPage({ user }: { user: AppUser }) {
             },
             {
               step: "04",
-              title: "Submit and download",
-              desc: "After payment, receive your application reference and download your application letter.",
+              title: "Submit your application",
+              desc: "After submission, receive your application reference and track its status from your dashboard.",
             },
             {
               step: "05",
