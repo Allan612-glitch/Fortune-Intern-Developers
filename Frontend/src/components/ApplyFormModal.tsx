@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  printApplicationLetter,
   fromBackendApplication,
   type ApplicationRecord,
 } from "../services/applications";
@@ -102,6 +101,7 @@ export default function ApplyFormModal({
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
+    dateOfBirth: "",
     gender: "",
     phone: "",
     email: ownerEmail,
@@ -120,6 +120,7 @@ export default function ApplyFormModal({
     const required: Array<keyof typeof form> = [
       "firstName",
       "lastName",
+      "dateOfBirth",
       "gender",
       "phone",
       "email",
@@ -132,6 +133,16 @@ export default function ApplyFormModal({
     ];
     if (required.some((key) => !form[key].trim()))
       return "Please complete all required fields.";
+    const birthDate = new Date(`${form.dateOfBirth}T00:00:00.000Z`);
+    const today = new Date();
+    const applicantAge =
+      today.getUTCFullYear() -
+      birthDate.getUTCFullYear() -
+      ((today.getUTCMonth() < birthDate.getUTCMonth() ||
+      (today.getUTCMonth() === birthDate.getUTCMonth() &&
+        today.getUTCDate() < birthDate.getUTCDate())) ? 1 : 0);
+    if (applicantAge < 16)
+      return "Applicants under 16 cannot submit applications.";
     if (form.institution === "Other" && !form.otherInstitution.trim())
       return "Please specify your institution.";
     if (!/^0\d{9}$/.test(form.phone))
@@ -156,6 +167,7 @@ export default function ApplyFormModal({
     payload.append("companyName", form.companyName);
     payload.append("companyAddress", form.companyAddress);
     payload.append("applicant_name", `${form.firstName} ${form.lastName}`.trim());
+    payload.append("date_of_birth", form.dateOfBirth);
     payload.append("gender", form.gender);
     payload.append("student_index_number", form.indexNumber.trim());
     payload.append("year_of_study", form.year);
@@ -163,11 +175,9 @@ export default function ApplyFormModal({
     try {
       const result = await submitApplication(payload);
       const application = {
-        ...fromBackendApplication(result, ownerEmail || form.email.trim().toLowerCase()),
+        ...fromBackendApplication(result),
         company: form.companyName,
-        companyAddress: form.companyAddress,
         applicantName: `${form.firstName} ${form.lastName}`.trim(),
-        applicantEmail: form.email,
         studentIndexNumber: form.indexNumber.trim(),
         paymentStatus: paymentReference.startsWith("FIN-DEMO")
           ? "Payment Pending" as const
@@ -175,8 +185,6 @@ export default function ApplyFormModal({
         paymentReference,
         applicationDate: now,
         lastUpdated: now,
-        applicationLetterAvailable: false,
-        details: { personalInformation: form },
       };
       setSubmittedApplication(application);
       setReference(result.id);
@@ -228,9 +236,6 @@ export default function ApplyFormModal({
     }
     void complete(`FIN-DEMO-${Date.now().toString().slice(-6)}`);
   };
-  const letter = () => {
-    if (submittedApplication) printApplicationLetter(submittedApplication);
-  };
   if (step === "success")
     return (
       <div className="fixed inset-0 z-50 bg-black/60 p-4 flex items-center justify-center">
@@ -249,7 +254,9 @@ export default function ApplyFormModal({
             Application Submitted Successfully
           </h2>
           <p className="text-sm text-muted-foreground mt-3">
-            Your internship application has been submitted successfully.
+            {submittedApplication?.status === "Under Review"
+              ? "Because you are under 18, your application is under review before a decision; a reviewer will check guardian or institution approval."
+              : "Your internship application has been submitted successfully."}
           </p>
           <p className="text-sm font-semibold text-amber-700 mt-3">
             {submittedApplication?.paymentStatus === "Payment Successful"
@@ -260,7 +267,7 @@ export default function ApplyFormModal({
             <p>Opportunity: {prefilledRole || "Internship Application"}</p>
             <p>Reference: {reference}</p>
             <p>Submission date: {new Date().toLocaleDateString()}</p>
-            <p>Application status: Submitted</p>
+            <p>Application status: {submittedApplication?.status || "Submitted"}</p>
             <p>Payment status: {submittedApplication?.paymentStatus}</p>
           </div>
           <div className="mt-4 space-y-2 text-left">
@@ -273,12 +280,6 @@ export default function ApplyFormModal({
               complete as part of the internship evaluation process.
             </div>
           </div>
-          <button
-            onClick={letter}
-            className="w-full mt-5 py-3 rounded-xl bg-accent text-primary font-bold"
-          >
-            Print Application
-          </button>
           <button
             onClick={onViewApplications || onClose}
             className="w-full mt-3 py-3 rounded-xl bg-primary text-white font-semibold"
@@ -330,6 +331,20 @@ export default function ApplyFormModal({
               value={form.lastName}
               onChange={(value) => set("lastName", value)}
             />
+            <label className="block">
+              <span className="text-sm font-semibold">Date of Birth *</span>
+              <input
+                type="date"
+                required
+                value={form.dateOfBirth}
+                onChange={(event) => set("dateOfBirth", event.target.value)}
+                max={new Date().toISOString().slice(0, 10)}
+                className="mt-2 w-full rounded-xl border border-border px-4 py-3 text-sm"
+              />
+              <span className="mt-1 block text-xs text-muted-foreground">
+                Applicants under 16 cannot apply. Students under 18 must have guardian or institution approval; applications are held for review before a decision.
+              </span>
+            </label>
             <div>
               <span className="text-sm font-semibold">Gender *</span>
               <p className="text-xs text-muted-foreground mt-1">

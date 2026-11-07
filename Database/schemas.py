@@ -7,10 +7,14 @@ class LoginRequest(BaseModel):
     password: str
     captcha_token: str | None = Field(default=None, max_length=8192)
     trusted_device_token: str | None = Field(default=None, max_length=8192)
+    remember_me: bool = False
 
 
 class GoogleLoginRequest(BaseModel):
     credential: str = Field(min_length=1, max_length=8192)
+    terms_accepted: bool = False
+    privacy_accepted: bool = False
+    remember_me: bool = False
 
 
 class RegisterRequest(BaseModel):
@@ -18,6 +22,8 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     captcha_token: str | None = Field(default=None, max_length=8192)
+    terms_accepted: bool = False
+    privacy_accepted: bool = False
 
 
 class VerificationStartResponse(BaseModel):
@@ -173,6 +179,7 @@ class ProgramResponse(BaseModel):
     duration: str
     skills: list[str]
     deadline: str | None = None
+    cycle_closed_at: str | None = None
 
 
 class AdminProgramCreateRequest(BaseModel):
@@ -203,6 +210,7 @@ class ApplicationResponse(BaseModel):
     student_index_number: str | None = None
     year_of_study: str | None = None
     suggested_company: str | None = None
+    requires_minor_review: bool = False
     applicant_institution: str | None = None
     applicant_course: str | None = None
     applicant_contact: str | None = None
@@ -215,6 +223,11 @@ class ApplicationStatusHistoryResponse(BaseModel):
     previous_status: str | None = None
     new_status: str
     created_at: str
+
+
+class LetterVerificationResponse(BaseModel):
+    valid: bool
+    reference: str
 
 
 class AdminApplicationStatusRequest(BaseModel):
@@ -333,3 +346,9 @@ class TokenResponse(BaseModel):
     token_type: str
     user: UserResponse
     device_token: str | None = None
+
+
+class AccessTokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    remember_me: bool = False

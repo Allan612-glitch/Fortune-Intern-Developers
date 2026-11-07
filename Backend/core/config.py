@@ -21,6 +21,7 @@ class Settings:
     verification_code_expire_minutes: int = 10
     verification_code_max_attempts: int = 5
     access_token_expire_minutes: int = 60
+    refresh_token_expire_days: int = 30
     password_reset_token_expire_minutes: int = 30
     frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:5500")
     cors_origins: list[str] = [

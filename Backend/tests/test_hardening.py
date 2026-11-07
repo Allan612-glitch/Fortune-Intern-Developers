@@ -8,7 +8,7 @@ from urllib.error import URLError
 from urllib.parse import parse_qs, urlsplit
 from uuid import uuid4
 
-from fastapi import BackgroundTasks, HTTPException
+from fastapi import BackgroundTasks, HTTPException, Response
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlmodel import Session, SQLModel
@@ -316,6 +316,7 @@ class TestVerificationCodeGuessLimit(unittest.TestCase):
                         verify_email(
                             VerifyEmailRequest(email=registration.email, code="000000"),
                             request,
+                            Response(),
                             session,
                         )
                     expected_status = 429 if attempt == 5 else 400
@@ -325,6 +326,7 @@ class TestVerificationCodeGuessLimit(unittest.TestCase):
                     verify_email(
                         VerifyEmailRequest(email=registration.email, code="000000"),
                         request,
+                        Response(),
                         session,
                     )
                 self.assertEqual(raised.exception.status_code, 429)
@@ -375,6 +377,7 @@ class TestLoginRateLimitScope(unittest.TestCase):
             login(
                 LoginRequest(email="person@example.test", password="incorrect"),
                 request,
+                Response(),
                 session,
             )
 
@@ -595,7 +598,7 @@ class TestAcceptedApplicationDocuments(unittest.TestCase):
         self.assertEqual(session.commit.call_count, 1)
         self.assertEqual(
             build_letter_pdf.call_args.kwargs["reference_no"],
-            "FIN/2026/0451",
+            f"FIN/2026/{application_id.hex.upper()}",
         )
         self.assertIsNone(build_letter_pdf.call_args.kwargs["index_number"])
 

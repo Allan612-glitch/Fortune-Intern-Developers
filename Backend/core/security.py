@@ -41,8 +41,54 @@ def create_access_token(user_id: UUID, token_version: int = 0) -> str:
     expires_at = datetime.now(timezone.utc) + timedelta(
         minutes=settings.access_token_expire_minutes
     )
-    payload = {"sub": str(user_id), "ver": token_version, "exp": expires_at}
+    payload = {
+        "sub": str(user_id),
+        "ver": token_version,
+        "type": "access",
+        "exp": expires_at,
+    }
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+
+
+def create_refresh_token(
+    user_id: UUID,
+    token_version: int = 0,
+    remember_me: bool = False,
+) -> str:
+    expires_at = datetime.now(timezone.utc) + timedelta(
+        days=settings.refresh_token_expire_days
+    )
+    payload = {
+        "sub": str(user_id),
+        "ver": token_version,
+        "type": "refresh",
+        "remember_me": remember_me,
+        "exp": expires_at,
+    }
+    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
+
+
+def get_user_id_from_refresh_token(token: str) -> tuple[UUID, int, bool]:
+    try:
+        payload = jwt.decode(
+            token,
+            settings.jwt_secret,
+            algorithms=[settings.jwt_algorithm],
+        )
+        token_version = payload.get("ver", 0)
+        if payload.get("type") != "refresh":
+            raise ValueError("Invalid refresh token type")
+        if not isinstance(token_version, int) or token_version < 0:
+            raise ValueError("Invalid token version")
+        remember_me = payload.get("remember_me", False)
+        if not isinstance(remember_me, bool):
+            raise ValueError("Invalid remember-me claim")
+        return UUID(payload["sub"]), token_version, remember_me
+    except (jwt.InvalidTokenError, KeyError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token",
+        ) from None
 
 
 def _trusted_device_claim(email: str, client_fingerprint: str) -> str:
@@ -104,6 +150,8 @@ def get_user_id_from_token(
             algorithms=[settings.jwt_algorithm],
         )
         token_version = payload.get("ver", 0)
+        if payload.get("type") not in (None, "access"):
+            raise ValueError("Invalid access token type")
         if not isinstance(token_version, int) or token_version < 0:
             raise ValueError("Invalid token version")
         return UUID(payload["sub"]), token_version

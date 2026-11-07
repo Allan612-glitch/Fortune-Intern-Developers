@@ -22,7 +22,9 @@ from Backend.core.login_risk import (
 )
 from Backend.core.security import (
     create_access_token,
+    create_refresh_token,
     create_trusted_device_token,
+    get_user_id_from_refresh_token,
     hash_one_time_secret,
     hash_password,
     verify_one_time_secret,
@@ -31,8 +33,9 @@ from Backend.core.security import (
 )
 from Backend.core.rate_limit import enforce_rate_limit
 from Backend.database import get_session
-from Database.models import password_reset, registration_verification, user
+from Database.models import consent_log, password_reset, registration_verification, user
 from Database.schemas import (
+    AccessTokenResponse,
     ForgotPasswordRequest,
     GoogleLoginRequest,
     LoginRequest,
@@ -49,6 +52,7 @@ from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 logger = logging.getLogger(__name__)
+REFRESH_COOKIE_NAME = "fortune-intern-refresh-token"
 
 
 class AccountDeletionRequest(BaseModel):
@@ -105,7 +109,49 @@ def serialize_user(account: user) -> UserResponse:
     return UserResponse(id=str(account.id), name=account.name, email=account.email, is_admin=account.is_admin)
 
 
-def create_auth_response(account: user, client_fingerprint: str) -> TokenResponse:
+def _set_refresh_cookie(
+    response: Response,
+    account: user,
+    remember_me: bool = False,
+) -> None:
+    is_secure = settings.environment != "development"
+    response.set_cookie(
+        key=REFRESH_COOKIE_NAME,
+        value=create_refresh_token(
+            account.id,
+            account.token_version,
+            remember_me,
+        ),
+        max_age=(
+            settings.refresh_token_expire_days * 24 * 60 * 60
+            if remember_me
+            else None
+        ),
+        httponly=True,
+        secure=is_secure,
+        samesite="none" if is_secure else "lax",
+        path="/api/auth",
+    )
+
+
+def _clear_refresh_cookie(response: Response) -> None:
+    is_secure = settings.environment != "development"
+    response.delete_cookie(
+        key=REFRESH_COOKIE_NAME,
+        httponly=True,
+        secure=is_secure,
+        samesite="none" if is_secure else "lax",
+        path="/api/auth",
+    )
+
+
+def create_auth_response(
+    account: user,
+    client_fingerprint: str,
+    response: Response,
+    remember_me: bool = False,
+) -> TokenResponse:
+    _set_refresh_cookie(response, account, remember_me)
     return TokenResponse(
         access_token=create_access_token(account.id, account.token_version),
         token_type="bearer",
@@ -124,10 +170,36 @@ def validate_email(email: str) -> str:
     return normalized_email
 
 
+def _record_consents(
+    session: Session,
+    account: user,
+    *,
+    terms_accepted_at: datetime,
+    privacy_accepted_at: datetime,
+) -> None:
+    account.terms_accepted_at = terms_accepted_at
+    account.privacy_accepted_at = privacy_accepted_at
+    session.add_all(
+        [
+            consent_log(
+                account_id=account.id,
+                consent_type="terms",
+                accepted_at=terms_accepted_at,
+            ),
+            consent_log(
+                account_id=account.id,
+                consent_type="privacy",
+                accepted_at=privacy_accepted_at,
+            ),
+        ]
+    )
+
+
 @router.post("/login", response_model=TokenResponse)
 def login(
     credentials: LoginRequest,
     request: Request,
+    response: Response,
     session: Session = Depends(get_session),
 ):
     email = validate_email(credentials.email)
@@ -190,13 +262,76 @@ def login(
             detail="This account is scheduled for deletion",
         )
 
-    return create_auth_response(account, fingerprint)
+    return create_auth_response(
+        account,
+        fingerprint,
+        response,
+        credentials.remember_me,
+    )
+
+
+@router.post("/refresh", response_model=AccessTokenResponse)
+def refresh_access_token(
+    request: Request,
+    response: Response,
+    session: Session = Depends(get_session),
+):
+    refresh_token = request.cookies.get(REFRESH_COOKIE_NAME)
+    if not refresh_token:
+        _clear_refresh_cookie(response)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token is required",
+        )
+
+    try:
+        account_id, token_version, remember_me = get_user_id_from_refresh_token(refresh_token)
+    except HTTPException:
+        _clear_refresh_cookie(response)
+        raise
+
+    account = session.get(user, account_id)
+    if (
+        not account
+        or account.is_suspended
+        or account.deletion_requested_at is not None
+        or account.token_version != token_version
+    ):
+        _clear_refresh_cookie(response)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session has expired",
+        )
+
+    enforce_rate_limit(
+        session,
+        request,
+        "token-refresh",
+        str(account.id),
+        ip_limit=500,
+        identity_limit=60,
+        window_seconds=60,
+    )
+    _set_refresh_cookie(response, account, remember_me)
+    return AccessTokenResponse(
+        access_token=create_access_token(account.id, account.token_version),
+        token_type="bearer",
+        remember_me=remember_me,
+    )
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(response: Response):
+    _clear_refresh_cookie(response)
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return response
 
 
 @router.post("/google", response_model=TokenResponse)
 def google_login(
     payload: GoogleLoginRequest,
     request: Request,
+    response: Response,
     session: Session = Depends(get_session),
 ):
     client_ip = request.client.host if request.client else "unknown"
@@ -243,16 +378,30 @@ def google_login(
                 raise HTTPException(status_code=409, detail="This email is linked to another Google account")
             account.google_sub = subject
         else:
+            if not payload.terms_accepted or not payload.privacy_accepted:
+                raise HTTPException(
+                    status_code=422,
+                    detail="You must accept the Terms and Conditions and Privacy Policy to create an account",
+                )
             name = claims.get("name")
             if not isinstance(name, str) or not name.strip():
                 name = email.partition("@")[0]
+            accepted_at = datetime.now(timezone.utc)
             account = user(
                 name=name.strip(),
                 email=email,
                 password_hash=None,
                 google_sub=subject,
+                terms_accepted_at=accepted_at,
+                privacy_accepted_at=accepted_at,
             )
             session.add(account)
+            _record_consents(
+                session,
+                account,
+                terms_accepted_at=accepted_at,
+                privacy_accepted_at=accepted_at,
+            )
     elif account.deletion_requested_at is not None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -264,7 +413,12 @@ def google_login(
     session.refresh(account)
     if account.is_suspended:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended")
-    return create_auth_response(account, request_client_fingerprint(request))
+    return create_auth_response(
+        account,
+        request_client_fingerprint(request),
+        response,
+        payload.remember_me,
+    )
 
 
 @router.post("/register", response_model=VerificationStartResponse, status_code=status.HTTP_202_ACCEPTED)
@@ -273,6 +427,11 @@ def register(
     request: Request,
     session: Session = Depends(get_session),
 ):
+    if not credentials.terms_accepted or not credentials.privacy_accepted:
+        raise HTTPException(
+            status_code=422,
+            detail="You must accept the Terms and Conditions and Privacy Policy to create an account",
+        )
     email = validate_email(credentials.email)
     client_ip = request.client.host if request.client else None
     enforce_rate_limit(
@@ -297,6 +456,7 @@ def register(
             email=email,
         )
 
+    accepted_at = datetime.now(timezone.utc)
     code = f"{randbelow(1_000_000):06d}"
     pending_registration = session.exec(
         select(registration_verification).where(registration_verification.email == email)
@@ -307,6 +467,8 @@ def register(
             email=email,
             password_hash=hash_password(credentials.password),
             code_hash=hash_one_time_secret(code, "registration-code"),
+            terms_accepted_at=accepted_at,
+            privacy_accepted_at=accepted_at,
             failed_attempts=0,
             expires_at=datetime.now(timezone.utc) + timedelta(minutes=settings.verification_code_expire_minutes),
         )
@@ -314,6 +476,8 @@ def register(
         pending_registration.name = name
         pending_registration.password_hash = hash_password(credentials.password)
         pending_registration.code_hash = hash_one_time_secret(code, "registration-code")
+        pending_registration.terms_accepted_at = accepted_at
+        pending_registration.privacy_accepted_at = accepted_at
         pending_registration.failed_attempts = 0
         pending_registration.expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.verification_code_expire_minutes)
         pending_registration.created_at = datetime.now(timezone.utc)
@@ -368,6 +532,7 @@ def resend_verification(
 def verify_email(
     payload: VerifyEmailRequest,
     request: Request,
+    response: Response,
     session: Session = Depends(get_session),
 ):
     email = validate_email(payload.email)
@@ -410,6 +575,17 @@ def verify_email(
             )
         raise HTTPException(status_code=400, detail="Invalid verification code")
 
+    if (
+        pending_registration.terms_accepted_at is None
+        or pending_registration.privacy_accepted_at is None
+    ):
+        session.delete(pending_registration)
+        session.commit()
+        raise HTTPException(
+            status_code=400,
+            detail="Restart registration and accept the current Terms and Privacy Policy",
+        )
+
     if session.exec(select(user).where(user.email == email)).first():
         session.delete(pending_registration)
         session.commit()
@@ -419,12 +595,20 @@ def verify_email(
         name=pending_registration.name,
         email=pending_registration.email,
         password_hash=pending_registration.password_hash,
+        terms_accepted_at=pending_registration.terms_accepted_at,
+        privacy_accepted_at=pending_registration.privacy_accepted_at,
     )
     session.add(account)
+    _record_consents(
+        session,
+        account,
+        terms_accepted_at=pending_registration.terms_accepted_at,
+        privacy_accepted_at=pending_registration.privacy_accepted_at,
+    )
     session.delete(pending_registration)
     session.commit()
     session.refresh(account)
-    return create_auth_response(account, request_client_fingerprint(request))
+    return create_auth_response(account, request_client_fingerprint(request), response)
 
 
 @router.post("/forgot-password", response_model=MessageResponse)

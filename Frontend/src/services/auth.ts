@@ -54,27 +54,43 @@ export interface ProfileDocument {
   created_at: string;
 }
 
-export async function login(email: string, password: string, captchaToken?: string) {
+export async function login(
+  email: string,
+  password: string,
+  captchaToken?: string,
+  rememberMe = false,
+) {
   const result = await apiRequest<TokenResponse>("/api/auth/login", {
     method: "POST",
     body: JSON.stringify({
       email,
       password,
+      remember_me: rememberMe,
       captcha_token: captchaToken,
       trusted_device_token: localStorage.getItem(trustedDeviceStorageKey),
     }),
   });
-  setAccessToken(result.access_token);
+  setAccessToken(result.access_token, rememberMe);
   saveDeviceToken(result.device_token);
   return result.user;
 }
 
-export async function loginWithGoogle(credential: string) {
+export async function loginWithGoogle(
+  credential: string,
+  termsAccepted = false,
+  privacyAccepted = false,
+  rememberMe = false,
+) {
   const result = await apiRequest<TokenResponse>("/api/auth/google", {
     method: "POST",
-    body: JSON.stringify({ credential }),
+    body: JSON.stringify({
+      credential,
+      terms_accepted: termsAccepted,
+      privacy_accepted: privacyAccepted,
+      remember_me: rememberMe,
+    }),
   });
-  setAccessToken(result.access_token);
+  setAccessToken(result.access_token, rememberMe);
   saveDeviceToken(result.device_token);
   return result.user;
 }
@@ -84,10 +100,19 @@ export function register(
   email: string,
   password: string,
   captchaToken?: string,
+  termsAccepted = false,
+  privacyAccepted = false,
 ) {
   return apiRequest<{ message: string; email: string }>("/api/auth/register", {
     method: "POST",
-    body: JSON.stringify({ name, email, password, captcha_token: captchaToken }),
+    body: JSON.stringify({
+      name,
+      email,
+      password,
+      captcha_token: captchaToken,
+      terms_accepted: termsAccepted,
+      privacy_accepted: privacyAccepted,
+    }),
   });
 }
 
@@ -110,6 +135,10 @@ export async function verifyEmail(email: string, code: string) {
 
 export function getCurrentUser() {
   return apiRequest<ApiUser>("/api/auth/me");
+}
+
+export function logout() {
+  return apiRequest<void>("/api/auth/logout", { method: "POST" });
 }
 
 export function deleteAccount(confirmation: string) {

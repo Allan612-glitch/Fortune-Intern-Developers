@@ -128,7 +128,7 @@ TURNSTILE_SECRET_KEY=your_cloudflare_turnstile_secret_key
 Account deletion disables access immediately and retains account data for 30 days before scheduled permanent deletion. Configure `CRON_SECRET` in the production deployment; the daily Vercel Cron job uses it to authenticate the cleanup endpoint. Run the database migration after deployment so the deletion schedule can be stored.
 Set `TURNSTILE_SECRET_KEY` in the backend environment and `VITE_TURNSTILE_SITE_KEY` in the frontend build environment. Signup presents a Cloudflare Turnstile challenge when an IP exceeds 500 signup requests per minute. Password login also challenges elevated-risk client groups; configure both keys so users can complete those challenges.
 
-Verify the sender domain in Resend before registering accounts. Registration emails contain a six-digit OTP that expires after 10 minutes and is locked after five incorrect guesses; the user can request a new code. `POST /api/auth/register` sends the OTP and `POST /api/auth/verify-email` accepts the email and OTP before the account is created.
+Verify the sender domain in Resend before registering accounts. Registration emails contain a six-digit OTP that expires after 10 minutes and is locked after five incorrect guesses; the user can request a new code. `POST /api/auth/register` requires Terms and Privacy acceptance and sends the OTP; `POST /api/auth/verify-email` accepts the email and OTP before the account is created. Acceptance timestamps are stored on the account and in the server-side consent log.
 
 Contact form submissions are sent to `CONTACT_EMAIL` (defaulting to `fortuneintern.gh@gmail.com`) through Resend. Configure `RESEND_API_KEY` and `RESEND_FROM_EMAIL` for delivery; if email delivery is not configured or fails, the form reports the error and asks the sender to contact us directly.
 
@@ -140,7 +140,7 @@ Create the PostgreSQL database and user referenced by `DATABASE_URL`, then run m
 .\.venv\Scripts\python.exe -m alembic -c Database/alembic.ini upgrade head
 ```
 
-The migrations create the users, profiles, programs, applications, notifications, mentors, mentorships, announcements, admin role, moderation flags, and registration-verification support tables. The latest migrations add lookup indexes, preserve existing application rows even if they contain active duplicates, and add login-failure counts to the rate-limit buckets. Application submissions are checked in the API and serialized with a PostgreSQL transaction-scoped advisory lock so concurrent API requests cannot create a duplicate for the same user and program. The profile index remains unique and the migration stops if duplicate profiles need manual review.
+The migrations create the users, profiles, programs, applications, notifications, mentors, mentorships, announcements, admin role, moderation flags, and registration-verification support tables. The latest migrations add lookup indexes, preserve existing application rows even if they contain active duplicates, and add login-failure counts to the rate-limit buckets. The privacy-retention migration adds consent records, date of birth on applications, program-cycle closure timestamps, and persistent letter references. The daily scheduled maintenance job closes programs when their application deadline has passed. Application records and uploaded resumes are purged three years after that recorded closure; consent logs are retained until three years after account deletion. Application submissions are checked in the API and serialized with a PostgreSQL transaction-scoped advisory lock so concurrent API requests cannot create a duplicate for the same user and program. The profile index remains unique and the migration stops if duplicate profiles need manual review.
 
 ## Run the Backend
 
@@ -184,7 +184,7 @@ WHERE email = 'your-email@example.com';
 3. Log out and log back in so the frontend receives the updated `is_admin` value.
 4. The **Admin Dashboard** link will appear in the side panel.
 
-Admins can manage users, mentors, programs, applications, resumes, and announcements. Admin endpoints are protected and regular users receive `403 Forbidden`.
+Admins can manage users, mentors, programs, applications, resumes, and announcements. Programs close automatically when their application deadline passes; programs without a deadline remain open until updated with one. Admin endpoints are protected and regular users receive `403 Forbidden`.
 
 ## Authentication and Security
 
@@ -204,6 +204,7 @@ Admins can manage users, mentors, programs, applications, resumes, and announcem
 - `/api/profile` - authenticated profile retrieval and updates
 - `/api/programs` - public program listing, search, filtering, and details
 - `/api/applications` - authenticated application submission and history
+- `/api/applications/verify-letter?reference=...` - rate-limited public verification of a sent recommendation letter reference
 - `/api/dashboard` - personalized dashboard data
 - `/api/notifications` - notifications, unread counts, read actions, and preferences
 - `/api/mentors` - mentor discovery and registration

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AsyncState from "../components/AsyncState";
 import {
-  printApplicationLetter,
   fromBackendApplication,
   type ApplicationRecord,
   type ApplicationStatus,
@@ -41,7 +40,7 @@ function stageIndex(application: ApplicationRecord) {
   return 4;
 }
 
-export default function ApplicationsPage({ email }: { email: string }) {
+export default function ApplicationsPage() {
   const [applications, setApplications] = useState<ApplicationRecord[]>([]);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<ApplicationStatus | "All">("All");
@@ -54,9 +53,7 @@ export default function ApplicationsPage({ email }: { email: string }) {
     setLoading(true);
     setError("");
     try {
-      const latest = (await listApplications()).map((application) =>
-        fromBackendApplication(application, email),
-      );
+      const latest = (await listApplications()).map(fromBackendApplication);
       setApplications(latest);
       setSelected((current) => current
         ? latest.find((application) => application.reference === current.reference) || null
@@ -67,7 +64,7 @@ export default function ApplicationsPage({ email }: { email: string }) {
     } finally {
       setLoading(false);
     }
-  }, [email]);
+  }, []);
 
   useEffect(() => {
     void refresh();
@@ -113,7 +110,7 @@ export default function ApplicationsPage({ email }: { email: string }) {
           </p>
           <h1 className="text-2xl font-bold mt-1">My Applications</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Track submitted applications, payment, and letter availability.
+            Track submitted applications, payment, and status.
           </p>
         </div>
       </div>
@@ -412,26 +409,6 @@ function TrackingModal({
                 </button>
               )}
               {downloadError && <p className="mt-2 text-xs text-red-600" role="alert">{downloadError}</p>}
-            </div>
-            <div className="border-t border-border pt-4">
-              {application.applicationLetterAvailable ? (
-                <>
-                  <p className="text-sm font-semibold text-emerald-700 mb-3">
-                    Application Letter Ready
-                  </p>
-                  <button
-                    onClick={() => printApplicationLetter(application)}
-                    className="w-full py-3 rounded-xl bg-primary text-white text-sm font-semibold"
-                  >
-                    Print Application
-                  </button>
-                </>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  Application letter will be available once your application has
-                  been successfully processed.
-                </p>
-              )}
             </div>
           </div>
         </div>

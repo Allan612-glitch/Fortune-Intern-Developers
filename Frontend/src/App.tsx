@@ -12,8 +12,8 @@ import CookieConsent from "./components/CookieConsent"
 import InstallBanner from "./components/InstallBanner"
 import LandingPage from "./pages/LandingPage"
 import Footer from "./components/layout/Footer"
-import { getCurrentUser, getProfile } from "./services/auth"
-import { getAccessToken, setAccessToken } from "./services/api"
+import { getCurrentUser, getProfile, logout } from "./services/auth"
+import { ApiError, getAccessToken, setAccessToken } from "./services/api"
 
 // Performance: these pages load only when a visitor opens them, so the
 // landing page no longer downloads the logged-in app, admin code, etc.
@@ -67,6 +67,16 @@ export default function App() {
 
     window.scrollTo({ top: 0, left: 0, behavior: "instant" })
   }, [location.pathname, location.hash])
+
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setAccessToken(null)
+      setUser(null)
+      navigate("/login")
+    }
+    window.addEventListener("auth:session-expired", handleSessionExpired)
+    return () => window.removeEventListener("auth:session-expired", handleSessionExpired)
+  }, [navigate])
 
   const selectedProgramId =
     pendingProgramIdRef.current ||
@@ -128,7 +138,11 @@ export default function App() {
             role: "student",
           })
         })
-        .catch(() => setAccessToken(null))
+        .catch((error: unknown) => {
+          if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+            setAccessToken(null)
+          }
+        })
         .finally(() => {
           if (active) setAuthLoading(false)
         })
@@ -168,6 +182,9 @@ export default function App() {
   }
 
   const handleLogout = () => {
+    void logout().catch((error: unknown) => {
+      console.error("Unable to clear the refresh session during logout.", error)
+    })
     setAccessToken(null)
     setUser(null)
     setPendingUser(null)

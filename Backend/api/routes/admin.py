@@ -12,7 +12,7 @@ from sqlalchemy import and_, func, or_
 from sqlmodel import Session, select
 
 from Backend.api.deps import get_current_admin
-from Backend.core import documents, storage
+from Backend.core import age, documents, storage
 from Backend.core.audit import record_audit_event
 from Backend.core.mailer import send_application_documents_email
 from Backend.database import get_session
@@ -51,6 +51,7 @@ def program_response(row: program) -> ProgramResponse:
 		category=row.category, status=row.status, location=row.location, duration=row.duration,
 		skills=[item.strip() for item in (row.skills or "").split(",") if item.strip()],
 		deadline=row.deadline.isoformat() if row.deadline else None,
+		cycle_closed_at=row.cycle_closed_at.isoformat() if row.cycle_closed_at else None,
 	)
 
 
@@ -58,9 +59,10 @@ def parse_deadline(value: str | None):
 	if not value:
 		return None
 	try:
-		return datetime.fromisoformat(value.replace("Z", "+00:00"))
+		deadline = datetime.fromisoformat(value.replace("Z", "+00:00"))
 	except ValueError:
 		raise HTTPException(status_code=422, detail="Deadline must be a valid ISO date")
+	return deadline.replace(tzinfo=timezone.utc) if deadline.tzinfo is None else deadline
 
 
 def _application_reference(session: Session, row: application) -> str:
@@ -80,6 +82,10 @@ def _application_reference(session: Session, row: application) -> str:
 		)
 	).one()
 	return f"FIN/{row.created_at.year}/{previous_applications + 1:04d}"
+
+
+def _stable_letter_reference(row: application) -> str:
+	return f"FIN/{row.created_at.year}/{row.id.hex.upper()}"
 
 
 @router.get("/users", response_model=list[AdminUserResponse])
@@ -140,6 +146,10 @@ def list_admin_applications(
 			applicant_name=row.applicant_name, gender=row.gender,
 			student_index_number=row.student_index_number, year_of_study=row.year_of_study,
 			suggested_company=row.suggested_company,
+			requires_minor_review=age.requires_minor_review(
+				getattr(row, "date_of_birth", None),
+				row.created_at,
+			),
 			applicant_institution=row.applicant_institution, applicant_course=row.applicant_course,
 			applicant_contact=row.applicant_contact, host_company_name=row.host_company_name,
 			host_company_address=row.host_company_address,
@@ -302,7 +312,9 @@ def get_admin_application_status_history(
 def create_program(payload: AdminProgramCreateRequest, request: Request, admin: user = Depends(get_current_admin), session: Session = Depends(get_session)):
 	if not payload.name.strip():
 		raise HTTPException(status_code=422, detail="Program name is required")
-	row = program(name=payload.name.strip(), description=payload.description.strip(), company=payload.company.strip(), category=payload.category.strip(), status=payload.status.strip(), location=payload.location.strip(), duration=payload.duration.strip(), skills=", ".join(payload.skills), deadline=parse_deadline(payload.deadline))
+	if payload.status.strip().lower() != "open":
+		raise HTTPException(status_code=422, detail="Program cycles close automatically at their deadline")
+	row = program(name=payload.name.strip(), description=payload.description.strip(), company=payload.company.strip(), category=payload.category.strip(), status="open", location=payload.location.strip(), duration=payload.duration.strip(), skills=", ".join(payload.skills), deadline=parse_deadline(payload.deadline))
 	session.add(row)
 	record_audit_event(session, request, actor_id=admin.id, action="program.create", object_type="program", object_id=str(row.id))
 	session.commit()
@@ -318,6 +330,10 @@ def update_program(program_id: str, payload: AdminProgramUpdateRequest, request:
 		row = None
 	if not row:
 		raise HTTPException(status_code=404, detail="Program not found")
+	if payload.status.strip().lower() == "closed":
+		raise HTTPException(status_code=422, detail="Program cycles close automatically at their deadline")
+	if row.cycle_closed_at is not None and payload.status.strip().lower() == "open":
+		raise HTTPException(status_code=409, detail="A closed internship cycle cannot be reopened")
 	for field in ("name", "description", "company", "category", "status", "location", "duration"):
 		setattr(row, field, getattr(payload, field).strip())
 	row.skills = ", ".join(payload.skills)
@@ -364,6 +380,8 @@ def update_application_status(application_id: str, payload: AdminApplicationStat
 	if not retrying_documents:
 		previous_status = row.status
 		row.status = requested_status
+		if requested_status == "accepted" and getattr(row, "letter_reference", None) is None:
+			row.letter_reference = _stable_letter_reference(row)
 		session.add(row)
 		session.add(application_status_history(
 			application_id=row.id,
@@ -393,7 +411,11 @@ def update_application_status(application_id: str, payload: AdminApplicationStat
 		if not applicant:
 			raise HTTPException(status_code=404, detail="Applicant not found")
 		try:
-			reference_no = _application_reference(session, row)
+			reference_no = getattr(row, "letter_reference", None) or _stable_letter_reference(row)
+			if getattr(row, "letter_reference", None) is None:
+				row.letter_reference = reference_no
+				session.add(row)
+				session.commit()
 			letter_pdf = documents.build_recommendation_letter_pdf(
 				student_name=row.applicant_name or applicant.name,
 				institution=row.applicant_institution or "Not specified",
@@ -434,6 +456,10 @@ def update_application_status(application_id: str, payload: AdminApplicationStat
 		applicant_name=row.applicant_name, gender=row.gender,
 		student_index_number=row.student_index_number, year_of_study=row.year_of_study,
 		suggested_company=row.suggested_company,
+		requires_minor_review=age.requires_minor_review(
+			getattr(row, "date_of_birth", None),
+			row.created_at,
+		),
 		applicant_institution=row.applicant_institution, applicant_course=row.applicant_course,
 		applicant_contact=row.applicant_contact, host_company_name=row.host_company_name,
 		host_company_address=row.host_company_address, created_at=row.created_at.isoformat(),
