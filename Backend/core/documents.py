@@ -6,6 +6,7 @@ from io import BytesIO
 from pathlib import Path
 from urllib.parse import quote
 
+from Backend.core.config import settings
 from reportlab.graphics import renderPDF
 from reportlab.graphics.barcode.qr import QrCodeWidget
 from reportlab.lib import colors
@@ -451,7 +452,7 @@ def build_recommendation_letter_pdf(
     ]))
 
     verification_url = (
-        "https://fortuneintern.com/verify-letter?reference="
+        f"{settings.frontend_url.rstrip('/')}/verify-letter?reference="
         f"{quote(reference_no, safe='/')}"
     )
     verification_style = ParagraphStyle(
