@@ -18,8 +18,8 @@ export default function PrivacyPolicy() {
           <h2 className="text-2xl font-extrabold text-[#0B172A] mb-4">1. Information We Collect</h2>
           <ul className="list-disc pl-6 space-y-3 text-lg leading-relaxed">
             <li><span className="font-bold text-[#0B172A]">Account data:</span> name, email address, username and password.</li>
-            <li><span className="font-bold text-[#0B172A]">Application data:</span> institution, index number, course or programme, year of study, phone number, host company, company address and uploaded documents such as resumes, introduction letters and certificates.</li>
-            <li><span className="font-bold text-[#0B172A]">Payment data:</span> a Paystack transaction reference only. Card and mobile money credentials are entered on the Paystack checkout and never reach our servers.</li>
+            <li><span className="font-bold text-[#0B172A]">Application data:</span> institution, index number, date of birth, course or programme, year of study, phone number, host company, company address and uploaded documents such as resumes, introduction letters and certificates.</li>
+            <li><span className="font-bold text-[#0B172A]">Payment data:</span> application fees are paid through Paystack. Card and mobile money credentials are entered on the Paystack checkout and never reach our servers. Our servers do not store your payment details or Paystack transaction reference. Paystack receives your email address, name and index number with the payment and keeps its own payment records.</li>
             <li><span className="font-bold text-[#0B172A]">Support data:</span> messages you send us and your recorded cookie consent choice.</li>
           </ul>
         </div>
@@ -62,7 +62,7 @@ export default function PrivacyPolicy() {
               <span className="font-bold text-[#0B172A]">Necessary, no consent required:</span> session and login storage, saved document fields and your consent record. The portal cannot function without these.
             </li>
             <li>
-              <span className="font-bold text-[#0B172A]">On-device functionality:</span> the Super AI knowledge base and, if you provide one, your OpenAI key remain on your device and are never uploaded.
+              <span className="font-bold text-[#0B172A]">Sign-in cookie, no consent required:</span> when you sign in we set one cookie named <span className="font-mono text-base">fortune-intern-refresh-token</span>. It is HttpOnly, so page scripts cannot read it, and it is sent only to our sign-in endpoints to keep you signed in. If you choose &quot;Remember me&quot; it lasts 30 days. Otherwise it is removed when you close your browser. Signing out removes it.
             </li>
             <li>
               <span className="font-bold text-[#0B172A]">Analytics and marketing:</span> none at present. If introduced, they load only after you accept and this policy is updated.
@@ -90,14 +90,14 @@ export default function PrivacyPolicy() {
         <div className="mb-10">
           <h2 className="text-2xl font-extrabold text-[#0B172A] mb-4">7. Data Retention</h2>
           <p className="text-lg leading-relaxed">
-            Application and document records are kept for three years after the internship cycle closes. Payment references are kept for seven years for audit and tax purposes. Consent logs are kept for the life of your account plus three years. Data is then deleted or anonymised securely.
+            Application records, including any resume attached to an application, are deleted three years after the internship cycle they belong to closes, or earlier if your account is deleted. Documents you upload to your profile are deleted when your account is deleted. Records showing that you accepted the Terms and Conditions and this Privacy Policy are kept while your account is open and for three years after it is closed. When you ask us to delete your account, your account and files are permanently deleted after a 30-day waiting period. We do not store card or mobile money details. Payment records are held by Paystack under its own retention rules.
           </p>
         </div>
 
         <div className="mb-10">
           <h2 className="text-2xl font-extrabold text-[#0B172A] mb-4">8. Children</h2>
           <p className="text-lg leading-relaxed">
-            Our services target tertiary students, generally aged 16 and above. Users under 18 require guardian or institution approval. We do not knowingly collect data from children under 16.
+            Our services target tertiary students. Applicants must be at least 16, and applications from people under 16 are rejected. Applications from people under 18 are flagged for review by our team. We do not knowingly collect data from children under 16.
           </p>
         </div>
 
@@ -118,7 +118,7 @@ export default function PrivacyPolicy() {
           </p>
         </div>
 
-        <span className="text-gray-500">Last updated: September 2026</span>
+        <span className="text-gray-500">Last updated: November 2026</span>
 
       </div>
     </div>
