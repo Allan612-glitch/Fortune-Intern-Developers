@@ -477,7 +477,7 @@ def build_recommendation_letter_pdf(
         ("TOPPADDING", (0, 0), (-1, -1), 4),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
     ]))
-    story.extend([Spacer(1, 5), verification_row])
+    story.extend([Spacer(1, 15), verification_row])
 
     doc.build(story)
     return buffer.getvalue()
