@@ -101,8 +101,12 @@ class application(SQLModel, table=True):
             "program_id",
             "applicant_name",
             unique=True,
-            postgresql_where=text("status <> 'withdrawn' AND applicant_name IS NOT NULL"),
-            sqlite_where=text("status <> 'withdrawn' AND applicant_name IS NOT NULL"),
+            postgresql_where=text(
+                "status NOT IN ('accepted', 'rejected', 'withdrawn') AND applicant_name IS NOT NULL"
+            ),
+            sqlite_where=text(
+                "status NOT IN ('accepted', 'rejected', 'withdrawn') AND applicant_name IS NOT NULL"
+            ),
         ),
         Index(
             "uq_applications_active_user_program_student_index",
@@ -110,8 +114,12 @@ class application(SQLModel, table=True):
             "program_id",
             "student_index_number",
             unique=True,
-            postgresql_where=text("status <> 'withdrawn' AND student_index_number IS NOT NULL"),
-            sqlite_where=text("status <> 'withdrawn' AND student_index_number IS NOT NULL"),
+            postgresql_where=text(
+                "status NOT IN ('accepted', 'rejected', 'withdrawn') AND student_index_number IS NOT NULL"
+            ),
+            sqlite_where=text(
+                "status NOT IN ('accepted', 'rejected', 'withdrawn') AND student_index_number IS NOT NULL"
+            ),
         ),
         Index(
             "uq_applications_active_user_program_without_identity",
@@ -119,10 +127,12 @@ class application(SQLModel, table=True):
             "program_id",
             unique=True,
             postgresql_where=text(
-                "status <> 'withdrawn' AND applicant_name IS NULL AND student_index_number IS NULL"
+                "status NOT IN ('accepted', 'rejected', 'withdrawn') "
+                "AND applicant_name IS NULL AND student_index_number IS NULL"
             ),
             sqlite_where=text(
-                "status <> 'withdrawn' AND applicant_name IS NULL AND student_index_number IS NULL"
+                "status NOT IN ('accepted', 'rejected', 'withdrawn') "
+                "AND applicant_name IS NULL AND student_index_number IS NULL"
             ),
         ),
     )

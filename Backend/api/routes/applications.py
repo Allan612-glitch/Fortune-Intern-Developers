@@ -254,7 +254,7 @@ def _prepare_application(
         select(application).where(
             application.user_id == account.id,
             application.program_id == program_record.id,
-            application.status != "withdrawn",
+            application.status.notin_(("accepted", "rejected", "withdrawn")),
             duplicate_identity,
         )
     ).first()
