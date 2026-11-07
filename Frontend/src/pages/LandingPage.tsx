@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from "react"
+import { flushSync } from "react-dom"
 import logo from "../assets/logo.webp"
 import heroImage from "../assets/Hero.webp"
 import studentImage from "../assets/About.webp"
@@ -94,7 +95,7 @@ const steps = [
 // on every render. React skips re-rendering an unchanged element, so typing in
 // the search box or opening the menu no longer re-renders them.
 const whyFinSection = (
-  <section id="about" className="section-space bg-white">
+  <section id="about" className="section-space bg-white scroll-mt-[4.5rem]">
     <div className="landing-container">
       <SectionHeading
         eyebrow="Why Fortune Intern Network?"
@@ -124,7 +125,7 @@ const whyFinSection = (
 )
 
 const stepsSection = (
-  <section id="how-it-works" className="section-space bg-surface">
+  <section id="how-it-works" className="section-space bg-surface scroll-mt-[4.5rem]">
     <div className="landing-container">
       <SectionHeading
         eyebrow="Simple to apply"
@@ -152,7 +153,7 @@ const stepsSection = (
 )
 
 const aboutUsSection = (
-  <section id="about-us" className="section-space bg-white">
+  <section id="about-us" className="section-space bg-white scroll-mt-[4.5rem]">
     <div className="landing-container">
       <div className="max-w-3xl">
         <p className="section-eyebrow">About us</p>
@@ -178,7 +179,7 @@ const aboutUsSection = (
 )
 
 const contactSection = (
-  <section id="contact" className="section-space bg-surface">
+  <section id="contact" className="section-space bg-surface scroll-mt-[4.5rem]">
     <div className="landing-container">
       <SectionHeading
         eyebrow="Customer service"
@@ -354,7 +355,10 @@ export default function LandingPage({
   }
 
   const goTo = (id: string) => {
-    setMobileMenu(false)
+    // Close the phone menu first and wait until it has really closed. While it
+    // is open it pushes the whole page down, so measuring the section before it
+    // closes makes the scroll land too far down.
+    flushSync(() => setMobileMenu(false))
 
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" })
   }
@@ -487,7 +491,7 @@ export default function LandingPage({
           </div>
         </section>
 
-        <section id="internships" className="relative -mt-3 z-10 px-4 sm:px-6">
+        <section id="internships" className="relative -mt-3 z-10 px-4 sm:px-6 scroll-mt-[6rem]">
           <div className="max-w-6xl mx-auto bg-white rounded-3xl border border-border p-5 sm:p-8">
             <div className="text-center mb-6">
               <p className="text-xs uppercase tracking-[0.18em] font-bold text-primary">
@@ -548,7 +552,7 @@ export default function LandingPage({
           </div>
         </section>
 
-        <section id="opportunities" className="section-space bg-white">
+        <section id="opportunities" className="section-space bg-white scroll-mt-[4.5rem]">
           <div className="landing-container">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
               <SectionHeading
