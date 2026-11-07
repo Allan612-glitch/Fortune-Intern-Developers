@@ -204,6 +204,59 @@ class TestApplicationAgeAndLetterVerification(unittest.TestCase):
             self.assertEqual(adult_prepared.initial_status, "submitted")
         engine.dispose()
 
+    def test_decided_application_allows_reapplication_but_active_one_does_not(self):
+        engine = create_engine("sqlite://")
+        SQLModel.metadata.create_all(engine)
+        with Session(engine) as session:
+            applicant = user(name="Test Applicant", email="applicant@example.test")
+            internship = program(name="Summer Internship", description="Test program")
+            session.add_all([applicant, internship])
+            session.commit()
+            fields = _ApplicationFields(
+                program_id=str(internship.id),
+                program_name=internship.name,
+                institution="Test University",
+                course="Computing",
+                contact="",
+                company_name="",
+                company_address="",
+                applicant_name=applicant.name,
+                gender="",
+                student_index_number="INDEX-1",
+                year_of_study="",
+                suggested_company="",
+                date_of_birth="2000-01-01",
+            )
+            session.add(application(
+                user_id=applicant.id,
+                program_id=internship.id,
+                status="rejected",
+                applicant_name=applicant.name,
+                student_index_number="INDEX-1",
+            ))
+            session.commit()
+
+            prepared = _prepare_application(session, applicant, fields)
+            session.add(application(
+                user_id=applicant.id,
+                program_id=prepared.program_id,
+                status=prepared.initial_status,
+                applicant_name=prepared.fields.applicant_name,
+                student_index_number=prepared.fields.student_index_number,
+                date_of_birth=prepared.date_of_birth,
+            ))
+            session.commit()
+
+            with self.assertRaises(HTTPException) as raised:
+                _prepare_application(session, applicant, fields)
+
+            self.assertEqual(raised.exception.status_code, 409)
+            self.assertEqual(
+                raised.exception.detail,
+                "You already have an active application for this program",
+            )
+        engine.dispose()
+
     def test_public_letter_lookup_verifies_only_sent_accepted_documents(self):
         engine = create_engine("sqlite://")
         SQLModel.metadata.create_all(engine)
