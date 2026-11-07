@@ -178,10 +178,10 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="p-4 lg:p-6 max-w-4xl">
+    <div className="mx-auto w-full max-w-6xl p-4 sm:p-5 lg:p-6">
       <div className="flex items-center gap-3 mb-6">
         <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center text-white"
+          className="w-10 h-10 shrink-0 rounded-xl flex items-center justify-center text-white"
           style={{ background: "linear-gradient(135deg, #dc2626, #b91c1c)" }}
         >
           <svg
@@ -198,9 +198,9 @@ export default function AdminPage() {
             />
           </svg>
         </div>
-        <div>
+        <div className="min-w-0">
           <h1
-            className="text-2xl font-bold"
+            className="text-xl sm:text-2xl font-bold"
             style={{ fontFamily: "Inter, sans-serif" }}
           >
             Admin Dashboard
@@ -210,7 +210,7 @@ export default function AdminPage() {
           </p>
         </div>
         <div
-          className="ml-auto px-3 py-1 rounded-full text-xs font-bold text-white"
+          className="ml-auto shrink-0 px-3 py-1 rounded-full text-xs font-bold text-white"
           style={{ background: "linear-gradient(135deg, #dc2626, #b91c1c)" }}
         >
           ADMIN
@@ -230,7 +230,7 @@ export default function AdminPage() {
       ) : (
       <>
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {[
           { label: "Total Users", value: users.length, icon: "👥" },
           { label: "Programs", value: programs.length, icon: "💼" },
@@ -254,12 +254,15 @@ export default function AdminPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-muted rounded-xl p-1 mb-5 overflow-x-auto">
+      <div className="flex gap-1 bg-muted rounded-xl p-1 mb-5 overflow-x-auto sm:grid sm:grid-cols-4 sm:overflow-visible">
         {(["users", "applications", "programs", "announcements"] as const).map((t) => (
           <button
             key={t}
-            onClick={() => setTab(t)}
-            className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-semibold capitalize transition-all ${tab === t ? "text-white shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+            onClick={(event) => {
+              setTab(t);
+              event.currentTarget.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+            }}
+            className={`flex-shrink-0 px-4 py-2.5 sm:px-2 rounded-lg text-sm font-semibold capitalize text-center transition-all ${tab === t ? "text-white shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
             style={
               tab === t
                 ? { background: "linear-gradient(135deg, #2D3561, #3d4a8a)" }
@@ -283,11 +286,11 @@ export default function AdminPage() {
             {users.map((user) => (
               <div
                 key={user.id}
-                className="flex items-center justify-between px-5 py-4 hover:bg-muted/20 transition-colors"
+                className="flex flex-col gap-3 px-4 sm:px-5 py-4 sm:flex-row sm:items-center sm:justify-between hover:bg-muted/20 transition-colors"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                   <div
-                    className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                    className="w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-white text-xs font-bold"
                     style={{
                       background: "linear-gradient(135deg, #2D3561, #3d4a8a)",
                     }}
@@ -298,14 +301,14 @@ export default function AdminPage() {
                       .join("")
                       .slice(0, 2)}
                   </div>
-                  <div>
-                    <p className="font-semibold text-sm">{user.name}</p>
-                    <p className="text-xs text-muted-foreground">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm break-words">{user.name}</p>
+                    <p className="text-xs text-muted-foreground break-all">
                       {user.email} · {user.is_admin ? "Admin" : "Student"}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 pl-12 sm:pl-0 sm:shrink-0">
                   {user.is_suspended && (
                     <span className="text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded-full font-medium">
                       Suspended
@@ -315,7 +318,7 @@ export default function AdminPage() {
                     <button
                       onClick={() => void toggleSuspend(user)}
                       disabled={busyKey === `user-${user.id}`}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:cursor-wait disabled:opacity-60 ${user.is_suspended ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-red-100 text-red-700 hover:bg-red-200"}`}
+                      className={`px-3 py-2 lg:py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:cursor-wait disabled:opacity-60 ${user.is_suspended ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-red-100 text-red-700 hover:bg-red-200"}`}
                     >
                       {busyKey === `user-${user.id}` ? "Updating..." : user.is_suspended ? "Unsuspend" : "Suspend"}
                     </button>
@@ -384,7 +387,7 @@ export default function AdminPage() {
             {applications.map((app) => (
               <div
                 key={app.id}
-                className="flex items-center justify-between px-5 py-4 hover:bg-muted/20 transition-colors"
+                className="flex flex-col gap-3 px-4 sm:px-5 py-4 md:flex-row md:items-center md:justify-between hover:bg-muted/20 transition-colors"
               >
                 <div className="flex min-w-0 items-start gap-3">
                   <input
@@ -396,11 +399,11 @@ export default function AdminPage() {
                     className="mt-1 h-4 w-4 shrink-0 accent-[#2D3561]"
                   />
                   <div className="min-w-0">
-                    <p className="font-semibold text-sm">{app.applicant_name || `Applicant ${app.user_id.slice(0, 8)}`}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="font-semibold text-sm break-words">{app.applicant_name || `Applicant ${app.user_id.slice(0, 8)}`}</p>
+                    <p className="text-xs text-muted-foreground break-words">
                       {app.program_name} · {new Date(app.created_at).toLocaleDateString()}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-xs text-muted-foreground mt-1 break-words">
                       {[app.student_index_number, app.gender, app.year_of_study].filter(Boolean).join(" · ") || "No academic details"}
                     </p>
                     {app.requires_minor_review && (
@@ -410,7 +413,7 @@ export default function AdminPage() {
                     )}
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center justify-end gap-2">
+                <div className="flex flex-wrap items-center gap-2 pl-7 md:pl-0 md:justify-end md:shrink-0">
                   <span
                     className={`text-xs px-2.5 py-1 rounded-full font-medium capitalize ${statusBadge[app.status] || "status-applied"}`}
                   >
@@ -418,18 +421,18 @@ export default function AdminPage() {
                   </span>
                   <button
                     onClick={() => setPreviewApplication(app)}
-                    className="text-xs px-3 py-1.5 rounded-lg border border-border font-semibold hover:bg-muted/50 transition-colors"
+                    className="text-xs px-3 py-2 lg:py-1.5 rounded-lg border border-border font-semibold hover:bg-muted/50 transition-colors"
                     aria-label={`Preview application from ${app.applicant_name || `applicant ${app.user_id.slice(0, 8)}`}`}
                   >
                     Preview
                   </button>
-                  {app.resume_filename && <button onClick={() => void saveResumeDownload(app.id, true).catch((requestError) => setError(requestError instanceof Error ? requestError.message : "Unable to download resume."))} className="text-xs font-semibold text-primary underline">Resume</button>}
+                  {app.resume_filename && <button onClick={() => void saveResumeDownload(app.id, true).catch((requestError) => setError(requestError instanceof Error ? requestError.message : "Unable to download resume."))} className="text-xs font-semibold text-primary underline px-1 py-2 lg:py-0">Resume</button>}
                   {!(["accepted", "rejected"] as string[]).includes(app.status.toLowerCase()) && (
                     <>
-                      <button onClick={() => void updateStatus(app, "accepted")} disabled={busyKey === `app-${app.id}`} className="text-xs px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors font-semibold disabled:cursor-wait disabled:opacity-60">
+                      <button onClick={() => void updateStatus(app, "accepted")} disabled={busyKey === `app-${app.id}`} className="text-xs px-3 py-2 lg:py-1.5 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors font-semibold disabled:cursor-wait disabled:opacity-60">
                         {busyKey === `app-${app.id}` ? "Updating..." : "Accept"}
                       </button>
-                      <button onClick={() => void updateStatus(app, "rejected")} disabled={busyKey === `app-${app.id}`} className="text-xs px-3 py-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors font-semibold disabled:cursor-wait disabled:opacity-60">
+                      <button onClick={() => void updateStatus(app, "rejected")} disabled={busyKey === `app-${app.id}`} className="text-xs px-3 py-2 lg:py-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors font-semibold disabled:cursor-wait disabled:opacity-60">
                         {busyKey === `app-${app.id}` ? "Updating..." : "Reject"}
                       </button>
                     </>
@@ -456,7 +459,7 @@ export default function AdminPage() {
                 Program posted successfully.
               </p>
             )}
-            <form onSubmit={(event) => void submitProgram(event)} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <form onSubmit={(event) => void submitProgram(event)} className="grid grid-cols-1 sm:grid-cols-2 gap-4 [&_input]:min-w-0 [&_label]:min-w-0">
               <label className="block text-xs font-semibold text-muted-foreground">
                 Program title
                 <input
@@ -537,7 +540,7 @@ export default function AdminPage() {
                 <button
                   type="submit"
                   disabled={programSubmitting}
-                  className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-60"
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-60"
                   style={{ background: "linear-gradient(135deg, #2D3561, #3d4a8a)" }}
                 >
                   {programSubmitting ? "Posting..." : "Post Program"}
@@ -553,19 +556,19 @@ export default function AdminPage() {
             {programs.length ? (
               <div className="bg-white border border-border rounded-xl divide-y divide-border shadow-sm">
                 {programs.map((program) => (
-                  <article key={program.id} className="flex items-start justify-between gap-4 p-4">
+                  <article key={program.id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                     <div className="min-w-0">
-                      <h4 className="font-semibold text-sm">{program.name}</h4>
+                      <h4 className="font-semibold text-sm break-words">{program.name}</h4>
                       <p className="text-xs text-muted-foreground mt-1">
                         {program.company} · {program.category} · {program.location} · {program.duration}
                       </p>
-                      {program.description && <p className="text-sm text-muted-foreground mt-2">{program.description}</p>}
+                      {program.description && <p className="text-sm text-muted-foreground mt-2 break-words">{program.description}</p>}
                       <p className="text-xs text-muted-foreground mt-2">
                         {program.skills.length ? `Skills: ${program.skills.join(", ")}` : "No skills listed"}
                         {program.deadline && ` · Deadline: ${new Date(program.deadline).toLocaleString()}`}
                       </p>
                     </div>
-                    <span className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${program.status === "open" ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
+                    <span className={`shrink-0 self-start px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${program.status === "open" ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
                       {program.status}
                     </span>
                   </article>
