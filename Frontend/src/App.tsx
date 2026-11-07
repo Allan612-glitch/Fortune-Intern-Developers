@@ -26,6 +26,7 @@ const About = lazy(() => import("./pages/companypages/About"))
 const Contact = lazy(() => import("./pages/companypages/ContactUs"))
 const PrivacyPolicy = lazy(() => import("./pages/companypages/PrivacyPolicy"))
 const Terms = lazy(() => import("./pages/companypages/TAC"))
+const VerifyLetterPage = lazy(() => import("./pages/VerifyLetterPage"))
 
 export type AppUser = {
   name: string
@@ -331,6 +332,15 @@ export default function App() {
           element={
             <>
               <Terms />
+              <Footer />
+            </>
+          }
+        />
+        <Route
+          path="/verify-letter"
+          element={
+            <>
+              <VerifyLetterPage />
               <Footer />
             </>
           }
