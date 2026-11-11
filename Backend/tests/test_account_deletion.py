@@ -242,5 +242,6 @@ class TestAccountDeletion(unittest.TestCase):
                 "programs_closed": 0,
                 "applications_purged": 0,
                 "consent_logs_purged": 0,
+                "rate_limit_buckets_purged": 0,
             },
         )

@@ -233,6 +233,20 @@ class TestLoginRiskGates(unittest.TestCase):
             password="password123",
         )
 
+    def test_malformed_email_is_rejected_before_rate_or_risk_checks(self):
+        session = Mock()
+        credentials = LoginRequest(email="not-an-email", password="password")
+        with (
+            patch("Backend.api.routes.auth.enforce_rate_limit") as rate_limit,
+            patch("Backend.api.routes.auth.get_login_risk") as get_risk,
+            self.assertRaises(HTTPException) as raised,
+        ):
+            login(credentials, self.request, Response(), session)
+
+        self.assertEqual(raised.exception.status_code, 422)
+        rate_limit.assert_not_called()
+        get_risk.assert_not_called()
+
     def test_high_risk_request_requires_captcha_before_password_hash_check(self):
         session = Mock()
         challenge = HTTPException(

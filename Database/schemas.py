@@ -3,8 +3,8 @@ from pydantic import BaseModel, Field
 
 
 class LoginRequest(BaseModel):
-    email: str
-    password: str
+    email: str = Field(min_length=3, max_length=254)
+    password: str = Field(min_length=1, max_length=1024)
     captcha_token: str | None = Field(default=None, max_length=8192)
     trusted_device_token: str | None = Field(default=None, max_length=8192)
     remember_me: bool = False

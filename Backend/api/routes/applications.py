@@ -392,18 +392,18 @@ def list_applications(
     offset: int = Query(default=0, ge=0),
 ):
     rows = session.exec(
-        select(application)
+        select(application, program.name)
+        .outerjoin(program, application.program_id == program.id)
         .where(application.user_id == account.id)
         .order_by(application.created_at.desc())
         .offset(offset)
         .limit(limit)
     ).all()
 
-    results = []
-    for row in rows:
-        program_record = session.get(program, row.program_id)
-        results.append(serialize_application(row, program_record.name if program_record else "Program"))
-    return results
+    return [
+        serialize_application(row, program_name or "Program")
+        for row, program_name in rows
+    ]
 
 
 @router.get("/verify-letter", response_model=LetterVerificationResponse)
