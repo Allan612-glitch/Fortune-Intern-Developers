@@ -6,38 +6,52 @@ if (!/^http:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?$/i.test(configuredBaseUrl)) 
   throw new Error("This test is restricted to a local HTTP server (localhost or 127.0.0.1).");
 }
 
-http.setResponseCallback(http.expectedStatuses(401, 403, 429));
+const successEmail = __ENV.LOGIN_SUCCESS_EMAIL || "";
+const successPassword = __ENV.LOGIN_SUCCESS_PASSWORD || "";
+if (Boolean(successEmail) !== Boolean(successPassword)) {
+  throw new Error("Set both LOGIN_SUCCESS_EMAIL and LOGIN_SUCCESS_PASSWORD to enable successful logins.");
+}
 
-export const options = {
-  scenarios: {
-    login_bots: {
-      executor: "ramping-vus",
-      startVUs: 0,
-      stages: [
-        { duration: "30s", target: 100 },
-        { duration: "1m", target: 250 },
-        { duration: "2m", target: 500 },
-        { duration: "3m", target: 1000 },
-        { duration: "30s", target: 1000 },
-        { duration: "1m", target: 0 },
-      ],
-      gracefulRampDown: "30s",
-    },
+const successVus = successEmail.includes("{vu}") ? Number(__ENV.LOGIN_SUCCESS_VUS || "5") : 1;
+if (!Number.isInteger(successVus) || successVus < 1) {
+  throw new Error("LOGIN_SUCCESS_VUS must be a positive integer.");
+}
+
+http.setResponseCallback(http.expectedStatuses(200, 401, 403, 429));
+
+const warmupAndSteadyStages = (steadyVus) => [
+  { duration: "30s", target: Math.min(2, steadyVus) },
+  { duration: "30s", target: steadyVus },
+  { duration: "2m", target: steadyVus },
+  { duration: "30s", target: 0 },
+];
+
+const scenarios = {
+  invalid_login_burst_and_sustain: {
+    executor: "ramping-vus",
+    startVUs: 0,
+    stages: warmupAndSteadyStages(10),
+    gracefulRampDown: "30s",
+    exec: "invalidLogin",
   },
 };
 
-export default function () {
-  if (__ITER > 0) {
-    sleep(30);
-    return;
-  }
+if (successEmail) {
+  scenarios.successful_login_burst_and_sustain = {
+    executor: "ramping-vus",
+    startVUs: 0,
+    stages: warmupAndSteadyStages(successVus),
+    gracefulRampDown: "30s",
+    exec: "successfulLogin",
+  };
+}
 
+export const options = { scenarios };
+
+function postLogin(email, password, tag) {
   const response = http.post(
     `${configuredBaseUrl}/api/auth/login`,
-    JSON.stringify({
-      email: `login-bot-${__VU}@example.invalid`,
-      password: "intentionally-wrong-load-test-password",
-    }),
+    JSON.stringify({ email, password }),
     {
       headers: {
         "Content-Type": "application/json",
@@ -47,13 +61,31 @@ export default function () {
         "Sec-CH-UA-Mobile": "?0",
       },
       timeout: "30s",
-      tags: { endpoint: "login" },
+      tags: { endpoint: "login", scenario: tag },
     },
+  );
+  return response;
+}
+
+export function invalidLogin() {
+  const response = postLogin(
+    `login-bot-${__VU}@example.invalid`,
+    "intentionally-wrong-load-test-password",
+    "invalid",
   );
 
   check(response, {
-    "login is rejected or challenged": (res) => [401, 403, 429].includes(res.status),
+    "invalid login is rejected or rate-limited": (res) => [401, 403, 429].includes(res.status),
   });
+  sleep(6);
+}
 
-  sleep(30);
+export function successfulLogin() {
+  const email = successEmail.replace("{vu}", String(__VU));
+  const response = postLogin(email, successPassword, "successful");
+
+  check(response, {
+    "successful login succeeds or is rate-limited": (res) => [200, 429].includes(res.status),
+  });
+  sleep(6);
 }

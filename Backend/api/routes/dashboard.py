@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import func
+from sqlalchemy import case, exists, func
 from sqlmodel import Session, select
 
 from Backend.api.deps import get_current_user
@@ -17,9 +17,16 @@ def get_dashboard(
 	account: user = Depends(get_current_user),
 	session: Session = Depends(get_session),
 ):
-	profile = session.exec(
-		select(user_profile).where(user_profile.user_id == account.id)
+	profile_row = session.exec(
+		select(
+			user_profile,
+			exists().where(profile_document.user_id == account.id),
+		)
+		.select_from(user)
+		.outerjoin(user_profile, user_profile.user_id == user.id)
+		.where(user.id == account.id)
 	).first()
+	profile, has_document = profile_row if profile_row else (None, False)
 	profile_values = [
 		profile.bio if profile else None,
 		profile.profile_picture if profile else None,
@@ -34,7 +41,7 @@ def get_dashboard(
 		profile.cgpa_scale if profile else None,
 		profile.phone_number if profile else None,
 		profile.location if profile else None,
-		bool(session.exec(select(profile_document).where(profile_document.user_id == account.id)).first()),
+		has_document,
 	]
 	profile_completion = round(sum(bool(value) for value in profile_values) / len(profile_values) * 100)
 
@@ -65,15 +72,11 @@ def get_dashboard(
 	]
 
 	now = datetime.now(timezone.utc)
-	open_programs = session.exec(
-		select(func.count()).select_from(program).where(program.status == "open")
-	).one()
-	next_deadline = session.exec(
-		select(func.min(program.deadline)).where(
-			program.status == "open",
-			program.deadline.is_not(None),
-			program.deadline >= now,
-		)
+	open_programs, next_deadline = session.exec(
+		select(
+			func.count(program.id),
+			func.min(case((program.deadline >= now, program.deadline), else_=None)),
+		).where(program.status == "open")
 	).one()
 
 	return DashboardResponse(

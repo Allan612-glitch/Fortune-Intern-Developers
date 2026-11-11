@@ -39,12 +39,6 @@ from Database.schemas import (
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 
-@router.get("/mentors")
-def list_admin_mentors(_: user = Depends(get_current_admin)):
-	# Mentorship feature is disabled (see Backend/api/routes/mentorship.py); kept as a stub so the admin dashboard still loads.
-	return []
-
-
 def program_response(row: program) -> ProgramResponse:
 	return ProgramResponse(
 		id=str(row.id), name=row.name, description=row.description or "", company=row.company,

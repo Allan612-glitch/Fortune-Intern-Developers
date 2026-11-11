@@ -11,12 +11,14 @@ from uuid import uuid4
 from fastapi import BackgroundTasks, HTTPException, Response
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
-from sqlmodel import Session, SQLModel
+from sqlalchemy import event
+from sqlmodel import Session, SQLModel, select
 
 from Backend.api.routes.admin import _application_reference, update_application_status
 from Backend.api.routes.applications import (
     _lock_application_identity,
     create_application,
+    list_applications,
 )
 from Backend.api.routes.auth import login, send_password_reset_email
 from Backend.api.routes.dashboard import get_dashboard
@@ -291,6 +293,47 @@ class TestPersistentRateLimit(unittest.TestCase):
             )
         self.assertEqual(challenge_passed, [True])
 
+    def test_repeated_rejected_request_does_not_increment_buckets(self):
+        engine = create_engine("sqlite://")
+        rate_limit_bucket.__table__.create(engine)
+        request = SimpleNamespace(client=SimpleNamespace(host="127.0.0.1"))
+
+        with Session(engine) as session:
+            for _ in range(3):
+                try:
+                    enforce_rate_limit(
+                        session,
+                        request,
+                        "blocked-action",
+                        "student",
+                        ip_limit=10,
+                        identity_limit=2,
+                        window_seconds=60,
+                    )
+                except HTTPException:
+                    pass
+
+            before = {
+                bucket.key: bucket.count
+                for bucket in session.exec(select(rate_limit_bucket)).all()
+            }
+            with self.assertRaises(HTTPException):
+                enforce_rate_limit(
+                    session,
+                    request,
+                    "blocked-action",
+                    "student",
+                    ip_limit=10,
+                    identity_limit=2,
+                    window_seconds=60,
+                )
+            after = {
+                bucket.key: bucket.count
+                for bucket in session.exec(select(rate_limit_bucket)).all()
+            }
+
+        self.assertEqual(after, before)
+
 
 class TestVerificationCodeGuessLimit(unittest.TestCase):
     def test_five_invalid_guesses_block_the_current_code(self):
@@ -438,6 +481,58 @@ class TestDashboardAggregates(unittest.TestCase):
         self.assertEqual(result.accepted_applications, 1)
         self.assertEqual(result.open_programs, 2)
         self.assertEqual(len(result.recent_applications), 2)
+
+    def test_dashboard_loads_its_summary_in_four_queries(self):
+        engine = create_engine("sqlite://")
+        SQLModel.metadata.create_all(engine)
+        account = user(name="Test", email="dashboard-queries@example.test")
+        statements = []
+        event.listen(
+            engine,
+            "before_cursor_execute",
+            lambda connection, cursor, statement, parameters, context, executemany:
+                statements.append(statement),
+        )
+        with Session(engine, expire_on_commit=False) as session:
+            session.add(account)
+            session.commit()
+            result = get_dashboard(account, session)
+
+        self.assertIsNotNone(result)
+        selects = [statement for statement in statements if statement.lstrip().upper().startswith("SELECT")]
+        self.assertEqual(len(selects), 4)
+
+
+class TestApplicationListingQueries(unittest.TestCase):
+    def test_application_listing_joins_program_names_in_one_query(self):
+        engine = create_engine("sqlite://")
+        SQLModel.metadata.create_all(engine)
+        account = user(name="Test", email="applications@example.test")
+        internship = program(name="Joined program", description="")
+        statements = []
+        event.listen(
+            engine,
+            "before_cursor_execute",
+            lambda connection, cursor, statement, parameters, context, executemany:
+                statements.append(statement),
+        )
+        with Session(engine, expire_on_commit=False) as session:
+            session.add_all([account, internship])
+            session.commit()
+            session.add(
+                application(
+                    user_id=account.id,
+                    program_id=internship.id,
+                    status="submitted",
+                )
+            )
+            session.commit()
+
+            results = list_applications(account, session, limit=100, offset=0)
+
+        selects = [statement for statement in statements if statement.lstrip().upper().startswith("SELECT")]
+        self.assertEqual(len(selects), 1)
+        self.assertEqual([result.program_name for result in results], ["Joined program"])
 
 
 class TestProgramLookup(unittest.TestCase):
