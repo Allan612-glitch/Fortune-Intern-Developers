@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import delete
 from sqlmodel import Session, select
@@ -11,12 +11,15 @@ from Database.models import (
     consent_log,
     notification,
     program,
+    rate_limit_bucket,
 )
 
 APPLICATION_RETENTION_YEARS = 3
 CONSENT_RETENTION_YEARS = 3
 RETENTION_BATCH_SIZE = 100
 PROGRAM_CLOSURE_BATCH_SIZE = 500
+RATE_LIMIT_BUCKET_RETENTION = timedelta(days=1)
+RATE_LIMIT_BUCKET_PURGE_BATCH_SIZE = 1000
 
 
 def add_calendar_years(value: datetime, years: int) -> datetime:
@@ -57,6 +60,29 @@ def close_expired_program_cycles(
     if expired_programs:
         session.commit()
     return len(expired_programs)
+
+
+def purge_expired_rate_limit_buckets(
+    session: Session,
+    *,
+    now: datetime | None = None,
+    limit: int = RATE_LIMIT_BUCKET_PURGE_BATCH_SIZE,
+) -> int:
+    cutoff = (now or datetime.now(timezone.utc)) - RATE_LIMIT_BUCKET_RETENTION
+    expired_keys = session.exec(
+        select(rate_limit_bucket.key)
+        .where(rate_limit_bucket.window_started_at <= cutoff)
+        .order_by(rate_limit_bucket.window_started_at)
+        .limit(limit)
+    ).all()
+    if not expired_keys:
+        return 0
+
+    session.execute(
+        delete(rate_limit_bucket).where(rate_limit_bucket.key.in_(expired_keys))
+    )
+    session.commit()
+    return len(expired_keys)
 
 
 def purge_expired_retained_data(

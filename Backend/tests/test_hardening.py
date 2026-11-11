@@ -14,7 +14,11 @@ from sqlalchemy import create_engine
 from sqlalchemy import event
 from sqlmodel import Session, SQLModel, select
 
-from Backend.api.routes.admin import _application_reference, update_application_status
+from Backend.api.routes.admin import (
+    _application_reference,
+    update_application_status,
+    update_program,
+)
 from Backend.api.routes.applications import (
     _lock_application_identity,
     create_application,
@@ -46,7 +50,12 @@ from Database.models import (
     registration_verification,
     user,
 )
-from Database.schemas import AdminApplicationStatusRequest, LoginRequest, VerifyEmailRequest
+from Database.schemas import (
+    AdminApplicationStatusRequest,
+    AdminProgramUpdateRequest,
+    LoginRequest,
+    VerifyEmailRequest,
+)
 
 
 class TestUploadValidation(unittest.TestCase):
@@ -455,8 +464,26 @@ class TestDashboardAggregates(unittest.TestCase):
         account = user(name="Test", email="dashboard@example.test")
         first_program = program(name="First", description="", status="open")
         second_program = program(name="Second", description="", status="open")
+        expired_program = program(
+            name="Expired",
+            description="",
+            status="open",
+            deadline=datetime.now(timezone.utc) - timedelta(days=1),
+        )
+        closed_cycle_program = program(
+            name="Closed cycle",
+            description="",
+            status="open",
+            cycle_closed_at=datetime.now(timezone.utc),
+        )
         with Session(engine) as session:
-            session.add_all([account, first_program, second_program])
+            session.add_all([
+                account,
+                first_program,
+                second_program,
+                expired_program,
+                closed_cycle_program,
+            ])
             session.commit()
             session.add_all([
                 application(
@@ -533,6 +560,30 @@ class TestApplicationListingQueries(unittest.TestCase):
         selects = [statement for statement in statements if statement.lstrip().upper().startswith("SELECT")]
         self.assertEqual(len(selects), 1)
         self.assertEqual([result.program_name for result in results], ["Joined program"])
+
+
+class TestAdminProgramStatus(unittest.TestCase):
+    def test_update_rejects_unrecognized_status(self):
+        row = program(name="Internship", description="", status="open")
+        session = Mock()
+        session.get.return_value = row
+        payload = AdminProgramUpdateRequest(
+            name="Internship",
+            status="opne",
+        )
+
+        with self.assertRaises(HTTPException) as raised:
+            update_program(
+                str(row.id),
+                payload,
+                SimpleNamespace(),
+                user(name="Admin", email="admin@example.test"),
+                session,
+            )
+
+        self.assertEqual(raised.exception.status_code, 422)
+        self.assertEqual(row.status, "open")
+        session.commit.assert_not_called()
 
 
 class TestProgramLookup(unittest.TestCase):

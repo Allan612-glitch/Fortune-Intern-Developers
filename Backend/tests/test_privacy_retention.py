@@ -24,6 +24,7 @@ from Backend.api.routes.auth import register, verify_email
 from Backend.core.data_retention import (
     add_calendar_years,
     close_expired_program_cycles,
+    purge_expired_rate_limit_buckets,
     purge_expired_retained_data,
 )
 from Database.models import (
@@ -34,6 +35,7 @@ from Database.models import (
     notification,
     program,
     registration_verification,
+    rate_limit_bucket,
     user,
 )
 from Database.schemas import RegisterRequest, VerifyEmailRequest
@@ -57,6 +59,45 @@ def load_privacy_migration():
     migration = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(migration)
     return migration
+
+
+class TestRateLimitBucketRetention(unittest.TestCase):
+    def test_purge_removes_stale_buckets_and_preserves_recent_buckets(self):
+        engine = create_engine("sqlite://")
+        SQLModel.metadata.create_all(engine)
+        now = datetime.now(timezone.utc)
+        expired = rate_limit_bucket(
+            key="expired-rate-limit",
+            window_started_at=now - timedelta(days=2),
+            count=3,
+        )
+        recent_rate_limit = rate_limit_bucket(
+            key="recent-rate-limit",
+            window_started_at=now - timedelta(hours=2),
+            count=3,
+        )
+        recent_risk = rate_limit_bucket(
+            key="login-risk:recent",
+            window_started_at=now - timedelta(minutes=5),
+            count=1,
+            failure_count=1,
+        )
+
+        with Session(engine) as session:
+            session.add_all([expired, recent_rate_limit, recent_risk])
+            session.commit()
+
+            purged = purge_expired_rate_limit_buckets(session, now=now)
+            remaining_keys = set(
+                session.exec(select(rate_limit_bucket.key)).all()
+            )
+
+        engine.dispose()
+        self.assertEqual(purged, 1)
+        self.assertEqual(
+            remaining_keys,
+            {"recent-rate-limit", "login-risk:recent"},
+        )
 
 
 class TestConsentRecording(unittest.TestCase):

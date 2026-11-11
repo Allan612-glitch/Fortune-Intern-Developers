@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import case, exists, func
+from sqlalchemy import case, exists, func, or_
 from sqlmodel import Session, select
 
 from Backend.api.deps import get_current_user
@@ -76,7 +76,11 @@ def get_dashboard(
 		select(
 			func.count(program.id),
 			func.min(case((program.deadline >= now, program.deadline), else_=None)),
-		).where(program.status == "open")
+		).where(
+			program.status == "open",
+			program.cycle_closed_at.is_(None),
+			or_(program.deadline.is_(None), program.deadline > now),
+		)
 	).one()
 
 	return DashboardResponse(

@@ -306,7 +306,10 @@ def get_admin_application_status_history(
 def create_program(payload: AdminProgramCreateRequest, request: Request, admin: user = Depends(get_current_admin), session: Session = Depends(get_session)):
 	if not payload.name.strip():
 		raise HTTPException(status_code=422, detail="Program name is required")
-	if payload.status.strip().lower() != "open":
+	requested_status = payload.status.strip().lower()
+	if requested_status != "open":
+		if requested_status != "closed":
+			raise HTTPException(status_code=422, detail="Unsupported program status")
 		raise HTTPException(status_code=422, detail="Program cycles close automatically at their deadline")
 	row = program(name=payload.name.strip(), description=payload.description.strip(), company=payload.company.strip(), category=payload.category.strip(), status="open", location=payload.location.strip(), duration=payload.duration.strip(), skills=", ".join(payload.skills), deadline=parse_deadline(payload.deadline))
 	session.add(row)
@@ -324,12 +327,16 @@ def update_program(program_id: str, payload: AdminProgramUpdateRequest, request:
 		row = None
 	if not row:
 		raise HTTPException(status_code=404, detail="Program not found")
-	if payload.status.strip().lower() == "closed":
+	requested_status = payload.status.strip().lower()
+	if requested_status != "open":
+		if requested_status != "closed":
+			raise HTTPException(status_code=422, detail="Unsupported program status")
 		raise HTTPException(status_code=422, detail="Program cycles close automatically at their deadline")
-	if row.cycle_closed_at is not None and payload.status.strip().lower() == "open":
+	if row.cycle_closed_at is not None:
 		raise HTTPException(status_code=409, detail="A closed internship cycle cannot be reopened")
 	for field in ("name", "description", "company", "category", "status", "location", "duration"):
 		setattr(row, field, getattr(payload, field).strip())
+	row.status = "open"
 	row.skills = ", ".join(payload.skills)
 	row.deadline = parse_deadline(payload.deadline)
 	session.add(row)
