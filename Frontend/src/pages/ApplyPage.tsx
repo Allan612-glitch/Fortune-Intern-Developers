@@ -39,8 +39,8 @@ export default function ApplyPage({ user }: { user: AppUser }) {
 
       <div className="grid sm:grid-cols-2 gap-3 mb-6">
         <button
-          onClick={() => setSection("apply")}
-          className="text-left bg-primary text-white rounded-2xl p-5 shadow-sm"
+          onClick={() => setShowModal(true)}
+          className="text-left bg-primary text-white rounded-2xl p-5 shadow-sm hover:opacity-90 transition-opacity"
         >
           <p className="font-semibold text-sm">Apply for an Internship</p>
           <p className="text-xs text-white/70 mt-1">
