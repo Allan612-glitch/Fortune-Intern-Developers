@@ -303,7 +303,11 @@ class TestApplicationAgeAndLetterVerification(unittest.TestCase):
         SQLModel.metadata.create_all(engine)
         with Session(engine) as session:
             applicant = user(name="Test Applicant", email="applicant@example.test")
-            internship = program(name="Summer Internship", description="Test program")
+            internship = program(
+                name="Summer Internship",
+                description="Test program",
+                company="Program Company",
+            )
             session.add_all([applicant, internship])
             session.commit()
             row = application(
@@ -312,8 +316,9 @@ class TestApplicationAgeAndLetterVerification(unittest.TestCase):
                 status="accepted",
                 documents_sent=True,
                 letter_reference="FIN/2026/ABC123",
-                applicant_name=applicant.name,
+                applicant_name="Letter Applicant",
                 applicant_institution="Test University",
+                host_company_name="Applied Company",
             )
             session.add(row)
             session.commit()
@@ -323,7 +328,17 @@ class TestApplicationAgeAndLetterVerification(unittest.TestCase):
                 result = verify_letter(request, "FIN/2026/ABC123", session)
             self.assertTrue(result.valid)
             self.assertFalse(hasattr(result, "email"))
-            self.assertFalse(hasattr(result, "applicant_name"))
+            self.assertEqual(result.applicant_name, "Letter Applicant")
+            self.assertEqual(result.company_name, "Applied Company")
+
+            row.applicant_name = None
+            row.host_company_name = None
+            session.add(row)
+            session.commit()
+            with patch("Backend.api.routes.applications.enforce_rate_limit"):
+                result = verify_letter(request, "FIN/2026/ABC123", session)
+            self.assertEqual(result.applicant_name, "Test Applicant")
+            self.assertEqual(result.company_name, "Program Company")
 
             row.documents_sent = False
             session.add(row)

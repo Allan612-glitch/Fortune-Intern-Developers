@@ -438,9 +438,22 @@ def verify_letter(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Letter reference not found",
         )
+    applicant = session.get(user, row.user_id)
+    if not applicant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Applicant not found",
+        )
+    program_record = session.get(program, row.program_id)
     return LetterVerificationResponse(
         valid=True,
         reference=reference,
+        applicant_name=row.applicant_name or applicant.name,
+        company_name=(
+            row.host_company_name
+            or (program_record.company if program_record else None)
+            or "Fortune Intern Network"
+        ),
     )
 
 

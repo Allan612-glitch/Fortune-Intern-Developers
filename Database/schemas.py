@@ -228,6 +228,8 @@ class ApplicationStatusHistoryResponse(BaseModel):
 class LetterVerificationResponse(BaseModel):
     valid: bool
     reference: str
+    applicant_name: str
+    company_name: str
 
 
 class AdminApplicationStatusRequest(BaseModel):
