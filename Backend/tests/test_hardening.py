@@ -829,9 +829,11 @@ class TestApplicationProgramSelection(unittest.TestCase):
         receipt = SimpleNamespace(
             to_email=account.email,
             student_name=account.name,
-            program_name="Approved opportunity",
+            institution="Example University",
+            program_of_study="Computer Science",
             year_of_study="Not provided",
             company="Example Company",
+            role="Approved opportunity",
             reference="application-reference",
             submitted_at="2026-10-13",
         )
@@ -894,6 +896,20 @@ class TestApplicationProgramSelection(unittest.TestCase):
             all(thread_id != event_loop_thread for thread_id in worker_threads)
         )
         self.assertEqual(len(background_tasks.tasks), 1)
+        self.assertEqual(
+            background_tasks.tasks[0].kwargs,
+            {
+                "to_email": account.email,
+                "student_name": account.name,
+                "institution": "Example University",
+                "program_of_study": "Computer Science",
+                "year_of_study": "Not provided",
+                "company": "Example Company",
+                "role": "Approved opportunity",
+                "reference": "application-reference",
+                "submitted_at": "2026-10-13",
+            },
+        )
 
     def test_unknown_program_name_does_not_create_public_catalog_entry(self):
         event_loop_thread = threading.get_ident()
