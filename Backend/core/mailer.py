@@ -13,9 +13,11 @@ def send_application_received_email(
         *,
         to_email: str,
         student_name: str,
-        program_name: str,
+        institution: str,
+        program_of_study: str,
         year_of_study: str,
         company: str,
+        role: str,
         reference: str,
         submitted_at: str,
 ) -> None:
@@ -25,9 +27,11 @@ def send_application_received_email(
 
         values = {
                 "student_name": escape(student_name),
-                "program_name": escape(program_name),
+                "institution": escape(institution),
+                "program_of_study": escape(program_of_study),
                 "year_of_study": escape(year_of_study),
                 "company": escape(company),
+                "role": escape(role),
                 "reference": escape(reference),
                 "submitted_at": escape(submitted_at),
         }
@@ -35,9 +39,11 @@ def send_application_received_email(
                 f"Dear {student_name},\n\n"
                 "Thank you for applying to the Fortune Intern Programme.\n\n"
                 "Application Summary\n"
-                f"Program: {program_name}\n"
+                f"Institution: {institution}\n"
+                f"Program: {program_of_study}\n"
                 f"Year: {year_of_study}\n"
                 f"Company: {company}\n"
+                f"Role: {role}\n"
                 f"Reference: {reference}\n"
                 f"Submission date: {submitted_at}\n\n"
                 "Questions? Contact fortuneintern.gh@gmail.com or 0257038948.\n\n"
@@ -52,9 +58,11 @@ def send_application_received_email(
             <p>Thank you for applying to the Fortune Intern Programme. We have received your application.</p>
             <h2 style="margin:28px 0 12px;font-size:18px">Application Summary</h2>
             <table style="width:100%;border-collapse:collapse">
-                <tr><td style="padding:8px 0;font-weight:bold">Program</td><td style="padding:8px 0">{values['program_name']}</td></tr>
+                <tr><td style="padding:8px 0;font-weight:bold">Institution</td><td style="padding:8px 0">{values['institution']}</td></tr>
+                <tr><td style="padding:8px 0;font-weight:bold">Program</td><td style="padding:8px 0">{values['program_of_study']}</td></tr>
                 <tr><td style="padding:8px 0;font-weight:bold">Year</td><td style="padding:8px 0">{values['year_of_study']}</td></tr>
                 <tr><td style="padding:8px 0;font-weight:bold">Company</td><td style="padding:8px 0">{values['company']}</td></tr>
+                <tr><td style="padding:8px 0;font-weight:bold">Role</td><td style="padding:8px 0">{values['role']}</td></tr>
                 <tr><td style="padding:8px 0;font-weight:bold">Reference</td><td style="padding:8px 0">{values['reference']}</td></tr>
                 <tr><td style="padding:8px 0;font-weight:bold">Submission date</td><td style="padding:8px 0">{values['submitted_at']}</td></tr>
             </table>

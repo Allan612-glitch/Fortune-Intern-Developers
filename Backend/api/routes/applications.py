@@ -67,9 +67,11 @@ class _PreparedApplication:
 class _ApplicationReceipt:
     to_email: str
     student_name: str
-    program_name: str
+    institution: str
+    program_of_study: str
     year_of_study: str
     company: str
+    role: str
     reference: str
     submitted_at: str
 
@@ -370,7 +372,8 @@ def _save_application(
         _ApplicationReceipt(
             to_email=account.email,
             student_name=new_application.applicant_name or account.name,
-            program_name=prepared.program_name,
+            institution=new_application.applicant_institution or "Not provided",
+            program_of_study=new_application.applicant_course or "Not provided",
             year_of_study=new_application.year_of_study or "Not provided",
             company=(
                 new_application.host_company_name
@@ -378,6 +381,7 @@ def _save_application(
                 or prepared.program_company
                 or ""
             ),
+            role=prepared.program_name,
             reference=str(new_application.id),
             submitted_at=new_application.created_at.strftime("%Y-%m-%d"),
         ),
@@ -434,9 +438,22 @@ def verify_letter(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Letter reference not found",
         )
+    applicant = session.get(user, row.user_id)
+    if not applicant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Applicant not found",
+        )
+    program_record = session.get(program, row.program_id)
     return LetterVerificationResponse(
         valid=True,
         reference=reference,
+        applicant_name=row.applicant_name or applicant.name,
+        company_name=(
+            row.host_company_name
+            or (program_record.company if program_record else None)
+            or "Fortune Intern Network"
+        ),
     )
 
 
@@ -628,9 +645,11 @@ async def create_application(
         send_application_received_email,
         to_email=receipt.to_email,
         student_name=receipt.student_name,
-        program_name=receipt.program_name,
+        institution=receipt.institution,
+        program_of_study=receipt.program_of_study,
         year_of_study=receipt.year_of_study,
         company=receipt.company,
+        role=receipt.role,
         reference=receipt.reference,
         submitted_at=receipt.submitted_at,
     )
