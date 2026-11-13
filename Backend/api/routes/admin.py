@@ -343,6 +343,22 @@ def update_program(program_id: str, payload: AdminProgramUpdateRequest, request:
 	return program_response(row)
 
 
+@router.delete("/programs/{program_id}", response_model=ProgramResponse)
+def remove_program(program_id: str, request: Request, admin: user = Depends(get_current_admin), session: Session = Depends(get_session)):
+	try:
+		row = session.get(program, UUID(program_id))
+	except ValueError:
+		row = None
+	if not row:
+		raise HTTPException(status_code=404, detail="Program not found")
+	row.status = "closed"
+	session.add(row)
+	record_audit_event(session, request, actor_id=admin.id, action="program.remove", object_type="program", object_id=str(row.id))
+	session.commit()
+	session.refresh(row)
+	return program_response(row)
+
+
 @router.put("/applications/{application_id}/status", response_model=ApplicationResponse)
 def update_application_status(application_id: str, payload: AdminApplicationStatusRequest, request: Request, admin: user = Depends(get_current_admin), session: Session = Depends(get_session)):
 	requested_status = payload.status.strip().lower()
