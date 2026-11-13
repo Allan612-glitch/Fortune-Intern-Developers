@@ -7,7 +7,7 @@ type LetterVerification = {
   valid: boolean;
   reference: string;
   applicant_name?: string | null;
-  company?: string | null;
+  company_name?: string | null;
 };
 
 type Result =
@@ -60,7 +60,7 @@ export default function VerifyLetterPage() {
               kind: "valid",
               reference: response.reference,
               applicantName: response.applicant_name?.trim() || null,
-              company: response.company?.trim() || null,
+              company: response.company_name?.trim() || null,
             }
           : { kind: "not-found", reference: value },
       );
