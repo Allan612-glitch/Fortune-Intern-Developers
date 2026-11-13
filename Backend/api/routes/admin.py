@@ -332,11 +332,8 @@ def update_program(program_id: str, payload: AdminProgramUpdateRequest, request:
 		if requested_status != "closed":
 			raise HTTPException(status_code=422, detail="Unsupported program status")
 		raise HTTPException(status_code=422, detail="Program cycles close automatically at their deadline")
-	if row.cycle_closed_at is not None:
-		raise HTTPException(status_code=409, detail="A closed internship cycle cannot be reopened")
-	for field in ("name", "description", "company", "category", "status", "location", "duration"):
+	for field in ("name", "description", "company", "category", "location", "duration"):
 		setattr(row, field, getattr(payload, field).strip())
-	row.status = "open"
 	row.skills = ", ".join(payload.skills)
 	row.deadline = parse_deadline(payload.deadline)
 	session.add(row)

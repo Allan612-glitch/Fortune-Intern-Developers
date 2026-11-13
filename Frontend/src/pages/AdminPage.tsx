@@ -11,6 +11,7 @@ import {
   saveResumeDownload,
   setApplicationStatus,
   setUserSuspension,
+  updateAdminProgram,
   type AdminUser,
   type Announcement,
   type BackendApplication,
@@ -36,6 +37,13 @@ const emptyProgramForm = {
   deadline: "",
 };
 
+function formatLocalDeadline(value: string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export default function AdminPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [applications, setApplications] = useState<BackendApplication[]>([]);
@@ -43,8 +51,9 @@ export default function AdminPage() {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [tab, setTab] = useState<"users" | "announcements" | "applications" | "programs">("users");
   const [programForm, setProgramForm] = useState(emptyProgramForm);
+  const [editingProgramId, setEditingProgramId] = useState<string | null>(null);
   const [programSubmitting, setProgramSubmitting] = useState(false);
-  const [programPublished, setProgramPublished] = useState(false);
+  const [programNotice, setProgramNotice] = useState("");
   const [annTitle, setAnnTitle] = useState("");
   const [annContent, setAnnContent] = useState("");
   const [published, setPublished] = useState(false);
@@ -153,9 +162,10 @@ export default function AdminPage() {
   const submitProgram = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setProgramSubmitting(true);
-    setProgramPublished(false);
+    setProgramNotice("");
+    const isEditing = editingProgramId !== null;
     try {
-      const created = await createAdminProgram({
+      const payload = {
         name: programForm.name.trim(),
         description: programForm.description.trim(),
         company: programForm.company.trim(),
@@ -165,16 +175,44 @@ export default function AdminPage() {
         duration: programForm.duration.trim(),
         skills: programForm.skills.split(",").map((skill) => skill.trim()).filter(Boolean),
         deadline: programForm.deadline ? new Date(programForm.deadline).toISOString() : null,
-      });
-      setPrograms((current) => [created, ...current]);
+      };
+      const saved = editingProgramId
+        ? await updateAdminProgram(editingProgramId, payload)
+        : await createAdminProgram(payload);
+      setPrograms((current) => isEditing
+        ? current.map((program) => program.id === saved.id ? saved : program)
+        : [saved, ...current]);
       setProgramForm(emptyProgramForm);
-      setProgramPublished(true);
+      setEditingProgramId(null);
+      setProgramNotice(isEditing ? "Program updated successfully." : "Program posted successfully.");
       setError("");
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Unable to post program.");
+      setError(requestError instanceof Error ? requestError.message : "Unable to save program.");
     } finally {
       setProgramSubmitting(false);
     }
+  };
+
+  const editProgram = (program: Program) => {
+    setEditingProgramId(program.id);
+    setProgramForm({
+      name: program.name,
+      description: program.description,
+      company: program.company,
+      category: program.category,
+      location: program.location,
+      duration: program.duration,
+      skills: program.skills.join(", "),
+      deadline: formatLocalDeadline(program.deadline),
+    });
+    setProgramNotice("");
+    setError("");
+  };
+
+  const cancelProgramEdit = () => {
+    setEditingProgramId(null);
+    setProgramForm(emptyProgramForm);
+    setProgramNotice("");
   };
 
   return (
@@ -449,14 +487,14 @@ export default function AdminPage() {
         <div className="space-y-5">
           <section className="bg-white border border-border rounded-xl p-5 shadow-sm">
             <div className="mb-5">
-              <h3 className="font-semibold">Post a Program</h3>
+              <h3 className="font-semibold">{editingProgramId ? "Edit Program" : "Post a Program"}</h3>
               <p className="text-xs text-muted-foreground mt-1">
                 New open programs will appear in the student Programs section.
               </p>
             </div>
-            {programPublished && (
+            {programNotice && (
               <p className="mb-4 text-sm text-emerald-700" role="status">
-                Program posted successfully.
+                {programNotice}
               </p>
             )}
             <form onSubmit={(event) => void submitProgram(event)} className="grid grid-cols-1 sm:grid-cols-2 gap-4 [&_input]:min-w-0 [&_label]:min-w-0">
@@ -536,14 +574,24 @@ export default function AdminPage() {
                   className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
                 />
               </label>
-              <div className="sm:col-span-2 flex justify-end">
+              <div className="sm:col-span-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                {editingProgramId && (
+                  <button
+                    type="button"
+                    onClick={cancelProgramEdit}
+                    disabled={programSubmitting}
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-lg border border-border text-sm font-semibold disabled:opacity-60"
+                  >
+                    Cancel
+                  </button>
+                )}
                 <button
                   type="submit"
                   disabled={programSubmitting}
                   className="w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-60"
                   style={{ background: "linear-gradient(135deg, #2D3561, #3d4a8a)" }}
                 >
-                  {programSubmitting ? "Posting..." : "Post Program"}
+                  {programSubmitting ? "Saving..." : editingProgramId ? "Save Changes" : "Post Program"}
                 </button>
               </div>
             </form>
@@ -568,9 +616,19 @@ export default function AdminPage() {
                         {program.deadline && ` · Deadline: ${new Date(program.deadline).toLocaleString()}`}
                       </p>
                     </div>
-                    <span className={`shrink-0 self-start px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${program.status === "open" ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
-                      {program.status}
-                    </span>
+                    <div className="flex items-center gap-2 self-start">
+                      <button
+                        type="button"
+                        onClick={() => editProgram(program)}
+                        disabled={programSubmitting}
+                        className="px-3 py-1.5 rounded-lg border border-border text-xs font-semibold hover:bg-muted disabled:opacity-60"
+                      >
+                        Edit
+                      </button>
+                      <span className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${program.status === "open" ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
+                        {program.status}
+                      </span>
+                    </div>
                   </article>
                 ))}
               </div>
