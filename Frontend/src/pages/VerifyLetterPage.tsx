@@ -151,7 +151,7 @@ export default function VerifyLetterPage() {
         <div aria-live="polite" className="mt-6">
           {result?.kind === "valid" && (
             <div className="rounded-xl border border-border bg-secondary/60 p-4">
-              <span className="status-offered inline-flex rounded-full px-3 py-1 text-xs font-semibold">
+              <span className="bg-accent text-accent-foreground inline-flex rounded-full px-3 py-1 text-xs font-semibold">
                 ✓ Valid letter
               </span>
               <p className="text-sm mt-3">
