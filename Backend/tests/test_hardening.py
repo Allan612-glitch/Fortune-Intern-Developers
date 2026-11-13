@@ -16,6 +16,7 @@ from sqlmodel import Session, SQLModel, select
 
 from Backend.api.routes.admin import (
     _application_reference,
+    delete_announcement,
     remove_program,
     update_application_status,
     update_program,
@@ -45,6 +46,7 @@ from Backend.core.uploads import read_validated_document
 from Backend.main import create_app
 from Database.models import (
     application,
+    announcement,
     notification,
     program,
     rate_limit_bucket,
@@ -636,6 +638,25 @@ class TestAdminProgramRemoval(unittest.TestCase):
         self.assertIsNone(row.cycle_closed_at)
         session.commit.assert_called_once()
         session.refresh.assert_called_once_with(row)
+
+
+class TestAdminAnnouncementRemoval(unittest.TestCase):
+    def test_removal_deletes_announcement(self):
+        row = announcement(title="Service update", content="Details")
+        session = Mock()
+        session.get.return_value = row
+
+        with patch("Backend.api.routes.admin.record_audit_event"):
+            result = delete_announcement(
+                str(row.id),
+                SimpleNamespace(),
+                user(name="Admin", email="admin@example.test"),
+                session,
+            )
+
+        self.assertIsNone(result)
+        session.delete.assert_called_once_with(row)
+        session.commit.assert_called_once()
 
 
 class TestProgramLookup(unittest.TestCase):

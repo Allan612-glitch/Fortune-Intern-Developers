@@ -559,3 +559,16 @@ def list_announcements(
 	record_audit_event(session, request, actor_id=admin.id, action="announcements.list", object_type="announcement", object_id="all")
 	session.commit()
 	return [AnnouncementResponse(id=str(row.id), title=row.title, content=row.content, created_at=row.created_at.isoformat()) for row in rows]
+
+
+@router.delete("/announcements/{announcement_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_announcement(announcement_id: str, request: Request, admin: user = Depends(get_current_admin), session: Session = Depends(get_session)) -> None:
+	try:
+		row = session.get(announcement, UUID(announcement_id))
+	except ValueError:
+		row = None
+	if not row:
+		raise HTTPException(status_code=404, detail="Announcement not found")
+	session.delete(row)
+	record_audit_event(session, request, actor_id=admin.id, action="announcement.delete", object_type="announcement", object_id=str(row.id))
+	session.commit()
