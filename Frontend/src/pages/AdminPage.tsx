@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import AsyncState from "../components/AsyncState";
 import {
   createAdminProgram,
+  deleteAdminAnnouncement,
   exportAdminApplications,
   listAdminApplications,
   listAdminUsers,
@@ -59,6 +60,8 @@ export default function AdminPage() {
   const [programRemoving, setProgramRemoving] = useState(false);
   const [annTitle, setAnnTitle] = useState("");
   const [annContent, setAnnContent] = useState("");
+  const [announcementToRemove, setAnnouncementToRemove] = useState<Announcement | null>(null);
+  const [announcementRemoving, setAnnouncementRemoving] = useState(false);
   const [published, setPublished] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -159,6 +162,21 @@ export default function AdminPage() {
       setError(requestError instanceof Error ? requestError.message : "Unable to publish announcement.");
     } finally {
       setPublishing(false);
+    }
+  };
+
+  const removeAnnouncement = async () => {
+    if (!announcementToRemove) return;
+    setAnnouncementRemoving(true);
+    try {
+      await deleteAdminAnnouncement(announcementToRemove.id);
+      setAnnouncements((current) => current.filter((item) => item.id !== announcementToRemove.id));
+      setAnnouncementToRemove(null);
+      setError("");
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to remove announcement.");
+    } finally {
+      setAnnouncementRemoving(false);
     }
   };
 
@@ -691,62 +709,98 @@ export default function AdminPage() {
 
       {/* Announcements */}
       {tab === "announcements" && (
-        <div className="bg-white border border-border rounded-2xl p-6 shadow-sm">
-          <h3 className="font-semibold mb-5">Publish Announcement</h3>
-          {published ? (
-            <div className="text-center py-8">
-              <div className="text-4xl mb-3">📢</div>
-              <p className="font-semibold text-emerald-700">
-                Announcement published!
-              </p>
-              <button
-                onClick={() => {
-                  setPublished(false);
-                  setAnnTitle("");
-                  setAnnContent("");
-                }}
-                className="mt-4 text-sm text-muted-foreground hover:underline"
-              >
-                Publish another
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-muted-foreground">
-                  Title
-                </label>
-                <input
-                  value={annTitle}
-                  onChange={(e) => setAnnTitle(e.target.value)}
-                  placeholder="Announcement title..."
-                  className="w-full px-4 py-3 rounded-xl border border-border text-sm focus:outline-none focus:ring-2 bg-muted/30"
-                />
+        <div className="space-y-5">
+          <section className="bg-white border border-border rounded-2xl p-6 shadow-sm">
+            <h3 className="font-semibold mb-5">Publish Announcement</h3>
+            {published ? (
+              <div className="text-center py-8">
+                <div className="text-4xl mb-3">📢</div>
+                <p className="font-semibold text-emerald-700">
+                  Announcement published!
+                </p>
+                <button
+                  onClick={() => {
+                    setPublished(false);
+                    setAnnTitle("");
+                    setAnnContent("");
+                  }}
+                  className="mt-4 text-sm text-muted-foreground hover:underline"
+                >
+                  Publish another
+                </button>
               </div>
-              <div>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-muted-foreground">
-                  Content
-                </label>
-                <textarea
-                  value={annContent}
-                  onChange={(e) => setAnnContent(e.target.value)}
-                  placeholder="Announcement content..."
-                  rows={5}
-                  className="w-full px-4 py-3 rounded-xl border border-border text-sm focus:outline-none focus:ring-2 bg-muted/30 resize-none"
-                />
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-muted-foreground">
+                    Title
+                  </label>
+                  <input
+                    value={annTitle}
+                    onChange={(e) => setAnnTitle(e.target.value)}
+                    placeholder="Announcement title..."
+                    className="w-full px-4 py-3 rounded-xl border border-border text-sm focus:outline-none focus:ring-2 bg-muted/30"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-muted-foreground">
+                    Content
+                  </label>
+                  <textarea
+                    value={annContent}
+                    onChange={(e) => setAnnContent(e.target.value)}
+                    placeholder="Announcement content..."
+                    rows={5}
+                    className="w-full px-4 py-3 rounded-xl border border-border text-sm focus:outline-none focus:ring-2 bg-muted/30 resize-none"
+                  />
+                </div>
+                <button
+                  onClick={() => void submitAnnouncement()}
+                  disabled={publishing}
+                  className="w-full py-3 rounded-xl text-white font-semibold hover:opacity-90 transition-opacity disabled:cursor-wait disabled:opacity-60"
+                  style={{
+                    background: "linear-gradient(135deg, #2D3561, #3d4a8a)",
+                  }}
+                >
+                  {publishing ? "Publishing..." : "Publish Announcement"}
+                </button>
               </div>
-              <button
-                onClick={() => void submitAnnouncement()}
-                disabled={publishing}
-                className="w-full py-3 rounded-xl text-white font-semibold hover:opacity-90 transition-opacity disabled:cursor-wait disabled:opacity-60"
-                style={{
-                  background: "linear-gradient(135deg, #2D3561, #3d4a8a)",
-                }}
-              >
-                {publishing ? "Publishing..." : "Publish Announcement"}
-              </button>
+            )}
+          </section>
+
+          <section className="bg-white border border-border rounded-2xl shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-border flex items-center justify-between gap-3">
+              <h3 className="font-semibold">Published Announcements</h3>
+              <span className="text-xs text-muted-foreground">{announcements.length}</span>
             </div>
-          )}
+            {announcements.length ? (
+              <div className="divide-y divide-border">
+                {announcements.map((item) => (
+                  <article key={item.id} className="p-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <h4 className="font-semibold text-sm break-words">{item.title}</h4>
+                      <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap break-words">{item.content}</p>
+                      <p className="text-xs text-muted-foreground mt-3">{new Date(item.created_at).toLocaleString()}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAnnouncementToRemove(item);
+                        setError("");
+                      }}
+                      disabled={announcementRemoving}
+                      className="self-start shrink-0 px-3 py-1.5 rounded-lg border border-red-200 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60"
+                      aria-label={`Remove announcement: ${item.title}`}
+                    >
+                      Remove
+                    </button>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="p-5 text-sm text-muted-foreground">No announcements have been published yet.</p>
+            )}
+          </section>
         </div>
       )}
       </>
@@ -825,6 +879,43 @@ export default function AdminPage() {
                 className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-60"
               >
                 {programRemoving ? "Removing..." : "Remove listing"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+      {announcementToRemove && (
+        <div
+          className="fixed inset-0 z-[110] bg-black/55 backdrop-blur-sm p-4 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="remove-announcement-title"
+          aria-describedby="remove-announcement-description"
+        >
+          <section className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 sm:p-7">
+            <h2 id="remove-announcement-title" className="font-bold text-lg">
+              Remove announcement?
+            </h2>
+            <p id="remove-announcement-description" className="text-sm text-muted-foreground leading-relaxed mt-2">
+              <span className="font-semibold text-foreground">{announcementToRemove.title}</span> will be removed from the announcements page. Notifications already sent to users will remain in their history.
+            </p>
+            {error && <p className="mt-4 text-sm text-red-600" role="alert">{error}</p>}
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-6">
+              <button
+                type="button"
+                onClick={() => setAnnouncementToRemove(null)}
+                disabled={announcementRemoving}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-lg border border-border text-sm font-semibold disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void removeAnnouncement()}
+                disabled={announcementRemoving}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-60"
+              >
+                {announcementRemoving ? "Removing..." : "Remove announcement"}
               </button>
             </div>
           </section>

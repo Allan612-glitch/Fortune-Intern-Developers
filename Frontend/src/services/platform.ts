@@ -208,3 +208,9 @@ export function publishAnnouncement(title: string, content: string) {
     body: JSON.stringify({ title, content }),
   });
 }
+
+export function deleteAdminAnnouncement(id: string) {
+  return apiRequest<void>(`/api/admin/announcements/${id}`, {
+    method: "DELETE",
+  });
+}
