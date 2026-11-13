@@ -40,7 +40,6 @@ Backend/
       applications.py
       auth.py
       dashboard.py
-      mentorship.py
       notifications.py
       profiles.py
       programs.py
@@ -70,6 +69,22 @@ requirements.txt
 - PostgreSQL
 - Git
 - A modern web browser
+
+## Local login load test
+
+The k6 script runs repeated invalid login attempts against a local backend, with a warm-up, steady-state, and ramp-down phase. Set `BASE_URL` only to `http://localhost` or `http://127.0.0.1`; other hosts are rejected by the script.
+
+To also exercise successful logins, set `LOGIN_SUCCESS_EMAIL` and `LOGIN_SUCCESS_PASSWORD` for a local test account. The email may contain `{vu}` to use separate pre-created accounts per virtual user; `LOGIN_SUCCESS_VUS` controls that scenario's virtual-user count and defaults to 5 when using an email template.
+
+```powershell
+k6 run `
+  -e LOGIN_SUCCESS_EMAIL="load-test-{vu}@example.test" `
+  -e LOGIN_SUCCESS_PASSWORD="local-test-password" `
+  -e LOGIN_SUCCESS_VUS="5" `
+  loadtests/login-bots.js
+```
+
+Without those credentials, the successful-login scenario is omitted.
 
 ## Setup
 

@@ -4,7 +4,11 @@ from datetime import datetime, timezone
 from html import escape
 from io import BytesIO
 from pathlib import Path
+from urllib.parse import quote
 
+from Backend.core.config import settings
+from reportlab.graphics import renderPDF
+from reportlab.graphics.barcode.qr import QrCodeWidget
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4
@@ -115,6 +119,21 @@ def _build_checkbox_drawing(size: float = 9.5, stroke_color=None) -> Drawing:
     drawing = Drawing(size, size)
     drawing.add(Rect(0.75, 0.75, size - 1.5, size - 1.5, strokeColor=stroke_color or NAVY, strokeWidth=0.9, fillColor=None))
     return drawing
+
+
+class _VerificationQRCode(Flowable):
+    def __init__(self, url: str, size: float = 20 * mm):
+        super().__init__()
+        self.widget = QrCodeWidget(url)
+        self.widget.barWidth = size
+        self.widget.barHeight = size
+        self.drawing = Drawing(size, size)
+        self.drawing.add(self.widget)
+        self.width = size
+        self.height = size
+
+    def draw(self) -> None:
+        renderPDF.draw(self.drawing, self.canv, 0, 0)
 
 
 ASSESSMENT_FIELD_LABELS = [
@@ -431,6 +450,34 @@ def build_recommendation_letter_pdf(
             signature_style,
         ),
     ]))
+
+    verification_url = (
+        f"{settings.frontend_url.rstrip('/')}/verify-letter?reference="
+        f"{quote(reference_no, safe='/')}"
+    )
+    verification_style = ParagraphStyle(
+        "LetterVerification", parent=base, fontSize=8, leading=10.5,
+    )
+    verification_text = Paragraph(
+        "<b>Verify this letter</b><br/>Scan the QR code or visit:<br/>"
+        f'<link href="{escape(verification_url, quote=True)}" color="#0A3161">'
+        f"<u>{escape(verification_url.removeprefix('https://'))}</u></link>",
+        verification_style,
+    )
+    verification_row = Table(
+        [[_VerificationQRCode(verification_url), verification_text]],
+        colWidths=[25 * mm, page_w - 36 * mm - 25 * mm],
+    )
+    verification_row.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F3F6FA")),
+        ("BOX", (0, 0), (-1, -1), 0.5, LINE),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 5),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ]))
+    story.extend([Spacer(1, 15), verification_row])
 
     doc.build(story)
     return buffer.getvalue()

@@ -24,6 +24,7 @@ from Backend.api.routes.auth import register, verify_email
 from Backend.core.data_retention import (
     add_calendar_years,
     close_expired_program_cycles,
+    purge_expired_rate_limit_buckets,
     purge_expired_retained_data,
 )
 from Database.models import (
@@ -34,6 +35,7 @@ from Database.models import (
     notification,
     program,
     registration_verification,
+    rate_limit_bucket,
     user,
 )
 from Database.schemas import RegisterRequest, VerifyEmailRequest
@@ -57,6 +59,45 @@ def load_privacy_migration():
     migration = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(migration)
     return migration
+
+
+class TestRateLimitBucketRetention(unittest.TestCase):
+    def test_purge_removes_stale_buckets_and_preserves_recent_buckets(self):
+        engine = create_engine("sqlite://")
+        SQLModel.metadata.create_all(engine)
+        now = datetime.now(timezone.utc)
+        expired = rate_limit_bucket(
+            key="expired-rate-limit",
+            window_started_at=now - timedelta(days=2),
+            count=3,
+        )
+        recent_rate_limit = rate_limit_bucket(
+            key="recent-rate-limit",
+            window_started_at=now - timedelta(hours=2),
+            count=3,
+        )
+        recent_risk = rate_limit_bucket(
+            key="login-risk:recent",
+            window_started_at=now - timedelta(minutes=5),
+            count=1,
+            failure_count=1,
+        )
+
+        with Session(engine) as session:
+            session.add_all([expired, recent_rate_limit, recent_risk])
+            session.commit()
+
+            purged = purge_expired_rate_limit_buckets(session, now=now)
+            remaining_keys = set(
+                session.exec(select(rate_limit_bucket.key)).all()
+            )
+
+        engine.dispose()
+        self.assertEqual(purged, 1)
+        self.assertEqual(
+            remaining_keys,
+            {"recent-rate-limit", "login-risk:recent"},
+        )
 
 
 class TestConsentRecording(unittest.TestCase):
@@ -204,12 +245,69 @@ class TestApplicationAgeAndLetterVerification(unittest.TestCase):
             self.assertEqual(adult_prepared.initial_status, "submitted")
         engine.dispose()
 
-    def test_public_letter_lookup_verifies_only_sent_accepted_documents(self):
+    def test_decided_application_allows_reapplication_but_active_one_does_not(self):
         engine = create_engine("sqlite://")
         SQLModel.metadata.create_all(engine)
         with Session(engine) as session:
             applicant = user(name="Test Applicant", email="applicant@example.test")
             internship = program(name="Summer Internship", description="Test program")
+            session.add_all([applicant, internship])
+            session.commit()
+            fields = _ApplicationFields(
+                program_id=str(internship.id),
+                program_name=internship.name,
+                institution="Test University",
+                course="Computing",
+                contact="",
+                company_name="",
+                company_address="",
+                applicant_name=applicant.name,
+                gender="",
+                student_index_number="INDEX-1",
+                year_of_study="",
+                suggested_company="",
+                date_of_birth="2000-01-01",
+            )
+            session.add(application(
+                user_id=applicant.id,
+                program_id=internship.id,
+                status="rejected",
+                applicant_name=applicant.name,
+                student_index_number="INDEX-1",
+            ))
+            session.commit()
+
+            prepared = _prepare_application(session, applicant, fields)
+            session.add(application(
+                user_id=applicant.id,
+                program_id=prepared.program_id,
+                status=prepared.initial_status,
+                applicant_name=prepared.fields.applicant_name,
+                student_index_number=prepared.fields.student_index_number,
+                date_of_birth=prepared.date_of_birth,
+            ))
+            session.commit()
+
+            with self.assertRaises(HTTPException) as raised:
+                _prepare_application(session, applicant, fields)
+
+            self.assertEqual(raised.exception.status_code, 409)
+            self.assertEqual(
+                raised.exception.detail,
+                "You already have an active application for this program",
+            )
+        engine.dispose()
+
+    def test_public_letter_lookup_verifies_only_sent_accepted_documents(self):
+        engine = create_engine("sqlite://")
+        SQLModel.metadata.create_all(engine)
+        with Session(engine) as session:
+            applicant = user(name="Test Applicant", email="applicant@example.test")
+            internship = program(
+                name="Summer Internship",
+                description="Test program",
+                company="Program Company",
+            )
             session.add_all([applicant, internship])
             session.commit()
             row = application(
@@ -218,8 +316,9 @@ class TestApplicationAgeAndLetterVerification(unittest.TestCase):
                 status="accepted",
                 documents_sent=True,
                 letter_reference="FIN/2026/ABC123",
-                applicant_name=applicant.name,
+                applicant_name="Letter Applicant",
                 applicant_institution="Test University",
+                host_company_name="Applied Company",
             )
             session.add(row)
             session.commit()
@@ -229,7 +328,17 @@ class TestApplicationAgeAndLetterVerification(unittest.TestCase):
                 result = verify_letter(request, "FIN/2026/ABC123", session)
             self.assertTrue(result.valid)
             self.assertFalse(hasattr(result, "email"))
-            self.assertFalse(hasattr(result, "applicant_name"))
+            self.assertEqual(result.applicant_name, "Letter Applicant")
+            self.assertEqual(result.company_name, "Applied Company")
+
+            row.applicant_name = None
+            row.host_company_name = None
+            session.add(row)
+            session.commit()
+            with patch("Backend.api.routes.applications.enforce_rate_limit"):
+                result = verify_letter(request, "FIN/2026/ABC123", session)
+            self.assertEqual(result.applicant_name, "Test Applicant")
+            self.assertEqual(result.company_name, "Program Company")
 
             row.documents_sent = False
             session.add(row)

@@ -9,6 +9,7 @@ from Backend.core.account_deletion import purge_expired_accounts
 from Backend.core.config import settings
 from Backend.core.data_retention import (
     close_expired_program_cycles,
+    purge_expired_rate_limit_buckets,
     purge_expired_retained_data,
 )
 from Backend.database import get_session
@@ -41,6 +42,7 @@ def purge_deleted_accounts(
         closed_programs = close_expired_program_cycles(session)
         purged = purge_expired_accounts(session)
         purged_applications, purged_consent_logs = purge_expired_retained_data(session)
+        purged_rate_limit_buckets = purge_expired_rate_limit_buckets(session)
     except (BotoCoreError, ClientError, RuntimeError) as error:
         logger.exception("scheduled account deletion purge failed")
         raise HTTPException(
@@ -52,4 +54,5 @@ def purge_deleted_accounts(
         "programs_closed": closed_programs,
         "applications_purged": purged_applications,
         "consent_logs_purged": purged_consent_logs,
+        "rate_limit_buckets_purged": purged_rate_limit_buckets,
     }

@@ -50,6 +50,20 @@ async function toApiError(response: Response, fallback: string) {
   return new ApiError(message, response.status, code);
 }
 
+const authRefreshRetryExemptPaths = new Set([
+  "/api/auth/login",
+  "/api/auth/register",
+  "/api/auth/google",
+  "/api/auth/verify-email",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
+  "/api/auth/refresh",
+]);
+
+function shouldSkipRefreshRetry(path: string) {
+  return authRefreshRetryExemptPaths.has(path.replace(/\/+$/, ""));
+}
+
 let refreshPromise: Promise<string | null> | null = null;
 
 export function refreshAccessToken(): Promise<string | null> {
@@ -96,7 +110,7 @@ async function authorizedFetch(path: string, init: RequestInit) {
   if (
     response.status === 401 &&
     getAccessToken() &&
-    !path.startsWith("/api/auth/")
+    !shouldSkipRefreshRetry(path)
   ) {
     const token = await refreshAccessToken();
     if (token) return send();
