@@ -585,6 +585,37 @@ class TestAdminProgramStatus(unittest.TestCase):
         self.assertEqual(row.status, "open")
         session.commit.assert_not_called()
 
+    def test_closed_program_can_be_edited_without_reopening_cycle(self):
+        closed_at = datetime.now(timezone.utc)
+        row = program(
+            name="Old title",
+            description="Old description",
+            status="closed",
+            cycle_closed_at=closed_at,
+        )
+        session = Mock()
+        session.get.return_value = row
+        payload = AdminProgramUpdateRequest(
+            name="Updated title",
+            description="Updated description",
+            status="open",
+        )
+
+        with patch("Backend.api.routes.admin.record_audit_event"):
+            updated = update_program(
+                str(row.id),
+                payload,
+                SimpleNamespace(),
+                user(name="Admin", email="admin@example.test"),
+                session,
+            )
+
+        self.assertEqual(updated.name, "Updated title")
+        self.assertEqual(updated.description, "Updated description")
+        self.assertEqual(updated.status, "closed")
+        self.assertEqual(row.cycle_closed_at, closed_at)
+        session.commit.assert_called_once()
+
 
 class TestProgramLookup(unittest.TestCase):
     def test_malformed_program_id_returns_not_found_without_querying(self):

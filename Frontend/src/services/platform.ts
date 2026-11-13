@@ -97,6 +97,13 @@ export function createAdminProgram(payload: Omit<Program, "id">) {
   });
 }
 
+export function updateAdminProgram(id: string, payload: Omit<Program, "id">) {
+  return apiRequest<Program>(`/api/admin/programs/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function submitApplication(form: FormData) {
   return apiRequest<BackendApplication>("/api/applications", {
     method: "POST",
