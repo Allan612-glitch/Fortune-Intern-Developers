@@ -3,10 +3,20 @@ import { Link, useSearchParams } from "react-router-dom";
 import logo from "../assets/attach1.png";
 import { ApiError, apiRequest } from "../services/api";
 
-type LetterVerification = { valid: boolean; reference: string };
+type LetterVerification = {
+  valid: boolean;
+  reference: string;
+  applicant_name?: string | null;
+  company?: string | null;
+};
 
 type Result =
-  | { kind: "valid"; reference: string }
+  | {
+      kind: "valid";
+      reference: string;
+      applicantName: string | null;
+      company: string | null;
+    }
   | { kind: "not-found"; reference: string }
   | { kind: "error"; message: string };
 
@@ -46,7 +56,12 @@ export default function VerifyLetterPage() {
       );
       setResult(
         response.valid
-          ? { kind: "valid", reference: response.reference }
+          ? {
+              kind: "valid",
+              reference: response.reference,
+              applicantName: response.applicant_name?.trim() || null,
+              company: response.company?.trim() || null,
+            }
           : { kind: "not-found", reference: value },
       );
     } catch (error) {
@@ -140,17 +155,32 @@ export default function VerifyLetterPage() {
                 ✓ Valid letter
               </span>
               <p className="text-sm mt-3">
-                This reference matches a letter issued by Fortune Intern
-                Network.
+                {result.applicantName
+                  ? "This reference matches a letter issued by Fortune Intern Network to:"
+                  : "This reference matches a letter issued by Fortune Intern Network."}
               </p>
+              {result.applicantName && (
+                <p className="text-base font-bold text-primary break-words mt-2">
+                  {result.applicantName}
+                </p>
+              )}
+              {result.applicantName && result.company && (
+                <p className="text-sm mt-2">
+                  Applied for an internship with{" "}
+                  <span className="font-semibold break-words">
+                    {result.company}
+                  </span>
+                  .
+                </p>
+              )}
               <p className="font-mono text-sm font-semibold text-primary break-all mt-2">
                 {result.reference}
               </p>
               <p className="text-xs text-muted-foreground mt-3">
-                This check confirms the reference is genuine. It does not show
-                the details on the letter, so compare the name, institution and
-                company on the letter with the person presenting it. If
-                anything does not match, email{" "}
+                {result.applicantName
+                  ? "Check that the name and company above match the letter and the person presenting it."
+                  : "This check confirms the reference is genuine. It does not show the details on the letter, so compare the name, institution and company on the letter with the person presenting it."}{" "}
+                If anything does not match, email{" "}
                 <a
                   href={`mailto:${CONTACT_EMAIL}`}
                   className="text-primary underline"
