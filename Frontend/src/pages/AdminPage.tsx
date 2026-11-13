@@ -8,6 +8,7 @@ import {
   listAnnouncements,
   listPrograms,
   publishAnnouncement,
+  removeAdminProgram,
   saveResumeDownload,
   setApplicationStatus,
   setUserSuspension,
@@ -54,6 +55,8 @@ export default function AdminPage() {
   const [editingProgramId, setEditingProgramId] = useState<string | null>(null);
   const [programSubmitting, setProgramSubmitting] = useState(false);
   const [programNotice, setProgramNotice] = useState("");
+  const [programToRemove, setProgramToRemove] = useState<Program | null>(null);
+  const [programRemoving, setProgramRemoving] = useState(false);
   const [annTitle, setAnnTitle] = useState("");
   const [annContent, setAnnContent] = useState("");
   const [published, setPublished] = useState(false);
@@ -214,6 +217,132 @@ export default function AdminPage() {
     setProgramForm(emptyProgramForm);
     setProgramNotice("");
   };
+
+  const removeProgram = async () => {
+    if (!programToRemove) return;
+    setProgramRemoving(true);
+    try {
+      const removed = await removeAdminProgram(programToRemove.id);
+      setPrograms((current) => current.map((program) => program.id === removed.id ? removed : program));
+      setProgramNotice("Program removed from student listings.");
+      setProgramToRemove(null);
+      setError("");
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to remove program.");
+    } finally {
+      setProgramRemoving(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!editingProgramId) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !programSubmitting) cancelProgramEdit();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [editingProgramId, programSubmitting]);
+
+  const programFormElement = (
+    <form onSubmit={(event) => void submitProgram(event)} className="grid grid-cols-1 sm:grid-cols-2 gap-4 [&_input]:min-w-0 [&_label]:min-w-0">
+      <label className="block text-xs font-semibold text-muted-foreground">
+        Program title
+        <input
+          required
+          value={programForm.name}
+          onChange={(event) => setProgramForm((current) => ({ ...current, name: event.target.value }))}
+          placeholder="e.g. Software Engineering Internship"
+          className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
+        />
+      </label>
+      <label className="block text-xs font-semibold text-muted-foreground">
+        Company
+        <input
+          required
+          value={programForm.company}
+          onChange={(event) => setProgramForm((current) => ({ ...current, company: event.target.value }))}
+          className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
+        />
+      </label>
+      <label className="block text-xs font-semibold text-muted-foreground sm:col-span-2">
+        Description
+        <textarea
+          value={programForm.description}
+          onChange={(event) => setProgramForm((current) => ({ ...current, description: event.target.value }))}
+          rows={4}
+          placeholder="Describe the internship and responsibilities"
+          className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white resize-y"
+        />
+      </label>
+      <label className="block text-xs font-semibold text-muted-foreground">
+        Category
+        <input
+          required
+          value={programForm.category}
+          onChange={(event) => setProgramForm((current) => ({ ...current, category: event.target.value }))}
+          placeholder="e.g. Technology"
+          className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
+        />
+      </label>
+      <label className="block text-xs font-semibold text-muted-foreground">
+        Location
+        <input
+          required
+          value={programForm.location}
+          onChange={(event) => setProgramForm((current) => ({ ...current, location: event.target.value }))}
+          className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
+        />
+      </label>
+      <label className="block text-xs font-semibold text-muted-foreground">
+        Duration
+        <input
+          required
+          value={programForm.duration}
+          onChange={(event) => setProgramForm((current) => ({ ...current, duration: event.target.value }))}
+          placeholder="e.g. 3 months"
+          className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
+        />
+      </label>
+      <label className="block text-xs font-semibold text-muted-foreground">
+        Skills
+        <input
+          value={programForm.skills}
+          onChange={(event) => setProgramForm((current) => ({ ...current, skills: event.target.value }))}
+          placeholder="Comma-separated, e.g. Python, SQL"
+          className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
+        />
+      </label>
+      <label className="block text-xs font-semibold text-muted-foreground">
+        Application deadline
+        <input
+          type="datetime-local"
+          value={programForm.deadline}
+          onChange={(event) => setProgramForm((current) => ({ ...current, deadline: event.target.value }))}
+          className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
+        />
+      </label>
+      <div className="sm:col-span-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+        {editingProgramId && (
+          <button
+            type="button"
+            onClick={cancelProgramEdit}
+            disabled={programSubmitting}
+            className="w-full sm:w-auto px-5 py-2.5 rounded-lg border border-border text-sm font-semibold disabled:opacity-60"
+          >
+            Cancel
+          </button>
+        )}
+        <button
+          type="submit"
+          disabled={programSubmitting}
+          className="w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-60"
+          style={{ background: "linear-gradient(135deg, #2D3561, #3d4a8a)" }}
+        >
+          {programSubmitting ? "Saving..." : editingProgramId ? "Save Changes" : "Post Program"}
+        </button>
+      </div>
+    </form>
+  );
 
   return (
     <div className="mx-auto w-full max-w-6xl p-4 sm:p-5 lg:p-6">
@@ -485,117 +614,22 @@ export default function AdminPage() {
       {/* Programs */}
       {tab === "programs" && (
         <div className="space-y-5">
-          <section className="bg-white border border-border rounded-xl p-5 shadow-sm">
-            <div className="mb-5">
-              <h3 className="font-semibold">{editingProgramId ? "Edit Program" : "Post a Program"}</h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                New open programs will appear in the student Programs section.
-              </p>
-            </div>
-            {programNotice && (
-              <p className="mb-4 text-sm text-emerald-700" role="status">
-                {programNotice}
-              </p>
-            )}
-            <form onSubmit={(event) => void submitProgram(event)} className="grid grid-cols-1 sm:grid-cols-2 gap-4 [&_input]:min-w-0 [&_label]:min-w-0">
-              <label className="block text-xs font-semibold text-muted-foreground">
-                Program title
-                <input
-                  required
-                  value={programForm.name}
-                  onChange={(event) => setProgramForm((current) => ({ ...current, name: event.target.value }))}
-                  placeholder="e.g. Software Engineering Internship"
-                  className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
-                />
-              </label>
-              <label className="block text-xs font-semibold text-muted-foreground">
-                Company
-                <input
-                  required
-                  value={programForm.company}
-                  onChange={(event) => setProgramForm((current) => ({ ...current, company: event.target.value }))}
-                  className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
-                />
-              </label>
-              <label className="block text-xs font-semibold text-muted-foreground sm:col-span-2">
-                Description
-                <textarea
-                  value={programForm.description}
-                  onChange={(event) => setProgramForm((current) => ({ ...current, description: event.target.value }))}
-                  rows={4}
-                  placeholder="Describe the internship and responsibilities"
-                  className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white resize-y"
-                />
-              </label>
-              <label className="block text-xs font-semibold text-muted-foreground">
-                Category
-                <input
-                  required
-                  value={programForm.category}
-                  onChange={(event) => setProgramForm((current) => ({ ...current, category: event.target.value }))}
-                  placeholder="e.g. Technology"
-                  className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
-                />
-              </label>
-              <label className="block text-xs font-semibold text-muted-foreground">
-                Location
-                <input
-                  required
-                  value={programForm.location}
-                  onChange={(event) => setProgramForm((current) => ({ ...current, location: event.target.value }))}
-                  className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
-                />
-              </label>
-              <label className="block text-xs font-semibold text-muted-foreground">
-                Duration
-                <input
-                  required
-                  value={programForm.duration}
-                  onChange={(event) => setProgramForm((current) => ({ ...current, duration: event.target.value }))}
-                  placeholder="e.g. 3 months"
-                  className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
-                />
-              </label>
-              <label className="block text-xs font-semibold text-muted-foreground">
-                Skills
-                <input
-                  value={programForm.skills}
-                  onChange={(event) => setProgramForm((current) => ({ ...current, skills: event.target.value }))}
-                  placeholder="Comma-separated, e.g. Python, SQL"
-                  className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
-                />
-              </label>
-              <label className="block text-xs font-semibold text-muted-foreground">
-                Application deadline
-                <input
-                  type="datetime-local"
-                  value={programForm.deadline}
-                  onChange={(event) => setProgramForm((current) => ({ ...current, deadline: event.target.value }))}
-                  className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-border text-sm text-foreground focus:outline-none focus:ring-2 bg-white"
-                />
-              </label>
-              <div className="sm:col-span-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-                {editingProgramId && (
-                  <button
-                    type="button"
-                    onClick={cancelProgramEdit}
-                    disabled={programSubmitting}
-                    className="w-full sm:w-auto px-5 py-2.5 rounded-lg border border-border text-sm font-semibold disabled:opacity-60"
-                  >
-                    Cancel
-                  </button>
-                )}
-                <button
-                  type="submit"
-                  disabled={programSubmitting}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-60"
-                  style={{ background: "linear-gradient(135deg, #2D3561, #3d4a8a)" }}
-                >
-                  {programSubmitting ? "Saving..." : editingProgramId ? "Save Changes" : "Post Program"}
-                </button>
+          {!editingProgramId && (
+            <section className="bg-white border border-border rounded-xl p-5 shadow-sm">
+              <div className="mb-5">
+                <h3 className="font-semibold">Post a Program</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  New open programs will appear in the student Programs section.
+                </p>
               </div>
-            </form>
-          </section>
+              {programNotice && (
+                <p className="mb-4 text-sm text-emerald-700" role="status">
+                  {programNotice}
+                </p>
+              )}
+              {programFormElement}
+            </section>
+          )}
 
           <section>
             <div className="flex items-center justify-between mb-3">
@@ -625,6 +659,20 @@ export default function AdminPage() {
                       >
                         Edit
                       </button>
+                      {program.status === "open" && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProgramToRemove(program);
+                            setError("");
+                          }}
+                          disabled={programRemoving}
+                          className="px-3 py-1.5 rounded-lg border border-red-200 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60"
+                          aria-label={`Remove ${program.name} from student listings`}
+                        >
+                          Remove
+                        </button>
+                      )}
                       <span className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${program.status === "open" ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
                         {program.status}
                       </span>
@@ -702,6 +750,85 @@ export default function AdminPage() {
         </div>
       )}
       </>
+      )}
+      {editingProgramId && tab === "programs" && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/55 backdrop-blur-sm p-4 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-program-title"
+        >
+          <section className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-border p-5 sm:px-7 flex items-center justify-between gap-4 z-10">
+              <div className="min-w-0">
+                <p className="text-xs uppercase tracking-widest text-muted-foreground font-bold">
+                  Edit program listing
+                </p>
+                <h2 id="edit-program-title" className="font-bold text-lg mt-1 truncate">
+                  {programForm.name || "Program details"}
+                </h2>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Update the information students see on this listing.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={cancelProgramEdit}
+                disabled={programSubmitting}
+                className="w-9 h-9 shrink-0 rounded-xl hover:bg-secondary disabled:opacity-50"
+                aria-label="Close program editor"
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-5 sm:p-7">
+              {error && <p className="mb-4 text-sm text-red-600" role="alert">{error}</p>}
+              {programFormElement}
+            </div>
+          </section>
+        </div>
+      )}
+      {programToRemove && (
+        <div
+          className="fixed inset-0 z-[110] bg-black/55 backdrop-blur-sm p-4 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="remove-program-title"
+          aria-describedby="remove-program-description"
+        >
+          <section className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 sm:p-7">
+            <div className="w-11 h-11 rounded-xl bg-red-50 text-red-700 flex items-center justify-center mb-5" aria-hidden="true">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 9v4m0 4h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0Z" />
+              </svg>
+            </div>
+            <h2 id="remove-program-title" className="font-bold text-lg">
+              Remove program listing?
+            </h2>
+            <p id="remove-program-description" className="text-sm text-muted-foreground leading-relaxed mt-2">
+              <span className="font-semibold text-foreground">{programToRemove.name}</span> will no longer appear in student listings. Existing applications and records will be kept.
+            </p>
+            {error && <p className="mt-4 text-sm text-red-600" role="alert">{error}</p>}
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-6">
+              <button
+                type="button"
+                onClick={() => setProgramToRemove(null)}
+                disabled={programRemoving}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-lg border border-border text-sm font-semibold disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void removeProgram()}
+                disabled={programRemoving}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-60"
+              >
+                {programRemoving ? "Removing..." : "Remove listing"}
+              </button>
+            </div>
+          </section>
+        </div>
       )}
       {previewApplication && (
         <ApplicationPreviewModal

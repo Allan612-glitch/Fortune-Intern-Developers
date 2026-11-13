@@ -16,6 +16,7 @@ from sqlmodel import Session, SQLModel, select
 
 from Backend.api.routes.admin import (
     _application_reference,
+    remove_program,
     update_application_status,
     update_program,
 )
@@ -615,6 +616,26 @@ class TestAdminProgramStatus(unittest.TestCase):
         self.assertEqual(updated.status, "closed")
         self.assertEqual(row.cycle_closed_at, closed_at)
         session.commit.assert_called_once()
+
+
+class TestAdminProgramRemoval(unittest.TestCase):
+    def test_removal_closes_listing_without_changing_application_cycle_history(self):
+        row = program(name="Internship", description="", status="open")
+        session = Mock()
+        session.get.return_value = row
+
+        with patch("Backend.api.routes.admin.record_audit_event"):
+            removed = remove_program(
+                str(row.id),
+                SimpleNamespace(),
+                user(name="Admin", email="admin@example.test"),
+                session,
+            )
+
+        self.assertEqual(removed.status, "closed")
+        self.assertIsNone(row.cycle_closed_at)
+        session.commit.assert_called_once()
+        session.refresh.assert_called_once_with(row)
 
 
 class TestProgramLookup(unittest.TestCase):

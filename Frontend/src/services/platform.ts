@@ -104,6 +104,12 @@ export function updateAdminProgram(id: string, payload: Omit<Program, "id">) {
   });
 }
 
+export function removeAdminProgram(id: string) {
+  return apiRequest<Program>(`/api/admin/programs/${id}`, {
+    method: "DELETE",
+  });
+}
+
 export function submitApplication(form: FormData) {
   return apiRequest<BackendApplication>("/api/applications", {
     method: "POST",
