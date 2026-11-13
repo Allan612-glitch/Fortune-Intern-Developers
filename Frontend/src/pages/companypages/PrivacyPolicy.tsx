@@ -42,6 +42,9 @@ export default function PrivacyPolicy() {
           <p className="text-lg leading-relaxed">
             We share your professional profile with the host organisations you apply to, with Paystack for payment processing and with our hosting provider for service delivery. We disclose data to regulators or courts only where legally required. We do not sell personal data.
           </p>
+          <p className="text-lg leading-relaxed mt-4">
+            <span className="font-bold text-[#0B172A]">Letter verification:</span> our verification page is public so that employers and institutions can check a letter. Anyone who enters a valid letter reference there can see that the letter is genuine, the full name of the person it was issued to and the company that person applied for. We show no other details.
+          </p>
         </div>
 
         <div className="mb-10">
