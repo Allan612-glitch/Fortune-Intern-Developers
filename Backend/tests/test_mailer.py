@@ -1,7 +1,10 @@
 import unittest
 from unittest.mock import patch
 
-from Backend.core.mailer import send_application_received_email
+from Backend.core.mailer import (
+    send_application_received_email,
+    send_certificate_available_email,
+)
 
 
 class TestApplicationReceivedEmail(unittest.TestCase):
@@ -44,3 +47,23 @@ class TestApplicationReceivedEmail(unittest.TestCase):
         ):
             self.assertIn(value, message["text"])
             self.assertIn(value, message["html"])
+
+
+class TestCertificateAvailableEmail(unittest.TestCase):
+    def test_notifies_applicant_with_dashboard_link(self):
+        with (
+            patch("Backend.core.mailer.settings.resend_api_key", "test-api-key"),
+            patch("Backend.core.mailer.settings.resend_from_email", "no-reply@example.com"),
+            patch("Backend.core.mailer.resend.Emails.send") as send,
+        ):
+            send_certificate_available_email(
+                to_email="student@example.com",
+                student_name="Test Student",
+                program_name="Software Engineering",
+                application_url="https://frontend.example.test/app/applications",
+            )
+
+        message = send.call_args.args[0]
+        self.assertIn("certificate is now available", message["text"])
+        self.assertIn("https://frontend.example.test/app/applications", message["html"])
+        self.assertIn("Track Application", message["text"])

@@ -28,6 +28,9 @@ export interface ApplicationRecord {
   resumeName: string;
   resumeType: string;
   resumeUploadedAt: string;
+  documentsSent: boolean;
+  supervisorAssessmentName: string;
+  certificateApproved: boolean;
 }
 
 export function fromBackendApplication(
@@ -57,5 +60,8 @@ export function fromBackendApplication(
     resumeName: application.resume_filename || "",
     resumeType: "",
     resumeUploadedAt: application.created_at,
+    documentsSent: application.documents_sent,
+    supervisorAssessmentName: application.supervisor_assessment_filename || "",
+    certificateApproved: application.certificate_approved,
   };
 }

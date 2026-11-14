@@ -14,7 +14,11 @@ from sqlmodel import Session, select
 from Backend.api.deps import get_current_admin
 from Backend.core import age, documents, storage
 from Backend.core.audit import record_audit_event
-from Backend.core.mailer import send_application_documents_email
+from Backend.core.config import settings
+from Backend.core.mailer import (
+	send_application_documents_email,
+	send_certificate_available_email,
+)
 from Backend.database import get_session
 from Database.models import (
 	announcement,
@@ -137,6 +141,9 @@ def list_admin_applications(
 			id=str(row.id), user_id=str(row.user_id), program_id=str(row.program_id),
 			program_name=program_record.name if program_record else "Program",
 			status=row.status, resume_filename=row.resume_filename,
+			documents_sent=row.documents_sent,
+			supervisor_assessment_filename=getattr(row, "supervisor_assessment_filename", None),
+			certificate_approved=getattr(row, "certificate_approved", False),
 			applicant_name=row.applicant_name, gender=row.gender,
 			student_index_number=row.student_index_number, year_of_study=row.year_of_study,
 			suggested_company=row.suggested_company,
@@ -300,6 +307,120 @@ def get_admin_application_status_history(
 		)
 		for entry in entries
 	]
+
+
+@router.get("/applications/{application_id}/assessment")
+def download_supervisor_assessment(
+	application_id: str,
+	request: Request,
+	admin: user = Depends(get_current_admin),
+	session: Session = Depends(get_session),
+):
+	try:
+		row = session.get(application, UUID(application_id))
+	except ValueError:
+		row = None
+	if not row or not row.supervisor_assessment_path:
+		raise HTTPException(status_code=404, detail="Supervisor assessment not found")
+	try:
+		content, content_type = storage.download_file(row.supervisor_assessment_path)
+	except (BotoCoreError, ClientError, RuntimeError) as error:
+		record_audit_event(
+			session, request, actor_id=admin.id, action="application.assessment.download",
+			object_type="application", object_id=application_id, result="failure",
+		)
+		session.commit()
+		raise HTTPException(status_code=503, detail="Assessment storage is unavailable") from error
+	record_audit_event(
+		session, request, actor_id=admin.id, action="application.assessment.download",
+		object_type="application", object_id=application_id,
+	)
+	session.commit()
+	return Response(
+		content=content,
+		media_type=content_type or "application/octet-stream",
+		headers={"Content-Disposition": storage.build_attachment_content_disposition(
+			row.supervisor_assessment_filename or "supervisor-assessment",
+		)},
+	)
+
+
+@router.post("/applications/{application_id}/certificate-approval", response_model=ApplicationResponse)
+def approve_application_certificate(
+	application_id: str,
+	request: Request,
+	admin: user = Depends(get_current_admin),
+	session: Session = Depends(get_session),
+):
+	try:
+		row = session.get(application, UUID(application_id))
+	except ValueError:
+		row = None
+	if not row:
+		raise HTTPException(status_code=404, detail="Application not found")
+	if row.status != "accepted" or not row.documents_sent or not row.supervisor_assessment_path:
+		raise HTTPException(
+			status_code=409,
+			detail="An accepted application with a submitted supervisor assessment is required",
+		)
+	if row.certificate_approved:
+		raise HTTPException(status_code=409, detail="The completion certificate is already approved")
+
+	applicant = session.get(user, row.user_id)
+	if not applicant:
+		raise HTTPException(status_code=404, detail="Applicant not found")
+	program_record = session.get(program, row.program_id)
+	program_name = program_record.name if program_record else "Program"
+	try:
+		send_certificate_available_email(
+			to_email=applicant.email,
+			student_name=row.applicant_name or applicant.name,
+			program_name=program_name,
+			application_url=f"{settings.frontend_url.rstrip('/')}/app/applications",
+		)
+	except RuntimeError as error:
+		logging.getLogger(__name__).exception(
+			"Failed to notify applicant about certificate approval for application %s",
+			row.id,
+		)
+		raise HTTPException(
+			status_code=503,
+			detail="Certificate approval notification could not be sent",
+		) from error
+
+	row.certificate_approved = True
+	row.certificate_approved_at = datetime.now(timezone.utc)
+	session.add(row)
+	session.add(notification(
+		user_id=row.user_id,
+		message=f"Your completion certificate for {program_name} is ready to download.",
+		target_type="application",
+		target_id=str(row.id),
+		read=False,
+	))
+	record_audit_event(
+		session, request, actor_id=admin.id, action="application.certificate.approve",
+		object_type="application", object_id=str(row.id),
+	)
+	session.commit()
+	session.refresh(row)
+	return ApplicationResponse(
+		id=str(row.id), user_id=str(row.user_id), program_id=str(row.program_id),
+		program_name=program_name, status=row.status, resume_filename=row.resume_filename,
+		documents_sent=row.documents_sent,
+		supervisor_assessment_filename=getattr(row, "supervisor_assessment_filename", None),
+		certificate_approved=getattr(row, "certificate_approved", False),
+		applicant_name=row.applicant_name, gender=row.gender,
+		student_index_number=row.student_index_number, year_of_study=row.year_of_study,
+		suggested_company=row.suggested_company,
+		requires_minor_review=age.requires_minor_review(
+			getattr(row, "date_of_birth", None),
+			row.created_at,
+		),
+		applicant_institution=row.applicant_institution, applicant_course=row.applicant_course,
+		applicant_contact=row.applicant_contact, host_company_name=row.host_company_name,
+		host_company_address=row.host_company_address, created_at=row.created_at.isoformat(),
+	)
 
 
 @router.post("/programs", response_model=ProgramResponse, status_code=status.HTTP_201_CREATED)
@@ -467,6 +588,9 @@ def update_application_status(application_id: str, payload: AdminApplicationStat
 	return ApplicationResponse(
 		id=str(row.id), user_id=str(row.user_id), program_id=str(row.program_id),
 		program_name=program_name, status=row.status, resume_filename=row.resume_filename,
+		documents_sent=row.documents_sent,
+		supervisor_assessment_filename=getattr(row, "supervisor_assessment_filename", None),
+		certificate_approved=getattr(row, "certificate_approved", False),
 		applicant_name=row.applicant_name, gender=row.gender,
 		student_index_number=row.student_index_number, year_of_study=row.year_of_study,
 		suggested_company=row.suggested_company,

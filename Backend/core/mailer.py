@@ -130,6 +130,50 @@ def send_application_documents_email(
         raise RuntimeError("Unable to send application documents email") from error
 
 
+def send_certificate_available_email(
+    *,
+    to_email: str,
+    student_name: str,
+    program_name: str,
+    application_url: str,
+) -> None:
+    if not all((settings.resend_api_key, settings.resend_from_email)):
+        raise RuntimeError(
+            "RESEND_API_KEY and RESEND_FROM_EMAIL must be configured to notify applicants"
+        )
+
+    safe_name = escape(student_name)
+    safe_program = escape(program_name)
+    safe_url = escape(application_url, quote=True)
+    resend.api_key = settings.resend_api_key
+    try:
+        resend.Emails.send({
+            "from": settings.resend_from_email,
+            "to": [to_email],
+            "subject": "Your Fortune Intern Network certificate is ready",
+            "text": (
+                f"Hi {student_name},\n\n"
+                f"Your supervisor assessment for {program_name} has been reviewed and your "
+                "completion certificate is now available. Sign in and open My Applications, "
+                "then Track Application to download it.\n\n"
+                f"Open your dashboard: {application_url}\n\n"
+                "Fortune Intern Network"
+            ),
+            "html": (
+                "<p>Hi " + safe_name + ",</p>"
+                "<p>Your supervisor assessment for <strong>" + safe_program + "</strong> "
+                "has been reviewed and your completion certificate is now available.</p>"
+                "<p>Sign in and open <strong>My Applications</strong>, then "
+                "<strong>Track Application</strong> to download it.</p>"
+                f'<p><a href="{safe_url}">Open your dashboard</a></p>'
+                "<p>Fortune Intern Network</p>"
+            ),
+        })
+    except Exception as error:
+        logger.exception("Failed to notify applicant about certificate availability")
+        raise RuntimeError("Unable to send certificate availability email") from error
+
+
 def send_contact_message(
     *,
     to_email: str,

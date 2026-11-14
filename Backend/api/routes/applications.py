@@ -5,7 +5,7 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 from botocore.exceptions import BotoCoreError, ClientError
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Request, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import Response
 from sqlalchemy import text
@@ -15,6 +15,7 @@ from sqlmodel import Session, or_, select
 from Backend.api.deps import get_current_user
 from Backend.core import age, storage
 from Backend.core.audit import record_audit_event
+from Backend.core.certificates import build_completion_certificate_html
 from Backend.core.mailer import send_application_received_email
 from Backend.core.rate_limit import enforce_rate_limit
 from Backend.core.uploads import read_validated_document
@@ -84,6 +85,9 @@ def serialize_application(row: application, program_name: str) -> ApplicationRes
         program_name=program_name,
         status=row.status,
         resume_filename=row.resume_filename,
+        documents_sent=row.documents_sent,
+        supervisor_assessment_filename=getattr(row, "supervisor_assessment_filename", None),
+        certificate_approved=getattr(row, "certificate_approved", False),
         applicant_name=row.applicant_name,
         gender=row.gender,
         student_index_number=row.student_index_number,
@@ -501,6 +505,132 @@ def get_application_status_history(
         )
         for entry in entries
     ]
+
+
+@router.post("/{application_id}/assessment", response_model=ApplicationResponse)
+async def upload_supervisor_assessment(
+    application_id: str,
+    request: Request,
+    file: UploadFile = File(...),
+    account: user = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    try:
+        row = session.get(application, UUID(application_id))
+    except ValueError:
+        row = None
+    if not row or row.user_id != account.id:
+        raise HTTPException(status_code=404, detail="Application not found")
+    if row.status != "accepted" or not row.documents_sent:
+        raise HTTPException(
+            status_code=409,
+            detail="A supervisor assessment can be uploaded after acceptance and document delivery",
+        )
+    if row.supervisor_assessment_path:
+        raise HTTPException(status_code=409, detail="A supervisor assessment has already been submitted")
+    content, filename, content_type = await read_validated_document(
+        file,
+        "Supervisor assessment",
+    )
+    extension = Path(filename).suffix.lower()
+    storage_path = f"assessments/{account.id}/{row.id}/{uuid4()}{extension}"
+    try:
+        storage.upload_file(storage_path, content, content_type=content_type)
+    except (BotoCoreError, ClientError, RuntimeError) as error:
+        raise HTTPException(
+            status_code=503,
+            detail="Supervisor assessment storage is unavailable",
+        ) from error
+
+    row.supervisor_assessment_filename = filename
+    row.supervisor_assessment_path = storage_path
+    session.add(row)
+    session.add(notification(
+        user_id=account.id,
+        message="Your supervisor assessment was submitted and is waiting for admin review.",
+        target_type="application",
+        target_id=str(row.id),
+        read=False,
+    ))
+    record_audit_event(
+        session,
+        request,
+        actor_id=account.id,
+        action="application.assessment.upload",
+        object_type="application",
+        object_id=str(row.id),
+    )
+    session.commit()
+    session.refresh(row)
+    program_record = session.get(program, row.program_id)
+    return serialize_application(row, program_record.name if program_record else "Program")
+
+
+@router.get("/{application_id}/certificate")
+def download_completion_certificate(
+    application_id: str,
+    request: Request,
+    account: user = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    try:
+        row = session.get(application, UUID(application_id))
+    except ValueError:
+        row = None
+    if not row or row.user_id != account.id:
+        raise HTTPException(status_code=404, detail="Application not found")
+    if (
+        row.status != "accepted"
+        or not row.supervisor_assessment_path
+        or not row.certificate_approved
+    ):
+        raise HTTPException(status_code=403, detail="The completion certificate is not available")
+
+    program_record = session.get(program, row.program_id)
+    company = (
+        row.host_company_name
+        or (program_record.company if program_record else None)
+        or "Fortune Intern Network"
+    )
+    certificate_number = f"FIN/CERT/{row.created_at.year}/{row.id.hex[:8].upper()}"
+    issued_date = getattr(row, "certificate_approved_at", None) or datetime.now(timezone.utc)
+    ordinal = "th" if 11 <= issued_date.day % 100 <= 13 else {
+        1: "st", 2: "nd", 3: "rd"
+    }.get(issued_date.day % 10, "th")
+    html_content = build_completion_certificate_html({
+        "name": row.applicant_name or account.name,
+        "inst": row.applicant_institution or "Not specified",
+        "prog": f"{program_record.name if program_record else 'Internship'} — {company}",
+        "start": "Not specified",
+        "end": "Not specified",
+        "duration": program_record.duration if program_record else "Not specified",
+        "grade": "with commendable performance and exemplary conduct",
+        "certno": certificate_number,
+        "issued": f"{issued_date.day}{ordinal} {issued_date.strftime('%B')}, {issued_date.year}",
+        "sname": "Emmanuel Amoasi",
+        "srole": "Managing Director",
+    })
+    record_audit_event(
+        session,
+        request,
+        actor_id=account.id,
+        action="application.certificate.download",
+        object_type="application",
+        object_id=str(row.id),
+    )
+    session.commit()
+    filename = f"FIN_Certificate_{row.id.hex[:8].upper()}.html"
+    return Response(
+        content=html_content,
+        media_type="text/html",
+        headers={
+            "Content-Disposition": storage.build_attachment_content_disposition(
+                filename,
+                default_filename="certificate.html",
+            ),
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @router.get("/{application_id}/resume")

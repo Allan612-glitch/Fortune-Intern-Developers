@@ -20,6 +20,9 @@ export interface BackendApplication {
   program_name: string;
   status: string;
   resume_filename: string | null;
+  documents_sent: boolean;
+  supervisor_assessment_filename: string | null;
+  certificate_approved: boolean;
   applicant_name: string | null;
   gender: string | null;
   student_index_number: string | null;
@@ -156,6 +159,49 @@ export function setApplicationStatus(id: string, status: string) {
     method: "PUT",
     body: JSON.stringify({ status }),
   });
+}
+
+export function approveApplicationCertificate(id: string) {
+  return apiRequest<BackendApplication>(
+    `/api/admin/applications/${id}/certificate-approval`,
+    { method: "POST" },
+  );
+}
+
+export async function uploadSupervisorAssessment(id: string, file: File) {
+  const form = new FormData();
+  form.append("file", file);
+  return apiRequest<BackendApplication>(
+    `/api/applications/${id}/assessment`,
+    { method: "POST", body: form },
+  );
+}
+
+export async function saveSupervisorAssessmentDownload(id: string) {
+  const file = await apiBlob(`/api/admin/applications/${id}/assessment`);
+  const url = URL.createObjectURL(file);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "supervisor-assessment";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export async function openCompletionCertificate(id: string) {
+  const tab = window.open("about:blank", "_blank");
+  if (!tab) throw new Error("Allow pop-ups to open your certificate.");
+  tab.opener = null;
+  try {
+    const certificate = await apiBlob(`/api/applications/${id}/certificate`);
+    const url = URL.createObjectURL(certificate);
+    tab.location.href = url;
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  } catch (error) {
+    tab.close();
+    throw error;
+  }
 }
 
 export function downloadResume(id: string, admin = false) {
