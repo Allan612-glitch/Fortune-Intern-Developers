@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fortune Intern Network — Certificate of Completion</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;900&family=Great+Vibes&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #46505E; font-family: Arial, Helvetica, sans-serif; padding: 24px 12px; }
+  @page { size: A4 landscape; margin: 0; }
+  @media print {
+    .toolbar { display: none !important; }
+    body { background: #fff; padding: 0; }
+    .sheet { box-shadow: none !important; margin: 0 !important; }
+  }
+
+  /* ============ TOOLBAR (screen only) ============ */
+  .toolbar { max-width: 297mm; margin: 0 auto 18px; background: #0A3161; border-radius: 14px; padding: 16px 18px; color: #fff; box-shadow: 0 12px 34px rgba(0,0,0,.4); border-top: 4px solid #EDB523; }
+  .toolbar h1 { font-size: 15px; letter-spacing: .5px; margin-bottom: 4px; }
+  .toolbar p { font-size: 11px; color: #B9C4D6; margin-bottom: 12px; line-height: 1.5; }
+  .tgrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 9px; }
+  .tgrid label { font-size: 9px; text-transform: uppercase; letter-spacing: .6px; color: #EDB523; display: block; margin-bottom: 3px; font-weight: 700; }
+  .tgrid input { width: 100%; padding: 8px 10px; border: 1px solid #2C4470; border-radius: 7px; background: #10264F; color: #fff; font-size: 12px; }
+  .tgrid input:focus { outline: none; border-color: #EDB523; }
+  .tbtns { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  .tbtn { flex: 1; min-width: 120px; padding: 12px; border: none; border-radius: 9px; font-weight: 800; font-size: 13px; cursor: pointer; }
+  .tbtn.gold { background: #EDB523; color: #0A3161; }
+  .tbtn.gold:active { transform: scale(.98); }
+  .tbtn.silver { background: #E8EDF4; color: #12365E; }
+  .tbtn.ghost { background: transparent; color: #fff; border: 1px solid #2C4470; }
+  .tbtn:disabled { opacity: .6; cursor: wait; }
+  .note { font-size: 10.5px; color: #B9C4D6; margin-top: 9px; line-height: 1.5; }
+
+  /* ============ CERTIFICATE SHEET (A4 landscape) ============ */
+  :root { --maroon: #7A2321; --navy: #12365E; --ink: #14181D; --gold: #EDB523; }
+  .sheet { position: relative; width: 297mm; height: 209mm; margin: 0 auto;
+           background: radial-gradient(ellipse at 50% 38%, #FFFFFF 0%, #F8FAFC 68%, #F2F5F9 100%);
+           box-shadow: 0 22px 60px rgba(0,0,0,.55); overflow: hidden; }
+
+  .frame { position: absolute; inset: 14mm; border: .7mm solid var(--maroon); border-right: none; z-index: 1; }
+  .frame::after { content: ''; position: absolute; inset: 1.6mm; border: .25mm solid rgba(200,154,60,.55); }
+
+  .rpanel { position: absolute; top: 14mm; bottom: 14.7mm; right: 14mm; width: 84mm; background: var(--navy); z-index: 2; box-shadow: -2mm 0 6mm rgba(10,31,68,.18); }
+  .rpanel > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .medal-logo { position: absolute; left: 50%; top: 40.7%; transform: translate(-50%,-50%); width: 30mm; text-align: center; }
+  .medal-logo .mk { width: 14mm; height: 11.9mm; margin: 0 auto; }
+  .medal-logo .mk svg { width: 100%; height: 100%; display: block; }
+  .medal-logo .w1 { font-weight: 900; font-size: 7.6pt; letter-spacing: .55px; color: var(--navy); line-height: 1.05; margin-top: .7mm; }
+  .medal-logo .w2 { font-weight: 900; font-size: 4.3pt; letter-spacing: 1px; margin-top: .35mm; }
+  .medal-logo .w2 .y { color: #DE9A26; } .medal-logo .w2 .b { color: var(--navy); }
+
+  .lcontent { position: absolute; left: 14mm; top: 14mm; bottom: 14.7mm; width: 185mm; z-index: 2;
+              padding: 7mm 10mm 5.5mm 12mm; display: flex; flex-direction: column; text-align: center; color: var(--ink); }
+  .clogo { align-self: flex-start; width: 23mm; margin-left: 1mm; text-align: center; }
+  .clogo .mk { width: 19mm; height: 16.2mm; margin: 0 auto; }
+  .clogo .mk svg { width: 100%; height: 100%; display: block; }
+  .clogo .w1 { font-weight: 900; font-size: 8.6pt; letter-spacing: .65px; color: var(--navy); line-height: 1.05; margin-top: .9mm; }
+  .clogo .w2 { font-weight: 900; font-size: 4.8pt; letter-spacing: 1.15px; margin-top: .4mm; }
+  .clogo .w2 .y { color: var(--gold); } .clogo .w2 .b { color: var(--navy); }
+
+  .ctitle { margin: 6.5mm -4mm 0 0; font-family: 'Playfair Display', Georgia, serif; font-weight: 700; font-size: 28pt; letter-spacing: 4mm; color: #101418; }
+  .csub { margin: 2.8mm -2.8mm 0 0; font-family: 'Playfair Display', Georgia, serif; font-weight: 600; font-size: 12.5pt; letter-spacing: 2.8mm; color: #1A1F26; display: flex; align-items: center; justify-content: center; gap: 4mm; }
+  .csub::before, .csub::after { content: ''; width: 22mm; height: .5mm; background: linear-gradient(90deg, transparent, var(--gold) 30%, var(--gold) 70%, transparent); }
+  .cpresent { margin-top: 7mm; font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 600; font-size: 12pt; color: #2A2F36; }
+  .cname { margin: 4.5mm auto 0; font-family: 'Great Vibes', cursive; font-weight: 400; font-size: 30pt; line-height: 1.16; color: #101418; max-width: 152mm; }
+  .orn { display: flex; align-items: center; gap: 2.2mm; width: 152mm; margin: 2.2mm auto 0; }
+  .orn::before, .orn::after { content: ''; flex: 1; height: .4mm; background: linear-gradient(90deg, transparent, #1A1F26 14%, #1A1F26 86%, transparent); }
+  .orn i { width: 2.1mm; height: 2.1mm; background: var(--gold); transform: rotate(45deg); flex-shrink: 0; }
+  .cdone { margin: 5.5mm -1.5mm 0 0; font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 600; font-size: 10.4pt; letter-spacing: 1.5mm; color: #2A2F36; line-height: 2.0; }
+  .cgrade { margin: 2mm -1.1mm 0 0; font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-weight: 500; font-size: 9.2pt; letter-spacing: 1.1mm; color: #4A5560; }
+  .cmeta { margin: 2.6mm -0.8mm 0 0; font-size: 7.4pt; font-weight: 600; letter-spacing: .8mm; color: #6B7280; line-height: 1.95; text-transform: uppercase; }
+
+  .sigrow { margin-top: auto; display: flex; align-items: flex-end; justify-content: space-between; gap: 8mm; padding: 0 4mm; }
+  .scol { width: 46mm; text-align: center; }
+  .sval { font-size: 9.4pt; font-weight: 800; color: var(--navy); min-height: 4.6mm; letter-spacing: .4mm; margin-right: -.4mm; }
+  .srule { height: .4mm; background: #4A5563; margin: 1.6mm auto 1.4mm; width: 42mm; }
+  .slab { font-size: 7.4pt; font-weight: 800; color: #2A2F36; text-transform: uppercase; letter-spacing: 1mm; margin-right: -1mm; }
+  .scol.midc { width: 64mm; }
+  /* ENLARGED, CRISP SIGNATURE SLOT */
+  .scol.midc .sigsvg { width: 36mm; height: 27mm; display: block; margin: 0 auto -1mm; }
+  .scol.midc .srule { width: 58mm; }
+  .signame { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 700; font-size: 11pt; letter-spacing: 1.3mm; margin-right: -1.3mm; color: #101418; text-transform: uppercase; }
+  .sigrole { margin-top: 1.2mm; font-size: 7.4pt; font-weight: 600; letter-spacing: 1.05mm; margin-right: -1.05mm; color: #2A2F36; line-height: 1.8; text-transform: uppercase; }
+
+  .cverify { margin-top: 4mm; font-size: 6.6pt; letter-spacing: .35mm; color: #8A94A2; text-align: center; }
+  .cverify b { color: #6B7280; }
+
+  .toast { position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-16px); background: #10B981; color: #fff; padding: 11px 18px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.35); font-weight: 700; font-size: 13px; opacity: 0; visibility: hidden; transition: all .3s; z-index: 99; }
+  .toast.show { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+  .toast.err { background: #EF4444; }
+</style>
+</head>
+<body>
+
+<!-- ============ FILL-IN PANEL ============ -->
+<div class="toolbar">
+  <h1>FORTUNE INTERN NETWORK — CERTIFICATE OF COMPLETION</h1>
+  <p>Fill the details — the certificate updates live. Download as <b>PNG</b> or <b>JPG</b> (high-resolution, print-ready). This panel never appears in the exported image.</p>
+  <div class="tgrid">
+    <div><label>Intern Name (script)</label><input data-field="name" value="Emmanuel Amoasi"></div>
+    <div><label>Institution Line</label><input data-field="inst" value="Kwame Nkrumah University of Science & Technology (KNUST)"></div>
+    <div><label>Programme / Track</label><input data-field="prog" value="Software Engineering Intern — MTN Ghana"></div>
+    <div><label>Start Date</label><input data-field="start" value="10th June, 2026"></div>
+    <div><label>End Date</label><input data-field="end" value="11th September, 2026"></div>
+    <div><label>Duration</label><input data-field="duration" value="Three (3) Months"></div>
+    <div><label>Performance Phrase</label><input data-field="grade" value="with commendable performance and exemplary conduct"></div>
+    <div><label>Certificate No.</label><input data-field="certno" value="FIN/CERT/2026/0001"></div>
+    <div><label>Date Issued</label><input data-field="issued" value=""></div>
+    <div><label>Signatory Name</label><input data-field="sname" value="Emmanuel Amoasi"></div>
+    <div><label>Signatory Role</label><input data-field="srole" value="Managing Director"></div>
+  </div>
+  <div class="tbtns">
+    <button class="tbtn gold" id="btnPng">⬇ DOWNLOAD PNG</button>
+    <button class="tbtn silver" id="btnJpg">⬇ DOWNLOAD JPG</button>
+    <button class="tbtn ghost" id="btnPrint">🖨 PRINT</button>
+  </div>
+  <div class="note">Export renders at 3× (≈3366 × 2370 px). For the sharpest signature use PNG. Accepts website parameters, e.g. <code>certificate.html?name=…&certno=…</code>.</div>
+</div>
+
+<!-- ============ CERTIFICATE ============ -->
+<div class="sheet" id="sheet">
+  <div class="frame"></div>
+
+  <div class="rpanel">
+    <svg viewBox="0 0 344 740" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="sg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#B98A2E"/><stop offset=".25" stop-color="#E9CE8C"/><stop offset=".5" stop-color="#C89A3C"/><stop offset=".75" stop-color="#EFD79A"/><stop offset="1" stop-color="#B98A2E"/></linearGradient>
+        <pattern id="tx" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" stroke="rgba(60,38,0,.14)" stroke-width="2"/></pattern>
+        <radialGradient id="md" cx=".42" cy=".36" r=".78"><stop offset="0" stop-color="#FCF3CC"/><stop offset=".55" stop-color="#F4DA8E"/><stop offset="1" stop-color="#E2B448"/></radialGradient>
+        <linearGradient id="tl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#EFC169"/><stop offset="1" stop-color="#CE7B20"/></linearGradient>
+        <path id="pt" d="M -13 -90 L 0 -113 L 13 -90 Z"/>
+      </defs>
+      <rect width="344" height="740" fill="#12365E"/>
+      <rect x="90" y="0" width="23" height="215" fill="url(#sg)"/><rect x="135" y="0" width="68" height="215" fill="url(#sg)"/><rect x="225" y="0" width="23" height="215" fill="url(#sg)"/>
+      <rect x="90" y="0" width="23" height="215" fill="url(#tx)"/><rect x="135" y="0" width="68" height="215" fill="url(#tx)"/><rect x="225" y="0" width="23" height="215" fill="url(#tx)"/>
+      <g transform="translate(146,336) rotate(24)"><polygon points="0,0 34,0 34,124 17,106 0,124" fill="url(#tl)"/></g>
+      <g transform="translate(164,336) rotate(-24)"><polygon points="0,0 34,0 34,124 17,106 0,124" fill="url(#tl)"/></g>
+      <g transform="translate(172,301)" fill="#EFC763">
+        <use href="#pt"/><use href="#pt" transform="rotate(15)"/><use href="#pt" transform="rotate(30)"/><use href="#pt" transform="rotate(45)"/><use href="#pt" transform="rotate(60)"/><use href="#pt" transform="rotate(75)"/><use href="#pt" transform="rotate(90)"/><use href="#pt" transform="rotate(105)"/><use href="#pt" transform="rotate(120)"/><use href="#pt" transform="rotate(135)"/><use href="#pt" transform="rotate(150)"/><use href="#pt" transform="rotate(165)"/><use href="#pt" transform="rotate(180)"/><use href="#pt" transform="rotate(195)"/><use href="#pt" transform="rotate(210)"/><use href="#pt" transform="rotate(225)"/><use href="#pt" transform="rotate(240)"/><use href="#pt" transform="rotate(255)"/><use href="#pt" transform="rotate(270)"/><use href="#pt" transform="rotate(285)"/><use href="#pt" transform="rotate(300)"/><use href="#pt" transform="rotate(315)"/><use href="#pt" transform="rotate(330)"/><use href="#pt" transform="rotate(345)"/>
+      </g>
+      <circle cx="172" cy="301" r="95" fill="url(#md)" stroke="#D2A231" stroke-width="1.5"/>
+      <circle cx="172" cy="301" r="88" fill="none" stroke="#C89A3C" stroke-width=".8" opacity=".65"/>
+      <circle cx="172" cy="301" r="79" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-dasharray="0.6 6.4" stroke-linecap="round"/>
+    </svg>
+    <div class="medal-logo">
+      <div class="mk">
+        <svg viewBox="0 0 200 170" xmlns="http://www.w3.org/2000/svg">
+          <g fill="#EDB523"><path d="M100 4 L105 26 L95 26 Z"/><path d="M134 10 L130 32 L139 29 Z"/><path d="M162 26 L149 42 L156 47 Z"/><path d="M178 52 L158 58 L160 66 Z"/><path d="M66 10 L70 32 L61 29 Z"/><path d="M38 26 L51 42 L44 47 Z"/><path d="M22 52 L42 58 L40 66 Z"/></g>
+          <path d="M100 24 C124 24 141 40 145 62 L100 62 Z" fill="#EDB523"/><path d="M100 24 C76 24 59 40 55 62 L100 62 Z" fill="#EDB523"/>
+          <g fill="none" stroke="#EDB523" stroke-width="7" stroke-linejoin="round"><path d="M100 50 L178 82 L100 114 L22 82 Z"/><path d="M48 94 L48 118 C48 126 62 132 78 135"/><path d="M152 94 L152 118 C152 126 138 132 122 135"/><path d="M72 138 L100 150 L128 138"/><path d="M62 150 L100 166 L138 150"/></g>
+          <path d="M178 82 L178 112" stroke="#EDB523" stroke-width="4" fill="none"/><circle cx="178" cy="117" r="5" fill="#EDB523"/><path d="M178 121 L172 140 L184 140 Z" fill="#EDB523"/>
+          <path d="M122 30 L110 80 L98 73 Z" fill="#EDB523"/><path d="M98 73 L110 80 L116 114 L104 88 L78 112 Z" fill="#0A3161"/><circle cx="105" cy="78" r="7.5" fill="#EDB523"/>
+        </svg>
+      </div>
+      <div class="w1">FORTUNE</div>
+      <div class="w2"><span class="y">INTERN</span> <span class="b">NETWORK</span></div>
+    </div>
+  </div>
+
+  <div class="lcontent">
+    <div class="clogo">
+      <div class="mk">
+        <svg viewBox="0 0 200 170" xmlns="http://www.w3.org/2000/svg">
+          <g fill="#EDB523"><path d="M100 4 L105 26 L95 26 Z"/><path d="M134 10 L130 32 L139 29 Z"/><path d="M162 26 L149 42 L156 47 Z"/><path d="M178 52 L158 58 L160 66 Z"/><path d="M66 10 L70 32 L61 29 Z"/><path d="M38 26 L51 42 L44 47 Z"/><path d="M22 52 L42 58 L40 66 Z"/></g>
+          <path d="M100 24 C124 24 141 40 145 62 L100 62 Z" fill="#EDB523"/><path d="M100 24 C76 24 59 40 55 62 L100 62 Z" fill="#EDB523"/>
+          <g fill="none" stroke="#EDB523" stroke-width="7" stroke-linejoin="round"><path d="M100 50 L178 82 L100 114 L22 82 Z"/><path d="M48 94 L48 118 C48 126 62 132 78 135"/><path d="M152 94 L152 118 C152 126 138 132 122 135"/><path d="M72 138 L100 150 L128 138"/><path d="M62 150 L100 166 L138 150"/></g>
+          <path d="M178 82 L178 112" stroke="#EDB523" stroke-width="4" fill="none"/><circle cx="178" cy="117" r="5" fill="#EDB523"/><path d="M178 121 L172 140 L184 140 Z" fill="#EDB523"/>
+          <path d="M122 30 L110 80 L98 73 Z" fill="#EDB523"/><path d="M98 73 L110 80 L116 114 L104 88 L78 112 Z" fill="#0A3161"/><circle cx="105" cy="78" r="7.5" fill="#EDB523"/>
+        </svg>
+      </div>
+      <div class="w1">FORTUNE</div>
+      <div class="w2"><span class="y">INTERN</span> <span class="b">NETWORK</span></div>
+    </div>
+
+    <div class="ctitle">CERTIFICATE</div>
+    <div class="csub">OF COMPLETION</div>
+    <div class="cpresent">This certificate is proudly presented to</div>
+
+    <div class="cname" data-field="name">Emmanuel Amoasi</div>
+    <div class="orn"><i></i></div>
+
+    <div class="cdone">has successfully completed the internship /<br>industrial attachment programme<br>&ldquo;<span data-field="prog">Software Engineering Intern — MTN Ghana</span>&rdquo;</div>
+    <div class="cgrade" data-field="grade">with commendable performance and exemplary conduct</div>
+    <div class="cmeta" data-field="inst">Kwame Nkrumah University of Science &amp; Technology (KNUST)</div>
+
+    <div class="sigrow">
+      <div class="scol"><div class="sval" data-field="issued">14th September, 2026</div><div class="srule"></div><div class="slab">Date Issued</div></div>
+
+      <div class="scol midc">
+        <!-- ====== REDRAWN HAND SIGNATURE — bold blue ink, true to the original ====== -->
+        <svg class="sigsvg" viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg" aria-label="Handwritten signature of Emmanuel Amoasi">
+          <!-- ink-bleed underlay for weight -->
+          <g fill="none" stroke="#2B3A9E" stroke-opacity=".28" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M112 22 C 84 6, 44 16, 30 48 C 16 82, 24 116, 58 130 C 88 142, 122 134, 132 112 C 136 102, 132 94, 124 92"/>
+            <path d="M66 46 C 74 38, 84 38, 88 44 M70 46 C 68 62, 66 80, 66 98 M68 72 C 74 68, 80 68, 84 70"/>
+            <path d="M84 98 C 88 84, 92 72, 96 66 C 99 76, 101 88, 103 98 C 107 84, 111 72, 115 66 C 118 76, 120 88, 122 98"/>
+            <path d="M108 64 C 102 44, 112 28, 122 32 C 132 36, 128 54, 114 60"/>
+            <path d="M128 100 C 140 92, 154 90, 168 94 C 159 99, 153 105, 155 112"/>
+          </g>
+          <!-- main pen stroke -->
+          <g fill="none" stroke="#2B3A9E" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+            <!-- encircling loop -->
+            <path d="M112 22 C 84 6, 44 16, 30 48 C 16 82, 24 116, 58 130 C 88 142, 122 134, 132 112 C 136 102, 132 94, 124 92"/>
+            <!-- E: hook, stem, arm -->
+            <path d="M66 46 C 74 38, 84 38, 88 44"/>
+            <path d="M70 46 C 68 62, 66 80, 66 98"/>
+            <path d="M68 72 C 74 68, 80 68, 84 70"/>
+            <!-- M zig-zag -->
+            <path d="M84 98 C 88 84, 92 72, 96 66 C 99 76, 101 88, 103 98 C 107 84, 111 72, 115 66 C 118 76, 120 88, 122 98"/>
+            <!-- cursive top loop + inner echo + descender -->
+            <path d="M108 64 C 102 44, 112 28, 122 32 C 132 36, 128 54, 114 60 C 110 62, 106 62, 104 60"/>
+            <path d="M112 44 C 117 40, 121 43, 119 49"/>
+            <path d="M112 62 C 110 74, 108 86, 106 96"/>
+            <!-- exit flick / tail -->
+            <path d="M128 100 C 140 92, 154 90, 168 94 C 159 99, 153 105, 155 112"/>
+          </g>
+        </svg>
+        <div class="srule"></div>
+        <div class="signame" data-field="sname">EMMANUEL AMOASI</div>
+        <div class="sigrole" data-field="srole">MANAGING DIRECTOR</div>
+      </div>
+
+      <div class="scol"><div class="sval" data-field="certno">FIN/CERT/2026/0001</div><div class="srule"></div><div class="slab">Certificate No.</div></div>
+    </div>
+
+    <div class="cverify"><span data-field="start">10th June, 2026</span> — <span data-field="end">11th September, 2026</span> · <span data-field="duration">Three (3) Months</span> &nbsp;◆&nbsp; Verify: <b>fortuneintern.gh@gmail.com</b> &nbsp;◆&nbsp; <b>+233 25 703 8948</b> &nbsp;◆&nbsp; Accra • Kumasi, Ghana</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  function ord(n){var s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
+  function finDate(d){var m=['January','February','March','April','May','June','July','August','September','October','November','December'];return ord(d.getDate())+' '+m[d.getMonth()]+', '+d.getFullYear();}
+  var issued = document.querySelector('input[data-field="issued"]');
+  if (issued && !issued.value) issued.value = finDate(new Date());
+
+  try {
+    var qs = new URLSearchParams(location.search);
+    document.querySelectorAll('.tgrid input').forEach(function (inp) {
+      var k = inp.getAttribute('data-field');
+      if (qs.has(k) && String(qs.get(k)).trim() !== '') inp.value = qs.get(k);
+    });
+  } catch (e) {}
+
+  function sync(f, v) {
+    document.querySelectorAll('[data-field="' + f + '"]').forEach(function (out) {
+      if (out.tagName === 'INPUT') return;
+      out.textContent = v;
+    });
+  }
+  document.querySelectorAll('.tgrid input').forEach(function (inp) {
+    var f = inp.getAttribute('data-field');
+    sync(f, inp.value);
+    inp.addEventListener('input', function () { sync(f, inp.value); });
+  });
+
+  var tt;
+  function toast(msg, err) {
+    var t = document.getElementById('toast');
+    t.textContent = msg; t.className = 'toast show' + (err ? ' err' : '');
+    clearTimeout(tt); tt = setTimeout(function () { t.classList.remove('show'); }, 2600);
+  }
+
+  function fileName(ext) {
+    var name = (document.querySelector('input[data-field="name"]').value || 'Intern').trim().replace(/\s+/g, '_');
+    var cert = (document.querySelector('input[data-field="certno"]').value || 'FIN').trim().replace(/[\/\\]/g, '-');
+    return 'FIN_Certificate_' + name + '_' + cert + '.' + ext;
+  }
+
+  function exportImage(type, btn) {
+    if (typeof html2canvas === 'undefined') { toast('Renderer not loaded — check internet connection', true); return; }
+    var sheet = document.getElementById('sheet');
+    var oldShadow = sheet.style.boxShadow;
+    sheet.style.boxShadow = 'none';
+    btn.disabled = true;
+    var label = btn.textContent;
+    btn.textContent = '⏳ RENDERING…';
+
+    function finish() { btn.disabled = false; btn.textContent = label; sheet.style.boxShadow = oldShadow; }
+
+    function doCapture() {
+      html2canvas(sheet, {
+        scale: 3,
+        backgroundColor: '#F8FAFC',
+        useCORS: true,
+        logging: false
+      }).then(function (canvas) {
+        var a = document.createElement('a');
+        if (type === 'png') { a.download = fileName('png'); a.href = canvas.toDataURL('image/png'); }
+        else { a.download = fileName('jpg'); a.href = canvas.toDataURL('image/jpeg', 0.95); }
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        toast(type.toUpperCase() + ' downloaded ✓');
+        finish();
+      }).catch(function (err) {
+        console.error(err);
+        toast('Export failed — try Print instead', true);
+        finish();
+      });
+    }
+
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(doCapture);
+    else doCapture();
+  }
+
+  document.getElementById('btnPng').addEventListener('click', function () { exportImage('png', this); });
+  document.getElementById('btnJpg').addEventListener('click', function () { exportImage('jpg', this); });
+  document.getElementById('btnPrint').addEventListener('click', function () { window.print(); });
+})();
+</script>
+</body>
+</html>

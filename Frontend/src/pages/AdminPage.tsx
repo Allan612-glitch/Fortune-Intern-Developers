@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import AsyncState from "../components/AsyncState";
 import {
   createAdminProgram,
+  approveApplicationCertificate,
   deleteAdminAnnouncement,
   exportAdminApplications,
   listAdminApplications,
@@ -11,6 +12,7 @@ import {
   publishAnnouncement,
   removeAdminProgram,
   saveResumeDownload,
+  saveSupervisorAssessmentDownload,
   setApplicationStatus,
   setUserSuspension,
   updateAdminProgram,
@@ -118,6 +120,19 @@ export default function AdminPage() {
       setError("");
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to update application status.");
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  const approveCertificate = async (application: BackendApplication) => {
+    setBusyKey(`certificate-${application.id}`);
+    try {
+      const updated = await approveApplicationCertificate(application.id);
+      setApplications((current) => current.map((row) => row.id === updated.id ? updated : row));
+      setError("");
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to approve certificate.");
     } finally {
       setBusyKey(null);
     }
@@ -612,6 +627,34 @@ export default function AdminPage() {
                     Preview
                   </button>
                   {app.resume_filename && <button onClick={() => void saveResumeDownload(app.id, true).catch((requestError) => setError(requestError instanceof Error ? requestError.message : "Unable to download resume."))} className="text-xs font-semibold text-primary underline px-1 py-2 lg:py-0">Resume</button>}
+                  {app.supervisor_assessment_filename && (
+                    <button
+                      onClick={() => void saveSupervisorAssessmentDownload(app.id).catch((requestError) => setError(requestError instanceof Error ? requestError.message : "Unable to download supervisor assessment."))}
+                      className="text-xs font-semibold text-primary underline px-1 py-2 lg:py-0"
+                    >
+                      Review assessment
+                    </button>
+                  )}
+                  {app.certificate_approved ? (
+                    <span className="text-xs font-semibold text-emerald-700 px-1 py-2 lg:py-0">Certificate approved</span>
+                  ) : app.supervisor_assessment_filename && app.status.toLowerCase() === "accepted" ? (
+                    <button
+                      onClick={() => void approveCertificate(app)}
+                      disabled={busyKey === `certificate-${app.id}`}
+                      className="text-xs px-3 py-2 lg:py-1.5 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors font-semibold disabled:cursor-wait disabled:opacity-60"
+                    >
+                      {busyKey === `certificate-${app.id}` ? "Approving..." : "Approve certificate"}
+                    </button>
+                  ) : null}
+                  {app.status.toLowerCase() === "accepted" && !app.documents_sent && (
+                    <button
+                      onClick={() => void updateStatus(app, "accepted")}
+                      disabled={busyKey === `app-${app.id}`}
+                      className="text-xs px-3 py-2 lg:py-1.5 rounded-lg bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors font-semibold disabled:cursor-wait disabled:opacity-60"
+                    >
+                      {busyKey === `app-${app.id}` ? "Sending..." : "Send assessment form"}
+                    </button>
+                  )}
                   {!(["accepted", "rejected"] as string[]).includes(app.status.toLowerCase()) && (
                     <>
                       <button onClick={() => void updateStatus(app, "accepted")} disabled={busyKey === `app-${app.id}`} className="text-xs px-3 py-2 lg:py-1.5 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors font-semibold disabled:cursor-wait disabled:opacity-60">

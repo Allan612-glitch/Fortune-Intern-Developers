@@ -1,11 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AsyncState from "../components/AsyncState";
 import {
   fromBackendApplication,
   type ApplicationRecord,
   type ApplicationStatus,
 } from "../services/applications";
-import { listApplications, saveResumeDownload } from "../services/platform";
+import {
+  listApplications,
+  openCompletionCertificate,
+  saveResumeDownload,
+  uploadSupervisorAssessment,
+} from "../services/platform";
 
 const statuses: Array<ApplicationStatus | "All"> = [
   "All",
@@ -202,6 +207,7 @@ export default function ApplicationsPage() {
         <TrackingModal
           application={selected}
           onClose={() => setSelected(null)}
+          onAssessmentUploaded={refresh}
         />
       )}
     </div>
@@ -272,15 +278,36 @@ function ApplicationCard({
 function TrackingModal({
   application,
   onClose,
+  onAssessmentUploaded,
 }: {
   application: ApplicationRecord;
   onClose: () => void;
+  onAssessmentUploaded: () => Promise<void>;
 }) {
+  const [assessmentFile, setAssessmentFile] = useState<File | null>(null);
+  const [assessmentBusy, setAssessmentBusy] = useState(false);
   const [downloadError, setDownloadError] = useState("");
+  const [assessmentError, setAssessmentError] = useState("");
+  const assessmentInput = useRef<HTMLInputElement>(null);
   const current = stageIndex(application);
   const paymentSuccessful =
     application.paymentStatus === "Payment Successful" ||
     (application.paymentStatus as string) === "Paid";
+  const submitAssessment = async () => {
+    if (!assessmentFile) return;
+    setAssessmentBusy(true);
+    setAssessmentError("");
+    try {
+      await uploadSupervisorAssessment(application.reference, assessmentFile);
+      setAssessmentFile(null);
+      if (assessmentInput.current) assessmentInput.current.value = "";
+      await onAssessmentUploaded();
+    } catch (error) {
+      setAssessmentError(error instanceof Error ? error.message : "Unable to submit supervisor assessment.");
+    } finally {
+      setAssessmentBusy(false);
+    }
+  };
   return (
     <div
       className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm p-4 flex items-center justify-center"
@@ -409,6 +436,55 @@ function TrackingModal({
                 </button>
               )}
               {downloadError && <p className="mt-2 text-xs text-red-600" role="alert">{downloadError}</p>}
+            </div>
+            <div className="border-t border-border pt-4">
+              <h3 className="font-semibold text-sm mb-2">Supervisor Assessment</h3>
+              {application.status !== "Accepted" ? (
+                <p className="text-xs text-muted-foreground">
+                  Your supervisor assessment can be submitted after your application is accepted.
+                </p>
+              ) : !application.documentsSent ? (
+                <p className="text-xs text-amber-700">
+                  Your assessment form is being prepared. You can upload it here once it has been sent.
+                </p>
+              ) : application.supervisorAssessmentName ? (
+                <>
+                  <p className="text-sm font-medium break-all">{application.supervisorAssessmentName}</p>
+                  {application.certificateApproved ? (
+                    <button
+                      onClick={() => void openCompletionCertificate(application.reference).catch((error) => setAssessmentError(error instanceof Error ? error.message : "Unable to open certificate."))}
+                      className="mt-3 px-4 py-2 rounded-lg bg-emerald-700 text-white text-xs font-semibold hover:bg-emerald-800"
+                    >
+                      Download certificate
+                    </button>
+                  ) : (
+                    <p className="text-xs text-amber-700 mt-2">
+                      Submitted. An admin must review your assessment before the certificate is available.
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Upload the completed assessment from your host supervisor for admin review.
+                  </p>
+                  <input
+                    ref={assessmentInput}
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    onChange={(event) => setAssessmentFile(event.target.files?.[0] || null)}
+                    className="block w-full text-xs text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-muted file:px-3 file:py-2 file:text-xs file:font-semibold"
+                  />
+                  <button
+                    onClick={() => void submitAssessment()}
+                    disabled={!assessmentFile || assessmentBusy}
+                    className="mt-3 px-4 py-2 rounded-lg bg-primary text-white text-xs font-semibold disabled:opacity-50"
+                  >
+                    {assessmentBusy ? "Submitting..." : "Submit supervisor assessment"}
+                  </button>
+                </>
+              )}
+              {assessmentError && <p className="mt-2 text-xs text-red-600" role="alert">{assessmentError}</p>}
             </div>
           </div>
         </div>
