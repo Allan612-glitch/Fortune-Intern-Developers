@@ -1,4 +1,5 @@
 """Personalize the supplied HTML completion-certificate design."""
+from datetime import date, datetime
 from html import escape
 from pathlib import Path
 import re
@@ -9,6 +10,14 @@ _INPUT_FIELD = re.compile(
     r'(<input\b[^>]*\bdata-field="([^"]+)"[^>]*\bvalue=")[^"]*(")',
     re.IGNORECASE,
 )
+
+
+def format_certificate_date(value: date | datetime) -> str:
+    day = value.day
+    suffix = "th" if 11 <= day % 100 <= 13 else {
+        1: "st", 2: "nd", 3: "rd"
+    }.get(day % 10, "th")
+    return f"{day}{suffix} {value.strftime('%B')}, {value.year}"
 
 
 def build_completion_certificate_html(fields: dict[str, str]) -> str:
@@ -26,6 +35,16 @@ def build_completion_certificate_html(fields: dict[str, str]) -> str:
     if seen_fields != fields.keys():
         missing = sorted(fields.keys() - seen_fields)
         raise RuntimeError(f"Certificate template is missing input fields: {', '.join(missing)}")
+
+    download_styles = """<style>
+body { background: #fff; padding: 0; }
+.toolbar { display: none !important; }
+.sheet { box-shadow: none; }
+</style>
+"""
+    if "</head>" not in rendered:
+        raise RuntimeError("Certificate template is missing its closing head tag")
+    rendered = rendered.replace("</head>", f"{download_styles}</head>")
 
     auto_download = """<script>
 window.addEventListener('load', function () {

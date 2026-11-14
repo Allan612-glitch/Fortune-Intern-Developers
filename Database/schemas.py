@@ -1,4 +1,6 @@
 
+from datetime import date
+
 from pydantic import BaseModel, Field
 
 
@@ -208,6 +210,8 @@ class ApplicationResponse(BaseModel):
     documents_sent: bool = False
     supervisor_assessment_filename: str | None = None
     certificate_approved: bool = False
+    internship_start_date: date | None = None
+    internship_end_date: date | None = None
     applicant_name: str | None = None
     gender: str | None = None
     student_index_number: str | None = None
@@ -237,6 +241,11 @@ class LetterVerificationResponse(BaseModel):
 
 class AdminApplicationStatusRequest(BaseModel):
     status: str
+
+
+class AdminCertificateApprovalRequest(BaseModel):
+    internship_start_date: date
+    internship_end_date: date
 
 
 class AnnouncementCreateRequest(BaseModel):

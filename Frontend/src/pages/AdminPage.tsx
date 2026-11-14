@@ -75,6 +75,9 @@ export default function AdminPage() {
   const [exportLimit, setExportLimit] = useState<10 | 25 | 50>(50);
   const [exporting, setExporting] = useState(false);
   const [previewApplication, setPreviewApplication] = useState<BackendApplication | null>(null);
+  const [certificateApplication, setCertificateApplication] = useState<BackendApplication | null>(null);
+  const [internshipStartDate, setInternshipStartDate] = useState("");
+  const [internshipEndDate, setInternshipEndDate] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -125,11 +128,16 @@ export default function AdminPage() {
     }
   };
 
-  const approveCertificate = async (application: BackendApplication) => {
+  const approveCertificate = async (
+    application: BackendApplication,
+    startDate: string,
+    endDate: string,
+  ) => {
     setBusyKey(`certificate-${application.id}`);
     try {
-      const updated = await approveApplicationCertificate(application.id);
+      const updated = await approveApplicationCertificate(application.id, startDate, endDate);
       setApplications((current) => current.map((row) => row.id === updated.id ? updated : row));
+      setCertificateApplication(null);
       setError("");
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to approve certificate.");
@@ -639,11 +647,16 @@ export default function AdminPage() {
                     <span className="text-xs font-semibold text-emerald-700 px-1 py-2 lg:py-0">Certificate approved</span>
                   ) : app.supervisor_assessment_filename && app.status.toLowerCase() === "accepted" ? (
                     <button
-                      onClick={() => void approveCertificate(app)}
+                      onClick={() => {
+                        setCertificateApplication(app);
+                        setInternshipStartDate("");
+                        setInternshipEndDate("");
+                        setError("");
+                      }}
                       disabled={busyKey === `certificate-${app.id}`}
                       className="text-xs px-3 py-2 lg:py-1.5 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors font-semibold disabled:cursor-wait disabled:opacity-60"
                     >
-                      {busyKey === `certificate-${app.id}` ? "Approving..." : "Approve certificate"}
+                      Review dates and approve
                     </button>
                   ) : null}
                   {app.status.toLowerCase() === "accepted" && !app.documents_sent && (
@@ -962,6 +975,136 @@ export default function AdminPage() {
               </button>
             </div>
           </section>
+        </div>
+      )}
+      {certificateApplication && (
+        <div
+          className="fixed inset-0 z-[110] bg-black/55 backdrop-blur-sm p-4 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="certificate-approval-title"
+        >
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void approveCertificate(certificateApplication, internshipStartDate, internshipEndDate);
+            }}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 sm:p-7"
+          >
+            <h2 id="certificate-approval-title" className="font-bold text-lg">
+              Confirm internship dates
+            </h2>
+            <p className="text-sm text-muted-foreground mt-2">
+              Enter the start and end dates shown on the supervisor assessment you reviewed. These dates will appear on the certificate.
+            </p>
+            <div className="grid sm:grid-cols-2 gap-3 mt-5">
+              <label className="text-xs font-semibold">
+                Start date
+                <input
+                  type="date"
+                  required
+                  value={internshipStartDate}
+                  onChange={(event) => setInternshipStartDate(event.target.value)}
+                  max={internshipEndDate || undefined}
+                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm font-normal"
+                />
+              </label>
+              <label className="text-xs font-semibold">
+                End date
+                <input
+                  type="date"
+                  required
+                  value={internshipEndDate}
+                  onChange={(event) => setInternshipEndDate(event.target.value)}
+                  min={internshipStartDate || undefined}
+                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm font-normal"
+                />
+              </label>
+            </div>
+            {error && <p className="mt-4 text-sm text-red-600" role="alert">{error}</p>}
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-6">
+              <button
+                type="button"
+                onClick={() => setCertificateApplication(null)}
+                disabled={busyKey === `certificate-${certificateApplication.id}`}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-lg border border-border text-sm font-semibold disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={busyKey === `certificate-${certificateApplication.id}`}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-emerald-700 text-white text-sm font-semibold hover:bg-emerald-800 disabled:opacity-60"
+              >
+                {busyKey === `certificate-${certificateApplication.id}` ? "Approving..." : "Approve and notify applicant"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+      {certificateApplication && (
+        <div
+          className="fixed inset-0 z-[110] bg-black/55 backdrop-blur-sm p-4 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="certificate-approval-title"
+        >
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void approveCertificate(certificateApplication, internshipStartDate, internshipEndDate);
+            }}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 sm:p-7"
+          >
+            <h2 id="certificate-approval-title" className="font-bold text-lg">
+              Confirm internship dates
+            </h2>
+            <p className="text-sm text-muted-foreground mt-2">
+              Enter the start and end dates shown on the supervisor assessment you reviewed. These dates will appear on the certificate.
+            </p>
+            <div className="grid sm:grid-cols-2 gap-3 mt-5">
+              <label className="text-xs font-semibold">
+                Start date
+                <input
+                  type="date"
+                  required
+                  value={internshipStartDate}
+                  onChange={(event) => setInternshipStartDate(event.target.value)}
+                  max={internshipEndDate || undefined}
+                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm font-normal"
+                />
+              </label>
+              <label className="text-xs font-semibold">
+                End date
+                <input
+                  type="date"
+                  required
+                  value={internshipEndDate}
+                  onChange={(event) => setInternshipEndDate(event.target.value)}
+                  min={internshipStartDate || undefined}
+                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm font-normal"
+                />
+              </label>
+            </div>
+            {error && <p className="mt-4 text-sm text-red-600" role="alert">{error}</p>}
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-6">
+              <button
+                type="button"
+                onClick={() => setCertificateApplication(null)}
+                disabled={busyKey === `certificate-${certificateApplication.id}`}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-lg border border-border text-sm font-semibold disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={busyKey === `certificate-${certificateApplication.id}`}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-emerald-700 text-white text-sm font-semibold hover:bg-emerald-800 disabled:opacity-60"
+              >
+                {busyKey === `certificate-${certificateApplication.id}` ? "Approving..." : "Approve and notify applicant"}
+              </button>
+            </div>
+          </form>
         </div>
       )}
       {previewApplication && (

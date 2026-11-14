@@ -23,6 +23,8 @@ export interface BackendApplication {
   documents_sent: boolean;
   supervisor_assessment_filename: string | null;
   certificate_approved: boolean;
+  internship_start_date: string | null;
+  internship_end_date: string | null;
   applicant_name: string | null;
   gender: string | null;
   student_index_number: string | null;
@@ -161,10 +163,20 @@ export function setApplicationStatus(id: string, status: string) {
   });
 }
 
-export function approveApplicationCertificate(id: string) {
+export function approveApplicationCertificate(
+  id: string,
+  internshipStartDate: string,
+  internshipEndDate: string,
+) {
   return apiRequest<BackendApplication>(
     `/api/admin/applications/${id}/certificate-approval`,
-    { method: "POST" },
+    {
+      method: "POST",
+      body: JSON.stringify({
+        internship_start_date: internshipStartDate,
+        internship_end_date: internshipEndDate,
+      }),
+    },
   );
 }
 

@@ -30,6 +30,7 @@ from Database.models import (
 )
 from Database.schemas import (
 	AdminApplicationStatusRequest,
+	AdminCertificateApprovalRequest,
 	ApplicationStatusHistoryResponse,
 	AdminProgramCreateRequest,
 	AdminProgramUpdateRequest,
@@ -144,6 +145,8 @@ def list_admin_applications(
 			documents_sent=row.documents_sent,
 			supervisor_assessment_filename=getattr(row, "supervisor_assessment_filename", None),
 			certificate_approved=getattr(row, "certificate_approved", False),
+			internship_start_date=getattr(row, "internship_start_date", None),
+			internship_end_date=getattr(row, "internship_end_date", None),
 			applicant_name=row.applicant_name, gender=row.gender,
 			student_index_number=row.student_index_number, year_of_study=row.year_of_study,
 			suggested_company=row.suggested_company,
@@ -348,6 +351,7 @@ def download_supervisor_assessment(
 @router.post("/applications/{application_id}/certificate-approval", response_model=ApplicationResponse)
 def approve_application_certificate(
 	application_id: str,
+	payload: AdminCertificateApprovalRequest,
 	request: Request,
 	admin: user = Depends(get_current_admin),
 	session: Session = Depends(get_session),
@@ -363,6 +367,8 @@ def approve_application_certificate(
 			status_code=409,
 			detail="An accepted application with a submitted supervisor assessment is required",
 		)
+	if payload.internship_end_date < payload.internship_start_date:
+		raise HTTPException(status_code=422, detail="Internship end date cannot be before its start date")
 	if row.certificate_approved:
 		raise HTTPException(status_code=409, detail="The completion certificate is already approved")
 
@@ -390,6 +396,8 @@ def approve_application_certificate(
 
 	row.certificate_approved = True
 	row.certificate_approved_at = datetime.now(timezone.utc)
+	row.internship_start_date = payload.internship_start_date
+	row.internship_end_date = payload.internship_end_date
 	session.add(row)
 	session.add(notification(
 		user_id=row.user_id,
@@ -410,6 +418,8 @@ def approve_application_certificate(
 		documents_sent=row.documents_sent,
 		supervisor_assessment_filename=getattr(row, "supervisor_assessment_filename", None),
 		certificate_approved=getattr(row, "certificate_approved", False),
+		internship_start_date=getattr(row, "internship_start_date", None),
+		internship_end_date=getattr(row, "internship_end_date", None),
 		applicant_name=row.applicant_name, gender=row.gender,
 		student_index_number=row.student_index_number, year_of_study=row.year_of_study,
 		suggested_company=row.suggested_company,
@@ -591,6 +601,8 @@ def update_application_status(application_id: str, payload: AdminApplicationStat
 		documents_sent=row.documents_sent,
 		supervisor_assessment_filename=getattr(row, "supervisor_assessment_filename", None),
 		certificate_approved=getattr(row, "certificate_approved", False),
+		internship_start_date=getattr(row, "internship_start_date", None),
+		internship_end_date=getattr(row, "internship_end_date", None),
 		applicant_name=row.applicant_name, gender=row.gender,
 		student_index_number=row.student_index_number, year_of_study=row.year_of_study,
 		suggested_company=row.suggested_company,
