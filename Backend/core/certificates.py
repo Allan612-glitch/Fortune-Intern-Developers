@@ -10,6 +10,13 @@ _INPUT_FIELD = re.compile(
     r'(<input\b[^>]*\bdata-field="([^"]+)"[^>]*\bvalue=")[^"]*(")',
     re.IGNORECASE,
 )
+_OUTPUT_FIELD = re.compile(
+    r'(?P<opening><(?P<tag>(?!input\b)[a-z][\w:-]*)\b'
+    r'(?=[^>]*\bdata-field="(?P<field>[^"]+)")[^>]*>)'
+    r'.*?'
+    r'(?P<closing></(?P=tag)\s*>)',
+    re.IGNORECASE | re.DOTALL,
+)
 
 
 def format_certificate_date(value: date | datetime) -> str:
@@ -35,6 +42,23 @@ def build_completion_certificate_html(fields: dict[str, str]) -> str:
     if seen_fields != fields.keys():
         missing = sorted(fields.keys() - seen_fields)
         raise RuntimeError(f"Certificate template is missing input fields: {', '.join(missing)}")
+
+    seen_output_fields: set[str] = set()
+
+    def replace_output(match: re.Match[str]) -> str:
+        field = match.group("field")
+        if field not in fields:
+            return match.group(0)
+        seen_output_fields.add(field)
+        return (
+            f"{match.group('opening')}{escape(fields[field], quote=False)}"
+            f"{match.group('closing')}"
+        )
+
+    rendered = _OUTPUT_FIELD.sub(replace_output, rendered)
+    if seen_output_fields != fields.keys():
+        missing = sorted(fields.keys() - seen_output_fields)
+        raise RuntimeError(f"Certificate template is missing display fields: {', '.join(missing)}")
 
     download_styles = """<style>
 body { background: #fff; padding: 0; }
