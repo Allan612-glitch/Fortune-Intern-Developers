@@ -15,7 +15,10 @@ from sqlmodel import Session, or_, select
 from Backend.api.deps import get_current_user
 from Backend.core import age, storage
 from Backend.core.audit import record_audit_event
-from Backend.core.certificates import build_completion_certificate_html
+from Backend.core.certificates import (
+    build_completion_certificate_html,
+    format_certificate_date,
+)
 from Backend.core.mailer import send_application_received_email
 from Backend.core.rate_limit import enforce_rate_limit
 from Backend.core.uploads import read_validated_document
@@ -88,6 +91,8 @@ def serialize_application(row: application, program_name: str) -> ApplicationRes
         documents_sent=row.documents_sent,
         supervisor_assessment_filename=getattr(row, "supervisor_assessment_filename", None),
         certificate_approved=getattr(row, "certificate_approved", False),
+        internship_start_date=getattr(row, "internship_start_date", None),
+        internship_end_date=getattr(row, "internship_end_date", None),
         applicant_name=row.applicant_name,
         gender=row.gender,
         student_index_number=row.student_index_number,
@@ -594,19 +599,18 @@ def download_completion_certificate(
     )
     certificate_number = f"FIN/CERT/{row.created_at.year}/{row.id.hex[:8].upper()}"
     issued_date = getattr(row, "certificate_approved_at", None) or datetime.now(timezone.utc)
-    ordinal = "th" if 11 <= issued_date.day % 100 <= 13 else {
-        1: "st", 2: "nd", 3: "rd"
-    }.get(issued_date.day % 10, "th")
+    if not row.internship_start_date or not row.internship_end_date:
+        raise HTTPException(status_code=409, detail="Certificate internship dates are missing")
     html_content = build_completion_certificate_html({
         "name": row.applicant_name or account.name,
         "inst": row.applicant_institution or "Not specified",
         "prog": f"{program_record.name if program_record else 'Internship'} — {company}",
-        "start": "Not specified",
-        "end": "Not specified",
+        "start": format_certificate_date(row.internship_start_date),
+        "end": format_certificate_date(row.internship_end_date),
         "duration": program_record.duration if program_record else "Not specified",
         "grade": "with commendable performance and exemplary conduct",
         "certno": certificate_number,
-        "issued": f"{issued_date.day}{ordinal} {issued_date.strftime('%B')}, {issued_date.year}",
+        "issued": format_certificate_date(issued_date),
         "sname": "Emmanuel Amoasi",
         "srole": "Managing Director",
     })

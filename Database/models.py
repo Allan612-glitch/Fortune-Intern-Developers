@@ -83,6 +83,8 @@ class application(SQLModel, table=True):
     supervisor_assessment_path: str | None = Field(default=None, sa_column=Column("supervisor_assessment_path", String))
     certificate_approved: bool = Field(default=False, sa_column=Column("certificate_approved", Boolean, nullable=False, default=False, server_default=text("false")))
     certificate_approved_at: datetime | None = Field(default=None, sa_column=Column("certificate_approved_at", DateTime(timezone=True), nullable=True))
+    internship_start_date: date | None = Field(default=None, sa_column=Column("internship_start_date", Date, nullable=True))
+    internship_end_date: date | None = Field(default=None, sa_column=Column("internship_end_date", Date, nullable=True))
     applicant_institution: str | None = Field(default=None, sa_column=Column("applicant_institution", String))
     applicant_course: str | None = Field(default=None, sa_column=Column("applicant_course", String))
     applicant_contact: str | None = Field(default=None, sa_column=Column("applicant_contact", String))
