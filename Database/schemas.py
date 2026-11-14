@@ -205,6 +205,9 @@ class ApplicationResponse(BaseModel):
     program_name: str
     status: str
     resume_filename: str | None = None
+    documents_sent: bool = False
+    supervisor_assessment_filename: str | None = None
+    certificate_approved: bool = False
     applicant_name: str | None = None
     gender: str | None = None
     student_index_number: str | None = None
