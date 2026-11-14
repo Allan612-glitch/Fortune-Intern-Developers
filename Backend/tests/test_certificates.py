@@ -35,7 +35,15 @@ class TestCompletionCertificateTemplate(unittest.TestCase):
 
         self.assertIn("CERTIFICATE</div>", rendered)
         self.assertIn('data-field="name" value="Alex &lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;"', rendered)
+        self.assertIn(
+            '<div class="cname" data-field="name">Alex &lt;script&gt;alert("x")&lt;/script&gt;</div>',
+            rendered,
+        )
         self.assertIn("data-field=\"certno\" value=\"FIN/CERT/2026/0001\"", rendered)
+        self.assertIn(
+            '<div class="sval" data-field="certno">FIN/CERT/2026/0001</div>',
+            rendered,
+        )
         self.assertIn("window.addEventListener('load'", rendered)
         self.assertIn(".toolbar { display: none !important; }", rendered)
         self.assertIn("body { background: #fff; padding: 0; }", rendered)
@@ -102,12 +110,33 @@ class TestCertificateApprovalGate(unittest.TestCase):
         rendered = response.body.decode("utf-8")
         self.assertEqual(response.media_type, "text/html")
         self.assertIn('data-field="name" value="Alex Example"', rendered)
+        self.assertIn('<div class="cname" data-field="name">Alex Example</div>', rendered)
         self.assertIn("Software Engineering Intern — Test Company", rendered)
+        self.assertIn(
+            '<span data-field="prog">Software Engineering Intern — Test Company</span>',
+            rendered,
+        )
         self.assertIn("Test University", rendered)
+        self.assertIn(
+            '<div class="cmeta" data-field="inst">Test University</div>',
+            rendered,
+        )
         self.assertIn("FIN/CERT/2026/", rendered)
         self.assertIn('data-field="issued" value="12th November, 2026"', rendered)
+        self.assertIn(
+            '<div class="sval" data-field="issued">12th November, 2026</div>',
+            rendered,
+        )
         self.assertIn('data-field="start" value="10th June, 2026"', rendered)
+        self.assertIn(
+            '<span data-field="start">10th June, 2026</span>',
+            rendered,
+        )
         self.assertIn('data-field="end" value="11th September, 2026"', rendered)
+        self.assertIn(
+            '<span data-field="end">11th September, 2026</span>',
+            rendered,
+        )
 
     def test_admin_cannot_approve_without_a_submitted_assessment(self):
         row = SimpleNamespace(
