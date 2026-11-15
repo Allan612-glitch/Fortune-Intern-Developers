@@ -1,4 +1,4 @@
-"""Email delivery for application receipts and internship documents."""
+"""Email delivery for application receipts, announcements, and internship documents."""
 from html import escape
 import logging
 
@@ -7,6 +7,38 @@ import resend
 from Backend.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def send_announcement_email(
+    *,
+    to_email: str,
+    title: str,
+    content: str,
+) -> None:
+    if not all((settings.resend_api_key, settings.resend_from_email)):
+        logger.warning(
+            "Skipping announcement email: RESEND_API_KEY/RESEND_FROM_EMAIL not configured"
+        )
+        return
+
+    safe_title = escape(title)
+    safe_content = escape(content).replace("\n", "<br>")
+    resend.api_key = settings.resend_api_key
+    try:
+        resend.Emails.send({
+            "from": settings.resend_from_email,
+            "to": [to_email],
+            "subject": "New announcement from Fortune Intern Network",
+            "text": f"{title}\n\n{content}\n\nFortune Intern Network",
+            "html": (
+                "<h1>New announcement</h1>"
+                f"<h2>{safe_title}</h2>"
+                f"<p>{safe_content}</p>"
+                "<p>Fortune Intern Network</p>"
+            ),
+        })
+    except Exception:
+        logger.exception("Failed to send announcement email to %s", to_email)
 
 
 def send_application_received_email(

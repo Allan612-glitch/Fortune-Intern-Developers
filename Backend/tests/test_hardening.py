@@ -16,6 +16,7 @@ from sqlmodel import Session, SQLModel, select
 
 from Backend.api.routes.admin import (
     _application_reference,
+    create_announcement,
     delete_announcement,
     remove_program,
     update_application_status,
@@ -52,8 +53,10 @@ from Database.models import (
     rate_limit_bucket,
     registration_verification,
     user,
+    user_profile,
 )
 from Database.schemas import (
+    AnnouncementCreateRequest,
     AdminApplicationStatusRequest,
     AdminProgramUpdateRequest,
     LoginRequest,
@@ -657,6 +660,52 @@ class TestAdminAnnouncementRemoval(unittest.TestCase):
         self.assertIsNone(result)
         session.delete.assert_called_once_with(row)
         session.commit.assert_called_once()
+
+
+class TestAdminAnnouncementEmail(unittest.TestCase):
+    def test_sends_announcement_only_to_enabled_or_default_opt_in_users(self):
+        engine = create_engine("sqlite://")
+        SQLModel.metadata.create_all(engine)
+        enabled = user(name="Enabled", email="enabled@example.test")
+        disabled = user(name="Disabled", email="disabled@example.test")
+        default_enabled = user(name="Default", email="default@example.test")
+        admin = user(name="Admin", email="admin@example.test")
+        expected_notification_ids = {enabled.id, disabled.id, default_enabled.id, admin.id}
+
+        with Session(engine) as session:
+            session.add_all([enabled, disabled, default_enabled, admin])
+            session.add_all([
+                user_profile(user_id=enabled.id, email_notifications=True),
+                user_profile(user_id=disabled.id, email_notifications=False),
+            ])
+            session.commit()
+
+            with (
+                patch("Backend.api.routes.admin.record_audit_event"),
+                patch("Backend.api.routes.admin.send_announcement_email") as send_email,
+            ):
+                response = create_announcement(
+                    AnnouncementCreateRequest(title=" Service update ", content=" Details "),
+                    SimpleNamespace(),
+                    admin,
+                    session,
+                )
+
+            notified_user_ids = {
+                row.user_id for row in session.exec(select(notification)).all()
+            }
+
+        self.assertEqual(response.title, "Service update")
+        self.assertEqual(response.content, "Details")
+        self.assertEqual(
+            notified_user_ids,
+            expected_notification_ids,
+        )
+        self.assertEqual(
+            {call.kwargs["to_email"] for call in send_email.call_args_list},
+            {"enabled@example.test", "default@example.test", "admin@example.test"},
+        )
+        self.assertTrue(all(call.kwargs["title"] == "Service update" for call in send_email.call_args_list))
 
 
 class TestProgramLookup(unittest.TestCase):

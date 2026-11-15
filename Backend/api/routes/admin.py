@@ -18,6 +18,7 @@ from Backend.core.config import settings
 from Backend.core.mailer import (
 	send_application_documents_email,
 	send_certificate_available_email,
+	send_announcement_email,
 )
 from Backend.database import get_session
 from Database.models import (
@@ -27,6 +28,7 @@ from Database.models import (
 	notification,
 	program,
 	user,
+	user_profile,
 )
 from Database.schemas import (
 	AdminApplicationStatusRequest,
@@ -672,9 +674,20 @@ def create_announcement(payload: AnnouncementCreateRequest, request: Request, ad
 			target_id=str(row.id),
 			read=False,
 		))
+	email_recipients = session.exec(
+		select(user)
+		.outerjoin(user_profile, user_profile.user_id == user.id)
+		.where(or_(user_profile.email_notifications.is_(True), user_profile.id.is_(None)))
+	).all()
 	record_audit_event(session, request, actor_id=admin.id, action="announcement.create", object_type="announcement", object_id=str(row.id))
 	session.commit()
 	session.refresh(row)
+	for recipient in email_recipients:
+		send_announcement_email(
+			to_email=recipient.email,
+			title=row.title,
+			content=row.content,
+		)
 	return AnnouncementResponse(id=str(row.id), title=row.title, content=row.content, created_at=row.created_at.isoformat())
 
 
