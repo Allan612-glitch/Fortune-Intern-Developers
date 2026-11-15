@@ -135,10 +135,6 @@ export function listAnnouncements() {
   return apiRequest<Announcement[]>("/api/announcements");
 }
 
-export function listAdminUniversities() {
-  return apiRequest<string[]>("/api/admin/universities");
-}
-
 export function listAdminUsers() {
   return apiRequest<AdminUser[]>("/api/admin/users");
 }

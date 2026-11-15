@@ -722,12 +722,12 @@ class TestAdminAnnouncementEmail(unittest.TestCase):
             session.add_all([
                 user_profile(
                     user_id=enabled.id,
-                    university="Central University",
+                    university="Kwame Nkrumah University of Science and Technology",
                     email_notifications=True,
                 ),
                 user_profile(
                     user_id=disabled.id,
-                    university="Central University",
+                    university="KNUST",
                     email_notifications=False,
                 ),
                 user_profile(
@@ -737,7 +737,7 @@ class TestAdminAnnouncementEmail(unittest.TestCase):
                 ),
                 user_profile(
                     user_id=admin.id,
-                    university="Central University",
+                    university="Kwame Nkrumah University of Science and Technology",
                     email_notifications=True,
                 ),
             ])
@@ -751,7 +751,7 @@ class TestAdminAnnouncementEmail(unittest.TestCase):
                     AnnouncementCreateRequest(
                         title="University update",
                         content="Details",
-                        target_university="Central University",
+                        target_university="KNUST",
                     ),
                     SimpleNamespace(),
                     admin,
@@ -762,7 +762,7 @@ class TestAdminAnnouncementEmail(unittest.TestCase):
                 row.user_id for row in session.exec(select(notification)).all()
             }
 
-        self.assertEqual(response.target_university, "Central University")
+        self.assertEqual(response.target_university, "KNUST")
         self.assertEqual(notified_user_ids, expected_student_ids)
         self.assertEqual(
             [call.kwargs["to_email"] for call in send_email.call_args_list],
@@ -779,9 +779,9 @@ class TestAnnouncementAudienceListing(unittest.TestCase):
         admin = user(name="Admin", email="admin@example.test", is_admin=True)
         global_announcement = announcement(title="For everyone", content="Details")
         central_announcement = announcement(
-            title="Central only",
+            title="KNUST only",
             content="Details",
-            target_university="Central University",
+            target_university="Kwame Nkrumah University of Science and Technology",
         )
         other_announcement = announcement(
             title="Other only",
@@ -794,7 +794,7 @@ class TestAnnouncementAudienceListing(unittest.TestCase):
                 central_student,
                 other_student,
                 admin,
-                user_profile(user_id=central_student.id, university="Central University"),
+                user_profile(user_id=central_student.id, university="KNUST"),
                 user_profile(user_id=other_student.id, university="Other University"),
                 global_announcement,
                 central_announcement,
@@ -822,10 +822,10 @@ class TestAnnouncementAudienceListing(unittest.TestCase):
             }
 
         self.assertEqual(anonymous_titles, {"For everyone"})
-        self.assertEqual(central_titles, {"For everyone", "Central only"})
+        self.assertEqual(central_titles, {"For everyone", "KNUST only"})
         self.assertEqual(
             admin_titles,
-            {"For everyone", "Central only", "Other only"},
+            {"For everyone", "KNUST only", "Other only"},
         )
 
 

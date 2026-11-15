@@ -2,18 +2,17 @@ import { useCallback, useEffect, useState } from "react";
 import AsyncState from "../components/AsyncState";
 import type { AppUser } from "../App";
 import {
-  listAdminUniversities,
   listAnnouncements,
   publishAnnouncement,
   type Announcement,
 } from "../services/platform";
+import { ghanaUniversities } from "../constants/universities";
 
 export default function AnnouncementsPage({ user }: { user: AppUser }) {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [targetUniversity, setTargetUniversity] = useState("");
-  const [universities, setUniversities] = useState<string[]>([]);
   const [loadError, setLoadError] = useState("");
   const [publishError, setPublishError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -34,15 +33,6 @@ export default function AnnouncementsPage({ user }: { user: AppUser }) {
   useEffect(() => {
     void load();
   }, [load]);
-
-  useEffect(() => {
-    if (!user.isAdmin) return;
-    listAdminUniversities()
-      .then(setUniversities)
-      .catch((requestError) => {
-        setPublishError(requestError instanceof Error ? requestError.message : "Unable to load universities.");
-      });
-  }, [user.isAdmin]);
 
   const publish = async () => {
     if (!title.trim() || !content.trim()) return;
@@ -171,7 +161,7 @@ export default function AnnouncementsPage({ user }: { user: AppUser }) {
                 onChange={(event) => setTargetUniversity(event.target.value)}
               >
                 <option value="">All students</option>
-                {universities.map((university) => (
+                {ghanaUniversities.map((university) => (
                   <option key={university} value={university}>
                     {university} students
                   </option>

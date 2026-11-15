@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlmodel import Session, select
 
 from Backend.api.deps import get_optional_current_user
 from Backend.database import get_session
 from Backend.core.config import settings
+from Backend.core.universities import canonical_university, university_match_values
 from Database.models import announcement, user, user_profile
 from Database.schemas import AnnouncementResponse
 
@@ -32,7 +33,9 @@ def list_public_announcements(
             query = query.where(
                 or_(
                     announcement.target_university.is_(None),
-                    announcement.target_university == profile.university,
+                    func.lower(func.trim(announcement.target_university)).in_(
+                        university_match_values(profile.university)
+                    ),
                 )
             )
         else:
@@ -47,7 +50,7 @@ def list_public_announcements(
             title=row.title,
             content=row.content,
             created_at=row.created_at.isoformat(),
-            target_university=row.target_university,
+            target_university=canonical_university(row.target_university),
         )
         for row in rows
     ]

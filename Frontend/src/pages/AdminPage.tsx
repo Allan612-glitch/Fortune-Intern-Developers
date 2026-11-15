@@ -7,7 +7,6 @@ import {
   exportAdminApplications,
   listAdminApplications,
   listAdminUsers,
-  listAdminUniversities,
   listAnnouncements,
   listPrograms,
   publishAnnouncement,
@@ -22,6 +21,7 @@ import {
   type BackendApplication,
   type Program,
 } from "../services/platform";
+import { ghanaUniversities } from "../constants/universities";
 
 const statusBadge: Record<string, string> = {
   applied: "status-applied",
@@ -64,7 +64,6 @@ export default function AdminPage() {
   const [annTitle, setAnnTitle] = useState("");
   const [annContent, setAnnContent] = useState("");
   const [annTargetUniversity, setAnnTargetUniversity] = useState("");
-  const [universities, setUniversities] = useState<string[]>([]);
   const [announcementToRemove, setAnnouncementToRemove] = useState<Announcement | null>(null);
   const [announcementRemoving, setAnnouncementRemoving] = useState(false);
   const [published, setPublished] = useState(false);
@@ -86,14 +85,13 @@ export default function AdminPage() {
     let active = true;
     setLoading(true);
     setLoadError("");
-    Promise.all([listAdminUsers(), listAdminApplications(), listAnnouncements(), listPrograms("", "All", "all"), listAdminUniversities()])
-      .then(([loadedUsers, loadedApplications, loadedAnnouncements, loadedPrograms, loadedUniversities]) => {
+    Promise.all([listAdminUsers(), listAdminApplications(), listAnnouncements(), listPrograms("", "All", "all")])
+      .then(([loadedUsers, loadedApplications, loadedAnnouncements, loadedPrograms]) => {
         if (!active) return;
         setUsers(loadedUsers);
         setApplications(loadedApplications);
         setAnnouncements(loadedAnnouncements);
         setPrograms(loadedPrograms);
-        setUniversities(loadedUniversities);
       })
       .catch((requestError) => {
         if (active) setLoadError(requestError instanceof Error ? requestError.message : "Unable to load admin data.");
@@ -825,7 +823,7 @@ export default function AdminPage() {
                     className="w-full px-4 py-3 rounded-xl border border-border text-sm bg-muted/30"
                   >
                     <option value="">All students</option>
-                    {universities.map((university) => (
+                    {ghanaUniversities.map((university) => (
                       <option key={university} value={university}>
                         {university} students
                       </option>
