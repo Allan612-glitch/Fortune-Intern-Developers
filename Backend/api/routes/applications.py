@@ -604,7 +604,7 @@ def download_completion_certificate(
     html_content = build_completion_certificate_html({
         "name": row.applicant_name or account.name,
         "inst": row.applicant_institution or "Not specified",
-        "prog": f"{program_record.name if program_record else 'Internship'} — {company}",
+        "prog": f"{program_record.name if program_record else 'Internship'} \u2014 {company}",
         "start": format_certificate_date(row.internship_start_date),
         "end": format_certificate_date(row.internship_end_date),
         "duration": program_record.duration if program_record else "Not specified",

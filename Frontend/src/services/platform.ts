@@ -267,6 +267,22 @@ export async function downloadCompletionCertificate(id: string) {
       backgroundColor: "#F8FAFC",
       useCORS: true,
       logging: false,
+      onclone: async (clonedDocument) => {
+        const signature = clonedDocument.querySelector<SVGSVGElement>(".sigsvg");
+        if (signature) {
+          // html2canvas shifts this SVG's ink despite centering its element box.
+          signature.style.transform = "translateX(-3mm)";
+        }
+        await Promise.all(
+          fontRequirements.map(async ([font, text]) => {
+            const loadedFonts = await clonedDocument.fonts.load(font, text);
+            if (!loadedFonts.length || !clonedDocument.fonts.check(font, text)) {
+              throw new Error("Certificate fonts could not be loaded in the PDF renderer.");
+            }
+          }),
+        );
+        await clonedDocument.fonts.ready;
+      },
     });
 
     const pdf = new jsPDF({
