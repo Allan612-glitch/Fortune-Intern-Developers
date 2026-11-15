@@ -201,10 +201,11 @@ export async function saveSupervisorAssessmentDownload(id: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export async function downloadCompletionCertificate(id: string) {
+export async function printCompletionCertificate(id: string) {
   const certificate = await apiBlob(`/api/applications/${id}/certificate`);
   const frame = document.createElement("iframe");
   frame.setAttribute("aria-hidden", "true");
+  frame.title = "Certificate print preview";
   frame.style.position = "fixed";
   frame.style.left = "-10000px";
   frame.style.top = "0";
@@ -222,23 +223,32 @@ export async function downloadCompletionCertificate(id: string) {
     }, { once: true });
     frame.addEventListener("error", () => {
       window.clearTimeout(timeout);
-      reject(new Error("Unable to load the certificate for download."));
+      reject(new Error("Unable to load the certificate for printing."));
     }, { once: true });
   });
   frame.srcdoc = await certificate.text();
   document.body.appendChild(frame);
 
+  let cleanupTimer: number | undefined;
+  const cleanupFrame = () => {
+    if (cleanupTimer !== undefined) window.clearTimeout(cleanupTimer);
+    frame.remove();
+  };
+
   try {
     await frameLoaded;
     const certificateDocument = frame.contentDocument;
-    const sheet = certificateDocument?.getElementById("sheet");
-    if (!certificateDocument || !sheet) {
-      throw new Error("Unable to render the certificate.");
+    const printWindow = frame.contentWindow;
+    if (!certificateDocument || !printWindow || !certificateDocument.getElementById("sheet")) {
+      throw new Error("Unable to prepare the certificate for printing.");
     }
 
     const name = certificateDocument.querySelector<HTMLInputElement>(
       '.tgrid input[data-field="name"]',
-    )?.value || "Intern";
+    )?.value.trim() || "Intern";
+    const certificateNumber = certificateDocument.querySelector<HTMLInputElement>(
+      '.tgrid input[data-field="certno"]',
+    )?.value.trim() || id;
     const fontRequirements: Array<[string, string]> = [
       ['700 28pt "Playfair Display"', "CERTIFICATE"],
       ['600 12.5pt "Playfair Display"', "OF COMPLETION"],
@@ -258,57 +268,17 @@ export async function downloadCompletionCertificate(id: string) {
     );
     await certificateDocument.fonts.ready;
 
-    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-      import("html2canvas"),
-      import("jspdf"),
-    ]);
-    const image = await html2canvas(sheet, {
-      scale: 3,
-      backgroundColor: "#F8FAFC",
-      useCORS: true,
-      logging: false,
-      onclone: async (clonedDocument) => {
-        const signature = clonedDocument.querySelector<SVGSVGElement>(".sigsvg");
-        if (signature) {
-          // html2canvas shifts this SVG's ink despite centering its element box.
-          signature.style.transform = "translateX(-3mm)";
-        }
-        await Promise.all(
-          fontRequirements.map(async ([font, text]) => {
-            const loadedFonts = await clonedDocument.fonts.load(font, text);
-            if (!loadedFonts.length || !clonedDocument.fonts.check(font, text)) {
-              throw new Error("Certificate fonts could not be loaded in the PDF renderer.");
-            }
-          }),
-        );
-        await clonedDocument.fonts.ready;
-      },
-    });
-
-    const pdf = new jsPDF({
-      orientation: "landscape",
-      unit: "mm",
-      format: "a4",
-      compress: true,
-    });
-    pdf.addImage(image.toDataURL("image/png"), "PNG", 0, 0, 297, 210);
-
-    const certificateNumber = certificateDocument.querySelector<HTMLInputElement>(
-      '.tgrid input[data-field="certno"]',
-    )?.value || id;
     const safeFilePart = (value: string) =>
       value.trim().replace(/[^a-z0-9_-]+/gi, "_").replace(/^_+|_+$/g, "").slice(0, 60);
-    const filename = `FIN_Certificate_${safeFilePart(name) || "Intern"}_${safeFilePart(certificateNumber) || "FIN"}.pdf`;
-    const url = URL.createObjectURL(pdf.output("blob"));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  } finally {
-    frame.remove();
+    certificateDocument.title =
+      `FIN_Certificate_${safeFilePart(name) || "Intern"}_${safeFilePart(certificateNumber) || "FIN"}`;
+    printWindow.addEventListener("afterprint", cleanupFrame, { once: true });
+    cleanupTimer = window.setTimeout(cleanupFrame, 60_000);
+    printWindow.focus();
+    printWindow.print();
+  } catch (error) {
+    cleanupFrame();
+    throw error;
   }
 }
 

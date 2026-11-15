@@ -6,8 +6,8 @@ import {
   type ApplicationStatus,
 } from "../services/applications";
 import {
-  downloadCompletionCertificate,
   listApplications,
+  printCompletionCertificate,
   saveResumeDownload,
   uploadSupervisorAssessment,
 } from "../services/platform";
@@ -452,10 +452,10 @@ function TrackingModal({
                   <p className="text-sm font-medium break-all">{application.supervisorAssessmentName}</p>
                   {application.certificateApproved ? (
                     <button
-                      onClick={() => void downloadCompletionCertificate(application.reference).catch((error) => setAssessmentError(error instanceof Error ? error.message : "Unable to download certificate."))}
+                      onClick={() => void printCompletionCertificate(application.reference).catch((error) => setAssessmentError(error instanceof Error ? error.message : "Unable to prepare certificate for printing."))}
                       className="mt-3 px-4 py-2 rounded-lg bg-emerald-700 text-white text-xs font-semibold hover:bg-emerald-800"
                     >
-                      Download certificate
+                      Print / Save as PDF
                     </button>
                   ) : (
                     <p className="text-xs text-amber-700 mt-2">
