@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AsyncState from "../components/AsyncState";
+import Spinner from "../components/ui/Spinner";
 import {
   fromBackendApplication,
   type ApplicationRecord,
@@ -288,6 +289,7 @@ function TrackingModal({
   const [assessmentBusy, setAssessmentBusy] = useState(false);
   const [downloadError, setDownloadError] = useState("");
   const [assessmentError, setAssessmentError] = useState("");
+  const [certificateBusy, setCertificateBusy] = useState(false);
   const assessmentInput = useRef<HTMLInputElement>(null);
   const current = stageIndex(application);
   const paymentSuccessful =
@@ -306,6 +308,21 @@ function TrackingModal({
       setAssessmentError(error instanceof Error ? error.message : "Unable to submit supervisor assessment.");
     } finally {
       setAssessmentBusy(false);
+    }
+  };
+  const printCertificate = async () => {
+    setCertificateBusy(true);
+    setAssessmentError("");
+    try {
+      await printCompletionCertificate(application.reference);
+    } catch (error) {
+      setAssessmentError(
+        error instanceof Error
+          ? error.message
+          : "Unable to prepare certificate for printing.",
+      );
+    } finally {
+      setCertificateBusy(false);
     }
   };
   return (
@@ -452,10 +469,17 @@ function TrackingModal({
                   <p className="text-sm font-medium break-all">{application.supervisorAssessmentName}</p>
                   {application.certificateApproved ? (
                     <button
-                      onClick={() => void printCompletionCertificate(application.reference).catch((error) => setAssessmentError(error instanceof Error ? error.message : "Unable to prepare certificate for printing."))}
-                      className="mt-3 px-4 py-2 rounded-lg bg-emerald-700 text-white text-xs font-semibold hover:bg-emerald-800"
+                      onClick={() => void printCertificate()}
+                      disabled={certificateBusy}
+                      aria-busy={certificateBusy}
+                      className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-700 text-white text-xs font-semibold hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-70"
                     >
-                      Print / Save as PDF
+                      {certificateBusy && (
+                        <span aria-hidden="true">
+                          <Spinner />
+                        </span>
+                      )}
+                      {certificateBusy ? "Preparing PDF..." : "Print / Save as PDF"}
                     </button>
                   ) : (
                     <p className="text-xs text-amber-700 mt-2">
