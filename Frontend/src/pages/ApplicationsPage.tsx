@@ -6,8 +6,8 @@ import {
   type ApplicationStatus,
 } from "../services/applications";
 import {
-  listApplications,
   downloadCompletionCertificate,
+  listApplications,
   saveResumeDownload,
   uploadSupervisorAssessment,
 } from "../services/platform";
