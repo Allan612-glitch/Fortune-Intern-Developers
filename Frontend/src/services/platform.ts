@@ -61,6 +61,7 @@ export interface Announcement {
   title: string;
   content: string;
   created_at: string;
+  target_university: string | null;
 }
 
 export interface AdminUser {
@@ -132,6 +133,10 @@ export function getDashboard() {
 
 export function listAnnouncements() {
   return apiRequest<Announcement[]>("/api/announcements");
+}
+
+export function listAdminUniversities() {
+  return apiRequest<string[]>("/api/admin/universities");
 }
 
 export function listAdminUsers() {
@@ -326,10 +331,18 @@ export function updateNotificationPreferences(preferences: NotificationPreferenc
   });
 }
 
-export function publishAnnouncement(title: string, content: string) {
+export function publishAnnouncement(
+  title: string,
+  content: string,
+  targetUniversity: string | null = null,
+) {
   return apiRequest<Announcement>("/api/admin/announcements", {
     method: "POST",
-    body: JSON.stringify({ title, content }),
+    body: JSON.stringify({
+      title,
+      content,
+      target_university: targetUniversity,
+    }),
   });
 }
 

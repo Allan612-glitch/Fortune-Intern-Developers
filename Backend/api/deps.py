@@ -55,6 +55,16 @@ def get_current_user(
     return account
 
 
+def get_optional_current_user(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    session: Session = Depends(get_session),
+) -> user | None:
+    if credentials is None:
+        return None
+    return get_current_user(request, credentials, session)
+
+
 def get_current_admin(account: user = Depends(get_current_user)) -> user:
     if not account.is_admin and account.email.lower() != (settings.admin_email or "").lower():
         from fastapi import HTTPException, status
