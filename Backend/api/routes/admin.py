@@ -15,6 +15,7 @@ from Backend.api.deps import get_current_admin
 from Backend.core import age, documents, storage
 from Backend.core.audit import record_audit_event
 from Backend.core.config import settings
+from Backend.core.universities import canonical_university, university_match_values
 from Backend.core.mailer import (
 	send_application_documents_email,
 	send_certificate_available_email,
@@ -103,24 +104,6 @@ def list_users(
 	record_audit_event(session, request, actor_id=admin.id, action="users.list", object_type="user", object_id="all")
 	session.commit()
 	return [AdminUserResponse(id=str(row.id), name=row.name, email=row.email, is_admin=row.is_admin, is_suspended=row.is_suspended) for row in rows]
-
-
-@router.get("/universities", response_model=list[str])
-def list_profile_universities(
-	admin: user = Depends(get_current_admin),
-	session: Session = Depends(get_session),
-):
-	return session.exec(
-		select(user_profile.university)
-		.join(user, user.id == user_profile.user_id)
-		.where(
-			user.is_admin.is_(False),
-			user_profile.university.is_not(None),
-			user_profile.university != "",
-		)
-		.distinct()
-		.order_by(user_profile.university)
-	).all()
 
 
 @router.put("/users/{user_id}/suspension", response_model=AdminUserResponse)
@@ -682,17 +665,7 @@ def get_admin_resume_download_url(application_id: str, request: Request, admin: 
 
 @router.post("/announcements", response_model=AnnouncementResponse, status_code=status.HTTP_201_CREATED)
 def create_announcement(payload: AnnouncementCreateRequest, request: Request, admin: user = Depends(get_current_admin), session: Session = Depends(get_session)):
-	target_university = (payload.target_university or "").strip() or None
-	if target_university and not session.exec(
-		select(user_profile.id)
-		.join(user, user.id == user_profile.user_id)
-		.where(
-			user_profile.university == target_university,
-			user.is_admin.is_(False),
-		)
-		.limit(1)
-	).first():
-		raise HTTPException(status_code=422, detail="No student profiles found for this university")
+	target_university = canonical_university(payload.target_university)
 
 	row = announcement(
 		title=payload.title.strip(),
@@ -707,7 +680,9 @@ def create_announcement(payload: AnnouncementCreateRequest, request: Request, ad
 			select(user)
 			.join(user_profile, user_profile.user_id == user.id)
 			.where(
-				user_profile.university == target_university,
+				func.lower(func.trim(user_profile.university)).in_(
+					university_match_values(target_university)
+				),
 				user.is_admin.is_(False),
 			)
 		).all()
@@ -730,7 +705,9 @@ def create_announcement(payload: AnnouncementCreateRequest, request: Request, ad
 			select(user)
 			.join(user_profile, user_profile.user_id == user.id)
 			.where(
-				user_profile.university == target_university,
+				func.lower(func.trim(user_profile.university)).in_(
+					university_match_values(target_university)
+				),
 				user_profile.email_notifications.is_(True),
 				user.is_admin.is_(False),
 			)
@@ -750,7 +727,7 @@ def create_announcement(payload: AnnouncementCreateRequest, request: Request, ad
 		title=row.title,
 		content=row.content,
 		created_at=row.created_at.isoformat(),
-		target_university=row.target_university,
+		target_university=canonical_university(row.target_university),
 	)
 
 
@@ -776,7 +753,7 @@ def list_announcements(
 			title=row.title,
 			content=row.content,
 			created_at=row.created_at.isoformat(),
-			target_university=row.target_university,
+			target_university=canonical_university(row.target_university),
 		)
 		for row in rows
 	]
