@@ -108,7 +108,7 @@ class TestCertificateApprovalGate(unittest.TestCase):
         self.assertEqual(response.media_type, "text/html")
         self.assertIn('data-field="name" value="Alex Example"', rendered)
         self.assertIn('<div class="cname" data-field="name">Alex Example</div>', rendered)
-        self.assertIn("Software Engineering Intern — Test Company", rendered)
+        self.assertIn("Software Engineering Intern \u2014 Test Company", rendered)
         self.assertIn("Test University", rendered)
 
     def test_admin_cannot_approve_without_a_submitted_assessment(self):
