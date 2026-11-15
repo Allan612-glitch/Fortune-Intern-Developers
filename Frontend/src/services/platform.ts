@@ -203,14 +203,54 @@ export async function saveSupervisorAssessmentDownload(id: string) {
 
 export async function downloadCompletionCertificate(id: string) {
   const certificate = await apiBlob(`/api/applications/${id}/certificate`);
-  const url = URL.createObjectURL(certificate);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `FIN_Certificate_${id.replace(/-/g, "").slice(0, 8).toUpperCase()}.pdf`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+    import("html2canvas"),
+    import("jspdf"),
+  ]);
+  const frame = document.createElement("iframe");
+  frame.setAttribute("aria-hidden", "true");
+  frame.style.position = "fixed";
+  frame.style.left = "-10000px";
+  frame.style.top = "0";
+  frame.style.width = "297mm";
+  frame.style.height = "210mm";
+  frame.style.border = "0";
+
+  const frameLoaded = new Promise<void>((resolve, reject) => {
+    frame.addEventListener("load", () => resolve(), { once: true });
+    frame.addEventListener("error", () => reject(new Error("Unable to render certificate.")), { once: true });
+  });
+  frame.srcdoc = await certificate.text();
+  document.body.appendChild(frame);
+
+  try {
+    await frameLoaded;
+    const certificateDocument = frame.contentDocument;
+    const sheet = certificateDocument?.getElementById("sheet");
+    if (!certificateDocument || !sheet) {
+      throw new Error("Unable to render certificate.");
+    }
+    await certificateDocument.fonts.ready;
+    const image = await html2canvas(sheet, {
+      scale: 3,
+      backgroundColor: "#F8FAFC",
+      useCORS: true,
+      logging: false,
+    });
+
+    const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
+    pdf.addImage(image.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, 297, 210);
+    const url = URL.createObjectURL(pdf.output("blob"));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `FIN_Certificate_${id.replace(/-/g, "").slice(0, 8).toUpperCase()}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } finally {
+    frame.remove();
+  }
 }
 
 export function downloadResume(id: string, admin = false) {

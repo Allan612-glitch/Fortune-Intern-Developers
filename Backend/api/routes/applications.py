@@ -16,7 +16,7 @@ from Backend.api.deps import get_current_user
 from Backend.core import age, storage
 from Backend.core.audit import record_audit_event
 from Backend.core.certificates import (
-    build_completion_certificate_pdf,
+    build_completion_certificate_html,
     format_certificate_date,
 )
 from Backend.core.mailer import send_application_received_email
@@ -601,7 +601,7 @@ def download_completion_certificate(
     issued_date = getattr(row, "certificate_approved_at", None) or datetime.now(timezone.utc)
     if not row.internship_start_date or not row.internship_end_date:
         raise HTTPException(status_code=409, detail="Certificate internship dates are missing")
-    pdf_content = build_completion_certificate_pdf({
+    html_content = build_completion_certificate_html({
         "name": row.applicant_name or account.name,
         "inst": row.applicant_institution or "Not specified",
         "prog": f"{program_record.name if program_record else 'Internship'} — {company}",
@@ -623,17 +623,10 @@ def download_completion_certificate(
         object_id=str(row.id),
     )
     session.commit()
-    filename = f"FIN_Certificate_{row.id.hex[:8].upper()}.pdf"
     return Response(
-        content=pdf_content,
-        media_type="application/pdf",
-        headers={
-            "Content-Disposition": storage.build_attachment_content_disposition(
-                filename,
-                default_filename="certificate.pdf",
-            ),
-            "Cache-Control": "no-store",
-        },
+        content=html_content,
+        media_type="text/html",
+        headers={"Cache-Control": "no-store"},
     )
 
 
