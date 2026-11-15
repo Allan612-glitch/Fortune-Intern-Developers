@@ -201,19 +201,16 @@ export async function saveSupervisorAssessmentDownload(id: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export async function openCompletionCertificate(id: string) {
-  const tab = window.open("about:blank", "_blank");
-  if (!tab) throw new Error("Allow pop-ups to open your certificate.");
-  tab.opener = null;
-  try {
-    const certificate = await apiBlob(`/api/applications/${id}/certificate`);
-    const url = URL.createObjectURL(certificate);
-    tab.location.href = url;
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  } catch (error) {
-    tab.close();
-    throw error;
-  }
+export async function downloadCompletionCertificate(id: string) {
+  const certificate = await apiBlob(`/api/applications/${id}/certificate`);
+  const url = URL.createObjectURL(certificate);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `FIN_Certificate_${id.replace(/-/g, "").slice(0, 8).toUpperCase()}.html`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export function downloadResume(id: string, admin = false) {
