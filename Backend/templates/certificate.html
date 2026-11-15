@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fortune Intern Network — Certificate of Completion</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;900&family=Great+Vibes&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -26,11 +25,7 @@
   .tgrid input:focus { outline: none; border-color: #EDB523; }
   .tbtns { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
   .tbtn { flex: 1; min-width: 120px; padding: 12px; border: none; border-radius: 9px; font-weight: 800; font-size: 13px; cursor: pointer; }
-  .tbtn.gold { background: #EDB523; color: #0A3161; }
-  .tbtn.gold:active { transform: scale(.98); }
-  .tbtn.silver { background: #E8EDF4; color: #12365E; }
   .tbtn.ghost { background: transparent; color: #fff; border: 1px solid #2C4470; }
-  .tbtn:disabled { opacity: .6; cursor: wait; }
   .note { font-size: 10.5px; color: #B9C4D6; margin-top: 9px; line-height: 1.5; }
 
   /* ============ CERTIFICATE SHEET (A4 landscape) ============ */
@@ -87,9 +82,6 @@
   .cverify { margin-top: 1mm; font-size: 6.6pt; letter-spacing: .35mm; color: #8A94A2; text-align: center; }
   .cverify b { color: #6B7280; }
 
-  .toast { position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-16px); background: #10B981; color: #fff; padding: 11px 18px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.35); font-weight: 700; font-size: 13px; opacity: 0; visibility: hidden; transition: all .3s; z-index: 99; }
-  .toast.show { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
-  .toast.err { background: #EF4444; }
 </style>
 </head>
 <body>
@@ -97,7 +89,7 @@
 <!-- ============ FILL-IN PANEL ============ -->
 <div class="toolbar">
   <h1>FORTUNE INTERN NETWORK — CERTIFICATE OF COMPLETION</h1>
-  <p>Fill the details — the certificate updates live. Download as <b>PNG</b> or <b>JPG</b> (high-resolution, print-ready). This panel never appears in the exported image.</p>
+  <p>Fill the details — the certificate updates live. Use Print and choose “Save as PDF” to keep a copy.</p>
   <div class="tgrid">
     <div><label>Intern Name (script)</label><input data-field="name" value="Emmanuel Amoasi"></div>
     <div><label>Institution Line</label><input data-field="inst" value="Kwame Nkrumah University of Science & Technology (KNUST)"></div>
@@ -112,11 +104,9 @@
     <div><label>Signatory Role</label><input data-field="srole" value="Managing Director"></div>
   </div>
   <div class="tbtns">
-    <button class="tbtn gold" id="btnPng">⬇ DOWNLOAD PNG</button>
-    <button class="tbtn silver" id="btnJpg">⬇ DOWNLOAD JPG</button>
     <button class="tbtn ghost" id="btnPrint">🖨 PRINT</button>
   </div>
-  <div class="note">Export renders at 3× (≈3366 × 2370 px). For the sharpest signature use PNG. Accepts website parameters, e.g. <code>certificate.html?name=…&certno=…</code>.</div>
+  <div class="note">This panel never appears in the printed certificate. Accepts website parameters, e.g. <code>certificate.html?name=…&certno=…</code>.</div>
 </div>
 
 <!-- ============ CERTIFICATE ============ -->
@@ -229,8 +219,6 @@
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
-
 <script>
 (function () {
   'use strict';
@@ -260,58 +248,6 @@
     inp.addEventListener('input', function () { sync(f, inp.value); });
   });
 
-  var tt;
-  function toast(msg, err) {
-    var t = document.getElementById('toast');
-    t.textContent = msg; t.className = 'toast show' + (err ? ' err' : '');
-    clearTimeout(tt); tt = setTimeout(function () { t.classList.remove('show'); }, 2600);
-  }
-
-  function fileName(ext) {
-    var name = (document.querySelector('input[data-field="name"]').value || 'Intern').trim().replace(/\s+/g, '_');
-    var cert = (document.querySelector('input[data-field="certno"]').value || 'FIN').trim().replace(/[\/\\]/g, '-');
-    return 'FIN_Certificate_' + name + '_' + cert + '.' + ext;
-  }
-
-  function exportImage(type, btn) {
-    if (typeof html2canvas === 'undefined') { toast('Renderer not loaded — check internet connection', true); return; }
-    var sheet = document.getElementById('sheet');
-    var oldShadow = sheet.style.boxShadow;
-    sheet.style.boxShadow = 'none';
-    btn.disabled = true;
-    var label = btn.textContent;
-    btn.textContent = '⏳ RENDERING…';
-
-    function finish() { btn.disabled = false; btn.textContent = label; sheet.style.boxShadow = oldShadow; }
-
-    function doCapture() {
-      html2canvas(sheet, {
-        scale: 3,
-        backgroundColor: '#F8FAFC',
-        useCORS: true,
-        logging: false
-      }).then(function (canvas) {
-        var a = document.createElement('a');
-        if (type === 'png') { a.download = fileName('png'); a.href = canvas.toDataURL('image/png'); }
-        else { a.download = fileName('jpg'); a.href = canvas.toDataURL('image/jpeg', 0.95); }
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        toast(type.toUpperCase() + ' downloaded ✓');
-        finish();
-      }).catch(function (err) {
-        console.error(err);
-        toast('Export failed — try Print instead', true);
-        finish();
-      });
-    }
-
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(doCapture);
-    else doCapture();
-  }
-
-  document.getElementById('btnPng').addEventListener('click', function () { exportImage('png', this); });
-  document.getElementById('btnJpg').addEventListener('click', function () { exportImage('jpg', this); });
   document.getElementById('btnPrint').addEventListener('click', function () { window.print(); });
 })();
 </script>

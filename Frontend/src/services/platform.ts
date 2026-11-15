@@ -206,7 +206,7 @@ export async function downloadCompletionCertificate(id: string) {
   const url = URL.createObjectURL(certificate);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `FIN_Certificate_${id.replace(/-/g, "").slice(0, 8).toUpperCase()}.html`;
+  link.download = `FIN_Certificate_${id.replace(/-/g, "").slice(0, 8).toUpperCase()}.pdf`;
   document.body.appendChild(link);
   link.click();
   link.remove();

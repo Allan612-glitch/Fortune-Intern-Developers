@@ -10,19 +10,19 @@ from sqlmodel import Session
 
 from Backend.api.routes.admin import approve_application_certificate
 from Backend.api.routes.applications import download_completion_certificate
-from Backend.core.certificates import build_completion_certificate_html
+from Backend.core.certificates import build_completion_certificate_pdf
 from Database.models import user
 from Database.schemas import AdminCertificateApprovalRequest
 
 
-class TestCompletionCertificateTemplate(unittest.TestCase):
-    def test_personalizes_supplied_design_and_escapes_applicant_values(self):
+class TestCompletionCertificatePdf(unittest.TestCase):
+    def test_builds_a_personalized_pdf(self):
         fields = {
-            "name": 'Alex <script>alert("x")</script>',
+            "name": "Alex Example",
             "inst": "Test University",
             "prog": "Software Engineering Intern — Test Company",
-            "start": "Not specified",
-            "end": "Not specified",
+            "start": "10th June, 2026",
+            "end": "11th September, 2026",
             "duration": "Three months",
             "grade": "with commendable performance",
             "certno": "FIN/CERT/2026/0001",
@@ -31,24 +31,15 @@ class TestCompletionCertificateTemplate(unittest.TestCase):
             "srole": "Managing Director",
         }
 
-        rendered = build_completion_certificate_html(fields)
+        rendered = build_completion_certificate_pdf(fields)
 
-        self.assertIn("CERTIFICATE</div>", rendered)
-        self.assertIn('data-field="name" value="Alex &lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;"', rendered)
-        self.assertIn(
-            '<div class="cname" data-field="name">Alex &lt;script&gt;alert("x")&lt;/script&gt;</div>',
-            rendered,
-        )
-        self.assertIn("data-field=\"certno\" value=\"FIN/CERT/2026/0001\"", rendered)
-        self.assertIn(
-            '<div class="sval" data-field="certno">FIN/CERT/2026/0001</div>',
-            rendered,
-        )
-        self.assertIn("window.addEventListener('load'", rendered)
-        self.assertIn(".toolbar { display: none !important; }", rendered)
-        self.assertIn("body { background: #fff; padding: 0; }", rendered)
-        self.assertIn("html2canvas(sheet", rendered)
-        self.assertNotIn('<input data-field="name" value="Emmanuel Amoasi">', rendered)
+        self.assertTrue(rendered.startswith(b"%PDF-"))
+        self.assertTrue(rendered.rstrip().endswith(b"%%EOF"))
+        self.assertIn(b"Alex Example", rendered)
+        self.assertIn(b"Test University", rendered)
+        self.assertIn(b"Test Company", rendered)
+        self.assertIn(b"Three months", rendered)
+        self.assertIn(b"commendable performance", rendered)
 
 
 class TestCertificateApprovalGate(unittest.TestCase):
@@ -73,7 +64,7 @@ class TestCertificateApprovalGate(unittest.TestCase):
 
         self.assertEqual(raised.exception.status_code, 403)
 
-    def test_approved_download_uses_application_details_and_source_template(self):
+    def test_approved_download_returns_personalized_pdf_attachment(self):
         account_id = uuid4()
         program_id = uuid4()
         row = SimpleNamespace(
@@ -107,36 +98,14 @@ class TestCertificateApprovalGate(unittest.TestCase):
                 session,
             )
 
-        rendered = response.body.decode("utf-8")
-        self.assertEqual(response.media_type, "text/html")
-        self.assertIn('data-field="name" value="Alex Example"', rendered)
-        self.assertIn('<div class="cname" data-field="name">Alex Example</div>', rendered)
-        self.assertIn("Software Engineering Intern — Test Company", rendered)
-        self.assertIn(
-            '<span data-field="prog">Software Engineering Intern — Test Company</span>',
-            rendered,
-        )
-        self.assertIn("Test University", rendered)
-        self.assertIn(
-            '<div class="cmeta" data-field="inst">Test University</div>',
-            rendered,
-        )
-        self.assertIn("FIN/CERT/2026/", rendered)
-        self.assertIn('data-field="issued" value="12th November, 2026"', rendered)
-        self.assertIn(
-            '<div class="sval" data-field="issued">12th November, 2026</div>',
-            rendered,
-        )
-        self.assertIn('data-field="start" value="10th June, 2026"', rendered)
-        self.assertIn(
-            '<span data-field="start">10th June, 2026</span>',
-            rendered,
-        )
-        self.assertIn('data-field="end" value="11th September, 2026"', rendered)
-        self.assertIn(
-            '<span data-field="end">11th September, 2026</span>',
-            rendered,
-        )
+        self.assertEqual(response.media_type, "application/pdf")
+        self.assertTrue(response.body.startswith(b"%PDF-"))
+        self.assertIn("attachment", response.headers["content-disposition"])
+        self.assertIn(row.id.hex[:8].upper(), response.headers["content-disposition"])
+        self.assertTrue(response.headers["content-disposition"].endswith(".pdf"))
+        self.assertIn(b"Alex Example", response.body)
+        self.assertIn(b"Test University", response.body)
+        self.assertIn(b"Test Company", response.body)
 
     def test_admin_cannot_approve_without_a_submitted_assessment(self):
         row = SimpleNamespace(
