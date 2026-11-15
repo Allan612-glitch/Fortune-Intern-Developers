@@ -683,7 +683,7 @@ class TestAdminAnnouncementEmail(unittest.TestCase):
 
             with (
                 patch("Backend.api.routes.admin.record_audit_event"),
-                patch("Backend.api.routes.admin.send_announcement_email") as send_email,
+                patch("Backend.api.routes.admin.send_announcement_emails") as send_email,
             ):
                 response = create_announcement(
                     AnnouncementCreateRequest(title=" Service update ", content=" Details "),
@@ -702,11 +702,12 @@ class TestAdminAnnouncementEmail(unittest.TestCase):
             notified_user_ids,
             expected_notification_ids,
         )
+        send_email.assert_called_once()
         self.assertEqual(
-            {call.kwargs["to_email"] for call in send_email.call_args_list},
+            set(send_email.call_args.kwargs["to_emails"]),
             {"enabled@example.test", "default@example.test", "admin@example.test"},
         )
-        self.assertTrue(all(call.kwargs["title"] == "Service update" for call in send_email.call_args_list))
+        self.assertEqual(send_email.call_args.kwargs["title"], "Service update")
 
     def test_targeted_announcement_only_notifies_and_emails_matching_students(self):
         engine = create_engine("sqlite://")
@@ -745,7 +746,7 @@ class TestAdminAnnouncementEmail(unittest.TestCase):
 
             with (
                 patch("Backend.api.routes.admin.record_audit_event"),
-                patch("Backend.api.routes.admin.send_announcement_email") as send_email,
+                patch("Backend.api.routes.admin.send_announcement_emails") as send_email,
             ):
                 response = create_announcement(
                     AnnouncementCreateRequest(
@@ -764,9 +765,10 @@ class TestAdminAnnouncementEmail(unittest.TestCase):
 
         self.assertEqual(response.target_university, "KNUST")
         self.assertEqual(notified_user_ids, expected_student_ids)
-        self.assertEqual(
-            [call.kwargs["to_email"] for call in send_email.call_args_list],
-            ["enabled@example.test"],
+        send_email.assert_called_once_with(
+            to_emails=["enabled@example.test"],
+            title="University update",
+            content="Details",
         )
 
 

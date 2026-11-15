@@ -1,20 +1,52 @@
 """Email delivery for application receipts, announcements, and internship documents."""
 from html import escape
 import logging
+import time
 
 import resend
+from resend.exceptions import RateLimitError
 
 from Backend.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+ANNOUNCEMENT_EMAIL_BATCH_SIZE = 100
+ANNOUNCEMENT_EMAIL_BATCH_INTERVAL_SECONDS = 0.12
+ANNOUNCEMENT_EMAIL_MAX_RATE_LIMIT_RETRIES = 3
 
-def send_announcement_email(
+
+def _send_announcement_batch(emails: list[resend.Emails.SendParams]) -> None:
+    for attempt in range(ANNOUNCEMENT_EMAIL_MAX_RATE_LIMIT_RETRIES + 1):
+        try:
+            resend.Batch.send(emails)
+            return
+        except RateLimitError as error:
+            if attempt == ANNOUNCEMENT_EMAIL_MAX_RATE_LIMIT_RETRIES:
+                raise
+
+            retry_after = next(
+                (
+                    value
+                    for name, value in error.headers.items()
+                    if name.lower() == "retry-after"
+                ),
+                None,
+            )
+            try:
+                delay = float(retry_after) if retry_after is not None else 0
+            except ValueError:
+                delay = 0
+            time.sleep(max(delay, 0.5 * (2**attempt)))
+
+
+def send_announcement_emails(
     *,
-    to_email: str,
+    to_emails: list[str],
     title: str,
     content: str,
 ) -> None:
+    if not to_emails:
+        return
     if not all((settings.resend_api_key, settings.resend_from_email)):
         logger.warning(
             "Skipping announcement email: RESEND_API_KEY/RESEND_FROM_EMAIL not configured"
@@ -24,8 +56,8 @@ def send_announcement_email(
     safe_title = escape(title)
     safe_content = escape(content).replace("\n", "<br>")
     resend.api_key = settings.resend_api_key
-    try:
-        resend.Emails.send({
+    emails: list[resend.Emails.SendParams] = [
+        {
             "from": settings.resend_from_email,
             "to": [to_email],
             "subject": "New announcement from Fortune Intern Network",
@@ -36,9 +68,22 @@ def send_announcement_email(
                 f"<p>{safe_content}</p>"
                 "<p>Fortune Intern Network</p>"
             ),
-        })
-    except Exception:
-        logger.exception("Failed to send announcement email to %s", to_email)
+        }
+        for to_email in to_emails
+    ]
+
+    for offset in range(0, len(emails), ANNOUNCEMENT_EMAIL_BATCH_SIZE):
+        if offset:
+            time.sleep(ANNOUNCEMENT_EMAIL_BATCH_INTERVAL_SECONDS)
+        batch = emails[offset : offset + ANNOUNCEMENT_EMAIL_BATCH_SIZE]
+        try:
+            _send_announcement_batch(batch)
+        except Exception:
+            logger.exception(
+                "Failed to send announcement email batch for recipients %d-%d",
+                offset + 1,
+                offset + len(batch),
+            )
 
 
 def send_application_received_email(

@@ -18,8 +18,8 @@ from Backend.core.config import settings
 from Backend.core.universities import canonical_university, university_match_values
 from Backend.core.mailer import (
 	send_application_documents_email,
+	send_announcement_emails,
 	send_certificate_available_email,
-	send_announcement_email,
 )
 from Backend.database import get_session
 from Database.models import (
@@ -716,12 +716,11 @@ def create_announcement(payload: AnnouncementCreateRequest, request: Request, ad
 	record_audit_event(session, request, actor_id=admin.id, action="announcement.create", object_type="announcement", object_id=str(row.id))
 	session.commit()
 	session.refresh(row)
-	for recipient in email_recipients:
-		send_announcement_email(
-			to_email=recipient.email,
-			title=row.title,
-			content=row.content,
-		)
+	send_announcement_emails(
+		to_emails=[recipient.email for recipient in email_recipients],
+		title=row.title,
+		content=row.content,
+	)
 	return AnnouncementResponse(
 		id=str(row.id),
 		title=row.title,
