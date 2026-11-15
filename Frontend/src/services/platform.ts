@@ -236,7 +236,28 @@ export async function downloadCompletionCertificate(id: string) {
       throw new Error("Unable to render the certificate.");
     }
 
+    const name = certificateDocument.querySelector<HTMLInputElement>(
+      '.tgrid input[data-field="name"]',
+    )?.value || "Intern";
+    const fontRequirements: Array<[string, string]> = [
+      ['700 28pt "Playfair Display"', "CERTIFICATE"],
+      ['600 12.5pt "Playfair Display"', "OF COMPLETION"],
+      ['600 12pt "Cormorant Garamond"', "This certificate is proudly presented to"],
+      ['400 30pt "Great Vibes"', name],
+      ['600 10.4pt "Cormorant Garamond"', "has successfully completed the internship"],
+      ['italic 500 9.2pt "Cormorant Garamond"', "with commendable performance"],
+      ['700 11pt "Cormorant Garamond"', "Emmanuel Amoasi"],
+    ];
+    await Promise.all(
+      fontRequirements.map(async ([font, text]) => {
+        const loadedFonts = await certificateDocument.fonts.load(font, text);
+        if (!loadedFonts.length || !certificateDocument.fonts.check(font, text)) {
+          throw new Error("Certificate fonts could not be loaded. Check your internet connection and try again.");
+        }
+      }),
+    );
     await certificateDocument.fonts.ready;
+
     const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
       import("html2canvas"),
       import("jspdf"),
@@ -254,11 +275,8 @@ export async function downloadCompletionCertificate(id: string) {
       format: "a4",
       compress: true,
     });
-    pdf.addImage(image.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, 297, 210);
+    pdf.addImage(image.toDataURL("image/png"), "PNG", 0, 0, 297, 210);
 
-    const name = certificateDocument.querySelector<HTMLInputElement>(
-      '.tgrid input[data-field="name"]',
-    )?.value || "Intern";
     const certificateNumber = certificateDocument.querySelector<HTMLInputElement>(
       '.tgrid input[data-field="certno"]',
     )?.value || id;

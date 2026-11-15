@@ -34,6 +34,7 @@ class TestCompletionCertificateTemplate(unittest.TestCase):
         rendered = build_completion_certificate_html(fields)
 
         self.assertIn("CERTIFICATE</div>", rendered)
+        self.assertIn('<path id="pt" fill="#EFC763"', rendered)
         self.assertIn(
             '<div class="cname" data-field="name">Alex &lt;script&gt;alert("x")&lt;/script&gt;</div>',
             rendered,
