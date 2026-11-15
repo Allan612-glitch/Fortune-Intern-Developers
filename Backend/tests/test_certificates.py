@@ -40,6 +40,8 @@ class TestCompletionCertificateTemplate(unittest.TestCase):
             rendered,
         )
         self.assertIn("Great Vibes", rendered)
+        self.assertIn("print-color-adjust: exact", rendered)
+        self.assertIn("@page { size: A4 landscape; margin: 0; }", rendered)
         self.assertIn(".toolbar { display: none !important; }", rendered)
         self.assertNotIn("DOWNLOAD PNG", rendered)
         self.assertNotIn("DOWNLOAD JPG", rendered)
