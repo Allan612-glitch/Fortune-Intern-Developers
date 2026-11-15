@@ -3,8 +3,30 @@ from unittest.mock import patch
 
 from Backend.core.mailer import (
     send_application_received_email,
+    send_announcement_email,
     send_certificate_available_email,
 )
+
+
+class TestAnnouncementEmail(unittest.TestCase):
+    def test_sends_announcement_content_as_text_and_safe_html(self):
+        with (
+            patch("Backend.core.mailer.settings.resend_api_key", "test-api-key"),
+            patch("Backend.core.mailer.settings.resend_from_email", "no-reply@example.com"),
+            patch("Backend.core.mailer.resend.Emails.send") as send,
+        ):
+            send_announcement_email(
+                to_email="student@example.com",
+                title="Important <update>",
+                content="First line\nSecond line",
+            )
+
+        message = send.call_args.args[0]
+        self.assertEqual(message["to"], ["student@example.com"])
+        self.assertIn("Important <update>", message["text"])
+        self.assertIn("First line\nSecond line", message["text"])
+        self.assertIn("Important &lt;update&gt;", message["html"])
+        self.assertIn("First line<br>Second line", message["html"])
 
 
 class TestApplicationReceivedEmail(unittest.TestCase):

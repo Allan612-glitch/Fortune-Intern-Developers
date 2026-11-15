@@ -199,7 +199,7 @@ WHERE email = 'your-email@example.com';
 3. Log out and log back in so the frontend receives the updated `is_admin` value.
 4. The **Admin Dashboard** link will appear in the side panel.
 
-Admins can manage users, mentors, programs, applications, resumes, and announcements. Programs close automatically when their application deadline passes; programs without a deadline remain open until updated with one. Admin endpoints are protected and regular users receive `403 Forbidden`.
+Admins can manage users, mentors, programs, applications, resumes, and announcements. Announcements can target all students or students at one university; university-targeted announcements are only listed for that university's students and are sent in-app and by email to eligible recipients. Email delivery follows each student's email-update preference. Programs close automatically when their application deadline passes; programs without a deadline remain open until updated with one. Admin endpoints are protected and regular users receive `403 Forbidden`.
 
 ## Authentication and Security
 

@@ -251,6 +251,7 @@ class AdminCertificateApprovalRequest(BaseModel):
 class AnnouncementCreateRequest(BaseModel):
     title: str
     content: str
+    target_university: str | None = None
 
 
 class AnnouncementResponse(BaseModel):
@@ -258,6 +259,7 @@ class AnnouncementResponse(BaseModel):
     title: str
     content: str
     created_at: str
+    target_university: str | None = None
 
 
 class DashboardApplication(BaseModel):

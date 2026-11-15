@@ -1,12 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
 import AsyncState from "../components/AsyncState";
 import type { AppUser } from "../App";
-import { listAnnouncements, publishAnnouncement, type Announcement } from "../services/platform";
+import {
+  listAdminUniversities,
+  listAnnouncements,
+  publishAnnouncement,
+  type Announcement,
+} from "../services/platform";
 
 export default function AnnouncementsPage({ user }: { user: AppUser }) {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [targetUniversity, setTargetUniversity] = useState("");
+  const [universities, setUniversities] = useState<string[]>([]);
   const [loadError, setLoadError] = useState("");
   const [publishError, setPublishError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -28,14 +35,24 @@ export default function AnnouncementsPage({ user }: { user: AppUser }) {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (!user.isAdmin) return;
+    listAdminUniversities()
+      .then(setUniversities)
+      .catch((requestError) => {
+        setPublishError(requestError instanceof Error ? requestError.message : "Unable to load universities.");
+      });
+  }, [user.isAdmin]);
+
   const publish = async () => {
     if (!title.trim() || !content.trim()) return;
     setPublishing(true);
     setPublishError("");
     try {
-      await publishAnnouncement(title.trim(), content.trim());
+      await publishAnnouncement(title.trim(), content.trim(), targetUniversity || null);
       setTitle("");
       setContent("");
+      setTargetUniversity("");
       await load();
     } catch (requestError) {
       setPublishError(requestError instanceof Error ? requestError.message : "Unable to publish announcement.");
@@ -94,6 +111,11 @@ export default function AnnouncementsPage({ user }: { user: AppUser }) {
                 <span>·</span>
                 <span>{new Date(ann.created_at).toLocaleDateString()}</span>
               </div>
+              {ann.target_university && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  For {ann.target_university} students
+                </p>
+              )}
             </div>
           ))}
         </div>
@@ -138,6 +160,23 @@ export default function AnnouncementsPage({ user }: { user: AppUser }) {
                   setPublishError("");
                 }}
               />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1 text-red-700">
+                Audience
+              </label>
+              <select
+                className="w-full px-4 py-2.5 rounded-xl border border-red-200 text-sm bg-white"
+                value={targetUniversity}
+                onChange={(event) => setTargetUniversity(event.target.value)}
+              >
+                <option value="">All students</option>
+                {universities.map((university) => (
+                  <option key={university} value={university}>
+                    {university} students
+                  </option>
+                ))}
+              </select>
             </div>
             <button
               onClick={publish}

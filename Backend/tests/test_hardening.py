@@ -16,11 +16,13 @@ from sqlmodel import Session, SQLModel, select
 
 from Backend.api.routes.admin import (
     _application_reference,
+    create_announcement,
     delete_announcement,
     remove_program,
     update_application_status,
     update_program,
 )
+from Backend.api.routes.announcements import list_public_announcements
 from Backend.api.routes.applications import (
     _lock_application_identity,
     create_application,
@@ -52,8 +54,10 @@ from Database.models import (
     rate_limit_bucket,
     registration_verification,
     user,
+    user_profile,
 )
 from Database.schemas import (
+    AnnouncementCreateRequest,
     AdminApplicationStatusRequest,
     AdminProgramUpdateRequest,
     LoginRequest,
@@ -657,6 +661,172 @@ class TestAdminAnnouncementRemoval(unittest.TestCase):
         self.assertIsNone(result)
         session.delete.assert_called_once_with(row)
         session.commit.assert_called_once()
+
+
+class TestAdminAnnouncementEmail(unittest.TestCase):
+    def test_sends_announcement_only_to_enabled_or_default_opt_in_users(self):
+        engine = create_engine("sqlite://")
+        SQLModel.metadata.create_all(engine)
+        enabled = user(name="Enabled", email="enabled@example.test")
+        disabled = user(name="Disabled", email="disabled@example.test")
+        default_enabled = user(name="Default", email="default@example.test")
+        admin = user(name="Admin", email="admin@example.test")
+        expected_notification_ids = {enabled.id, disabled.id, default_enabled.id, admin.id}
+
+        with Session(engine) as session:
+            session.add_all([enabled, disabled, default_enabled, admin])
+            session.add_all([
+                user_profile(user_id=enabled.id, email_notifications=True),
+                user_profile(user_id=disabled.id, email_notifications=False),
+            ])
+            session.commit()
+
+            with (
+                patch("Backend.api.routes.admin.record_audit_event"),
+                patch("Backend.api.routes.admin.send_announcement_email") as send_email,
+            ):
+                response = create_announcement(
+                    AnnouncementCreateRequest(title=" Service update ", content=" Details "),
+                    SimpleNamespace(),
+                    admin,
+                    session,
+                )
+
+            notified_user_ids = {
+                row.user_id for row in session.exec(select(notification)).all()
+            }
+
+        self.assertEqual(response.title, "Service update")
+        self.assertEqual(response.content, "Details")
+        self.assertEqual(
+            notified_user_ids,
+            expected_notification_ids,
+        )
+        self.assertEqual(
+            {call.kwargs["to_email"] for call in send_email.call_args_list},
+            {"enabled@example.test", "default@example.test", "admin@example.test"},
+        )
+        self.assertTrue(all(call.kwargs["title"] == "Service update" for call in send_email.call_args_list))
+
+    def test_targeted_announcement_only_notifies_and_emails_matching_students(self):
+        engine = create_engine("sqlite://")
+        SQLModel.metadata.create_all(engine)
+        enabled = user(name="Enabled", email="enabled@example.test")
+        disabled = user(name="Disabled", email="disabled@example.test")
+        other_university = user(name="Other", email="other@example.test")
+        admin = user(name="Admin", email="admin@example.test", is_admin=True)
+        expected_student_ids = {enabled.id, disabled.id}
+
+        with Session(engine) as session:
+            session.add_all([enabled, disabled, other_university, admin])
+            session.add_all([
+                user_profile(
+                    user_id=enabled.id,
+                    university="Central University",
+                    email_notifications=True,
+                ),
+                user_profile(
+                    user_id=disabled.id,
+                    university="Central University",
+                    email_notifications=False,
+                ),
+                user_profile(
+                    user_id=other_university.id,
+                    university="Other University",
+                    email_notifications=True,
+                ),
+                user_profile(
+                    user_id=admin.id,
+                    university="Central University",
+                    email_notifications=True,
+                ),
+            ])
+            session.commit()
+
+            with (
+                patch("Backend.api.routes.admin.record_audit_event"),
+                patch("Backend.api.routes.admin.send_announcement_email") as send_email,
+            ):
+                response = create_announcement(
+                    AnnouncementCreateRequest(
+                        title="University update",
+                        content="Details",
+                        target_university="Central University",
+                    ),
+                    SimpleNamespace(),
+                    admin,
+                    session,
+                )
+
+            notified_user_ids = {
+                row.user_id for row in session.exec(select(notification)).all()
+            }
+
+        self.assertEqual(response.target_university, "Central University")
+        self.assertEqual(notified_user_ids, expected_student_ids)
+        self.assertEqual(
+            [call.kwargs["to_email"] for call in send_email.call_args_list],
+            ["enabled@example.test"],
+        )
+
+
+class TestAnnouncementAudienceListing(unittest.TestCase):
+    def test_list_filters_by_profile_and_keeps_all_announcements_for_admins(self):
+        engine = create_engine("sqlite://")
+        SQLModel.metadata.create_all(engine)
+        central_student = user(name="Central", email="central@example.test")
+        other_student = user(name="Other", email="other@example.test")
+        admin = user(name="Admin", email="admin@example.test", is_admin=True)
+        global_announcement = announcement(title="For everyone", content="Details")
+        central_announcement = announcement(
+            title="Central only",
+            content="Details",
+            target_university="Central University",
+        )
+        other_announcement = announcement(
+            title="Other only",
+            content="Details",
+            target_university="Other University",
+        )
+
+        with Session(engine) as session:
+            session.add_all([
+                central_student,
+                other_student,
+                admin,
+                user_profile(user_id=central_student.id, university="Central University"),
+                user_profile(user_id=other_student.id, university="Other University"),
+                global_announcement,
+                central_announcement,
+                other_announcement,
+            ])
+            session.commit()
+
+            anonymous_titles = {
+                row.title
+                for row in list_public_announcements(
+                    account=None, session=session, limit=100, offset=0
+                )
+            }
+            central_titles = {
+                row.title
+                for row in list_public_announcements(
+                    account=central_student, session=session, limit=100, offset=0
+                )
+            }
+            admin_titles = {
+                row.title
+                for row in list_public_announcements(
+                    account=admin, session=session, limit=100, offset=0
+                )
+            }
+
+        self.assertEqual(anonymous_titles, {"For everyone"})
+        self.assertEqual(central_titles, {"For everyone", "Central only"})
+        self.assertEqual(
+            admin_titles,
+            {"For everyone", "Central only", "Other only"},
+        )
 
 
 class TestProgramLookup(unittest.TestCase):

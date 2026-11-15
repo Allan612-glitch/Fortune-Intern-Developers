@@ -18,6 +18,7 @@ from Backend.core.config import settings
 from Backend.core.mailer import (
 	send_application_documents_email,
 	send_certificate_available_email,
+	send_announcement_email,
 )
 from Backend.database import get_session
 from Database.models import (
@@ -27,6 +28,7 @@ from Database.models import (
 	notification,
 	program,
 	user,
+	user_profile,
 )
 from Database.schemas import (
 	AdminApplicationStatusRequest,
@@ -101,6 +103,24 @@ def list_users(
 	record_audit_event(session, request, actor_id=admin.id, action="users.list", object_type="user", object_id="all")
 	session.commit()
 	return [AdminUserResponse(id=str(row.id), name=row.name, email=row.email, is_admin=row.is_admin, is_suspended=row.is_suspended) for row in rows]
+
+
+@router.get("/universities", response_model=list[str])
+def list_profile_universities(
+	admin: user = Depends(get_current_admin),
+	session: Session = Depends(get_session),
+):
+	return session.exec(
+		select(user_profile.university)
+		.join(user, user.id == user_profile.user_id)
+		.where(
+			user.is_admin.is_(False),
+			user_profile.university.is_not(None),
+			user_profile.university != "",
+		)
+		.distinct()
+		.order_by(user_profile.university)
+	).all()
 
 
 @router.put("/users/{user_id}/suspension", response_model=AdminUserResponse)
@@ -662,9 +682,36 @@ def get_admin_resume_download_url(application_id: str, request: Request, admin: 
 
 @router.post("/announcements", response_model=AnnouncementResponse, status_code=status.HTTP_201_CREATED)
 def create_announcement(payload: AnnouncementCreateRequest, request: Request, admin: user = Depends(get_current_admin), session: Session = Depends(get_session)):
-	row = announcement(title=payload.title.strip(), content=payload.content.strip())
+	target_university = (payload.target_university or "").strip() or None
+	if target_university and not session.exec(
+		select(user_profile.id)
+		.join(user, user.id == user_profile.user_id)
+		.where(
+			user_profile.university == target_university,
+			user.is_admin.is_(False),
+		)
+		.limit(1)
+	).first():
+		raise HTTPException(status_code=422, detail="No student profiles found for this university")
+
+	row = announcement(
+		title=payload.title.strip(),
+		content=payload.content.strip(),
+		target_university=target_university,
+	)
 	session.add(row)
-	for recipient in session.exec(select(user)).all():
+	if target_university is None:
+		recipients = session.exec(select(user)).all()
+	else:
+		recipients = session.exec(
+			select(user)
+			.join(user_profile, user_profile.user_id == user.id)
+			.where(
+				user_profile.university == target_university,
+				user.is_admin.is_(False),
+			)
+		).all()
+	for recipient in recipients:
 		session.add(notification(
 			user_id=recipient.id,
 			message=f"New announcement: {row.title}",
@@ -672,10 +719,39 @@ def create_announcement(payload: AnnouncementCreateRequest, request: Request, ad
 			target_id=str(row.id),
 			read=False,
 		))
+	if target_university is None:
+		email_query = select(user).outerjoin(
+			user_profile, user_profile.user_id == user.id
+		).where(
+			or_(user_profile.email_notifications.is_(True), user_profile.id.is_(None))
+		)
+	else:
+		email_query = (
+			select(user)
+			.join(user_profile, user_profile.user_id == user.id)
+			.where(
+				user_profile.university == target_university,
+				user_profile.email_notifications.is_(True),
+				user.is_admin.is_(False),
+			)
+		)
+	email_recipients = session.exec(email_query).all()
 	record_audit_event(session, request, actor_id=admin.id, action="announcement.create", object_type="announcement", object_id=str(row.id))
 	session.commit()
 	session.refresh(row)
-	return AnnouncementResponse(id=str(row.id), title=row.title, content=row.content, created_at=row.created_at.isoformat())
+	for recipient in email_recipients:
+		send_announcement_email(
+			to_email=recipient.email,
+			title=row.title,
+			content=row.content,
+		)
+	return AnnouncementResponse(
+		id=str(row.id),
+		title=row.title,
+		content=row.content,
+		created_at=row.created_at.isoformat(),
+		target_university=row.target_university,
+	)
 
 
 @router.get("/announcements", response_model=list[AnnouncementResponse])
@@ -694,7 +770,16 @@ def list_announcements(
 	).all()
 	record_audit_event(session, request, actor_id=admin.id, action="announcements.list", object_type="announcement", object_id="all")
 	session.commit()
-	return [AnnouncementResponse(id=str(row.id), title=row.title, content=row.content, created_at=row.created_at.isoformat()) for row in rows]
+	return [
+		AnnouncementResponse(
+			id=str(row.id),
+			title=row.title,
+			content=row.content,
+			created_at=row.created_at.isoformat(),
+			target_university=row.target_university,
+		)
+		for row in rows
+	]
 
 
 @router.delete("/announcements/{announcement_id}", status_code=status.HTTP_204_NO_CONTENT)

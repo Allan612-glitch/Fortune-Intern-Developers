@@ -7,6 +7,7 @@ import {
   exportAdminApplications,
   listAdminApplications,
   listAdminUsers,
+  listAdminUniversities,
   listAnnouncements,
   listPrograms,
   publishAnnouncement,
@@ -62,6 +63,8 @@ export default function AdminPage() {
   const [programRemoving, setProgramRemoving] = useState(false);
   const [annTitle, setAnnTitle] = useState("");
   const [annContent, setAnnContent] = useState("");
+  const [annTargetUniversity, setAnnTargetUniversity] = useState("");
+  const [universities, setUniversities] = useState<string[]>([]);
   const [announcementToRemove, setAnnouncementToRemove] = useState<Announcement | null>(null);
   const [announcementRemoving, setAnnouncementRemoving] = useState(false);
   const [published, setPublished] = useState(false);
@@ -83,13 +86,14 @@ export default function AdminPage() {
     let active = true;
     setLoading(true);
     setLoadError("");
-    Promise.all([listAdminUsers(), listAdminApplications(), listAnnouncements(), listPrograms("", "All", "all")])
-      .then(([loadedUsers, loadedApplications, loadedAnnouncements, loadedPrograms]) => {
+    Promise.all([listAdminUsers(), listAdminApplications(), listAnnouncements(), listPrograms("", "All", "all"), listAdminUniversities()])
+      .then(([loadedUsers, loadedApplications, loadedAnnouncements, loadedPrograms, loadedUniversities]) => {
         if (!active) return;
         setUsers(loadedUsers);
         setApplications(loadedApplications);
         setAnnouncements(loadedAnnouncements);
         setPrograms(loadedPrograms);
+        setUniversities(loadedUniversities);
       })
       .catch((requestError) => {
         if (active) setLoadError(requestError instanceof Error ? requestError.message : "Unable to load admin data.");
@@ -177,7 +181,7 @@ export default function AdminPage() {
   const submitAnnouncement = async () => {
     setPublishing(true);
     try {
-      await publishAnnouncement(annTitle, annContent);
+      await publishAnnouncement(annTitle, annContent, annTargetUniversity || null);
       setAnnouncements(await listAnnouncements());
       setPublished(true);
       setError("");
@@ -779,6 +783,7 @@ export default function AdminPage() {
                     setPublished(false);
                     setAnnTitle("");
                     setAnnContent("");
+                    setAnnTargetUniversity("");
                   }}
                   className="mt-4 text-sm text-muted-foreground hover:underline"
                 >
@@ -810,6 +815,23 @@ export default function AdminPage() {
                     className="w-full px-4 py-3 rounded-xl border border-border text-sm focus:outline-none focus:ring-2 bg-muted/30 resize-none"
                   />
                 </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-muted-foreground">
+                    Audience
+                  </label>
+                  <select
+                    value={annTargetUniversity}
+                    onChange={(event) => setAnnTargetUniversity(event.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-border text-sm bg-muted/30"
+                  >
+                    <option value="">All students</option>
+                    {universities.map((university) => (
+                      <option key={university} value={university}>
+                        {university} students
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <button
                   onClick={() => void submitAnnouncement()}
                   disabled={publishing}
@@ -835,6 +857,9 @@ export default function AdminPage() {
                   <article key={item.id} className="p-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <h4 className="font-semibold text-sm break-words">{item.title}</h4>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Audience: {item.target_university ? `${item.target_university} students` : "All students"}
+                      </p>
                       <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap break-words">{item.content}</p>
                       <p className="text-xs text-muted-foreground mt-3">{new Date(item.created_at).toLocaleString()}</p>
                     </div>
