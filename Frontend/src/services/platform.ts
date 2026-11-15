@@ -203,10 +203,6 @@ export async function saveSupervisorAssessmentDownload(id: string) {
 
 export async function downloadCompletionCertificate(id: string) {
   const certificate = await apiBlob(`/api/applications/${id}/certificate`);
-  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-    import("html2canvas"),
-    import("jspdf"),
-  ]);
   const frame = document.createElement("iframe");
   frame.setAttribute("aria-hidden", "true");
   frame.style.position = "fixed";
@@ -217,8 +213,17 @@ export async function downloadCompletionCertificate(id: string) {
   frame.style.border = "0";
 
   const frameLoaded = new Promise<void>((resolve, reject) => {
-    frame.addEventListener("load", () => resolve(), { once: true });
-    frame.addEventListener("error", () => reject(new Error("Unable to render certificate.")), { once: true });
+    const timeout = window.setTimeout(() => {
+      reject(new Error("Timed out while loading the certificate."));
+    }, 15_000);
+    frame.addEventListener("load", () => {
+      window.clearTimeout(timeout);
+      resolve();
+    }, { once: true });
+    frame.addEventListener("error", () => {
+      window.clearTimeout(timeout);
+      reject(new Error("Unable to load the certificate for download."));
+    }, { once: true });
   });
   frame.srcdoc = await certificate.text();
   document.body.appendChild(frame);
@@ -228,9 +233,14 @@ export async function downloadCompletionCertificate(id: string) {
     const certificateDocument = frame.contentDocument;
     const sheet = certificateDocument?.getElementById("sheet");
     if (!certificateDocument || !sheet) {
-      throw new Error("Unable to render certificate.");
+      throw new Error("Unable to render the certificate.");
     }
+
     await certificateDocument.fonts.ready;
+    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+      import("html2canvas"),
+      import("jspdf"),
+    ]);
     const image = await html2canvas(sheet, {
       scale: 3,
       backgroundColor: "#F8FAFC",
@@ -238,16 +248,31 @@ export async function downloadCompletionCertificate(id: string) {
       logging: false,
     });
 
-    const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
+    const pdf = new jsPDF({
+      orientation: "landscape",
+      unit: "mm",
+      format: "a4",
+      compress: true,
+    });
     pdf.addImage(image.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, 297, 210);
+
+    const name = certificateDocument.querySelector<HTMLInputElement>(
+      '.tgrid input[data-field="name"]',
+    )?.value || "Intern";
+    const certificateNumber = certificateDocument.querySelector<HTMLInputElement>(
+      '.tgrid input[data-field="certno"]',
+    )?.value || id;
+    const safeFilePart = (value: string) =>
+      value.trim().replace(/[^a-z0-9_-]+/gi, "_").replace(/^_+|_+$/g, "").slice(0, 60);
+    const filename = `FIN_Certificate_${safeFilePart(name) || "Intern"}_${safeFilePart(certificateNumber) || "FIN"}.pdf`;
     const url = URL.createObjectURL(pdf.output("blob"));
     const link = document.createElement("a");
     link.href = url;
-    link.download = `FIN_Certificate_${id.replace(/-/g, "").slice(0, 8).toUpperCase()}.pdf`;
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   } finally {
     frame.remove();
   }
