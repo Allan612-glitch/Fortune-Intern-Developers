@@ -103,6 +103,22 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .ksm:hover{background:var(--navy);color:#fff}
 .ksm.del{color:var(--red);border-color:var(--red)}.ksm.del:hover{background:var(--red);color:#fff}
 @media (max-width:480px){.hdr-nm{font-size:15px}.mc{max-width:88%}}
+@media (max-width:480px){
+  .hdr{padding-top:calc(8px + env(safe-area-inset-top));padding-bottom:8px}
+  .hdr-av{width:40px;height:40px}
+  .hbtn{width:34px;height:34px}
+  .chat{padding:10px}
+  .chips{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding:8px 10px;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:none;min-height:34px;padding:8px 12px;white-space:nowrap}
+  .form{padding:7px 10px}
+  .in{height:44px;padding:9px 14px;font-size:14px}
+  .send{width:44px;height:44px}
+  .ct{gap:10px;padding:4px 10px;padding-bottom:calc(6px + env(safe-area-inset-bottom))}
+  .ct a{min-height:26px;font-size:11px}
+  .m{margin-bottom:10px}
+  .bub{padding:9px 12px;font-size:14px}
+}
 </style>
 </head>
 <body>
