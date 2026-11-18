@@ -174,7 +174,7 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){retur
 function now12(){return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
 function words(s){return String(s||'').split(/\s+/).filter(Boolean).length}
 var GREET_V='ghs5-ch15-v1';
-var chatEl=$('#chat'),input=$('#input'),KEY='',MODEL='gpt-4o-mini',KNOW=[],CHAT=[],BUSY=false,FLOW=null,lastDoc='',USER={name:''};
+var chatEl=$('#chat'),input=$('#input'),KEY='',MODEL='gpt-4o-mini',KNOW=[],CHAT=[],BUSY=false,FLOW=null,lastDoc='',USER={name:''},CHAT_EPOCH=0;
 var IS_ADMIN=new URLSearchParams(location.search).get('admin')==='1';
 if(!IS_ADMIN){
 if($('#btnTrain'))$('#btnTrain').style.display='none';
@@ -303,14 +303,14 @@ var SYS='You are Super, AI assistant of Fortune Intern Network (FIN), Ghana ("Br
 function attempt(msgs,nt){var b={model:MODEL,messages:msgs};b[nt?'max_completion_tokens':'max_tokens']=700;
 return fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+KEY},body:JSON.stringify(b)}).then(function(r){if(!r.ok)return r.json().catch(function(){return{}}).then(function(d){var msg=(d&&d.error&&d.error.message)||('HTTP '+r.status);if(!nt&&/max_tokens/i.test(msg))return attempt(msgs,1);throw{status:r.status,message:msg}});return r.json()})}
 function errTxt(e){var s=(e&&e.status)||0;return s===401?'invalid API key.':s===404?'model not on your account.':s===429?'quota/billing limit.':'couldn\'t reach OpenAI.'}
-function send(text){text=String(text||'').trim();if(BUSY||!text)return;captureName(text);addMsg('u',esc(text),1,text);input.value='';input.focus();
+function send(text){text=String(text||'').trim();if(BUSY||!text)return;captureName(text);addMsg('u',esc(text),1,text);input.value='';input.focus();var epoch=++CHAT_EPOCH;
 if(FLOW){flowHandle(text);return}
 var ty=typing();BUSY=true;
 if(KEY&&window.fetch){var msgs=[{role:'system',content:SYS+kbCtx(text)}].concat(CHAT.slice(-13).map(function(x){return{role:x.role==='u'?'user':'assistant',content:x.text}}));
-attempt(msgs,0).then(function(d){ty.remove();BUSY=false;var r=d&&d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content;
-if(r){var tmp=document.createElement('div');tmp.innerHTML=clean(r);addMsg('b',clean(r),1,tmp.textContent||r);setChips(CHIPS)}else fallback(ty,text,'empty reply.')}).catch(function(e){fallback(ty,text,errTxt(e))});return}
-setTimeout(function(){ty.remove();BUSY=false;var r=brain(text);if(r==null){setChips([]);return}addMsg('b',r,1,r.replace(/<[^>]+>/g,' ').trim());setChips(CHIPS)},420+Math.min(700,text.length*7))}
-function fallback(ty,text,why){ty.remove();BUSY=false;addMsg('b','<p><strong>GPT hiccup — '+esc(why)+'</strong> Offline brain instead:</p>');var r=brain(text);if(r!=null){addMsg('b',r,1,r.replace(/<[^>]+>/g,' ').trim());setChips(CHIPS)}}
+attempt(msgs,0).then(function(d){if(epoch!==CHAT_EPOCH)return;ty.remove();BUSY=false;var r=d&&d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content;
+if(r){var tmp=document.createElement('div');tmp.innerHTML=clean(r);addMsg('b',clean(r),1,tmp.textContent||r);setChips(CHIPS)}else fallback(ty,text,'empty reply.',epoch)}).catch(function(e){if(epoch===CHAT_EPOCH)fallback(ty,text,errTxt(e),epoch)});return}
+setTimeout(function(){if(epoch!==CHAT_EPOCH)return;ty.remove();BUSY=false;var r=brain(text);if(r==null){setChips([]);return}addMsg('b',r,1,r.replace(/<[^>]+>/g,' ').trim());setChips(CHIPS)},420+Math.min(700,text.length*7))}
+function fallback(ty,text,why,epoch){if(epoch!==CHAT_EPOCH)return;ty.remove();BUSY=false;addMsg('b','<p><strong>GPT hiccup — '+esc(why)+'</strong> Offline brain instead:</p>');var r=brain(text);if(r!=null){addMsg('b',r,1,r.replace(/<[^>]+>/g,' ').trim());setChips(CHIPS)}}
 document.addEventListener('click',function(e){var c=e.target.closest('[data-close]');if(c){$('#'+c.getAttribute('data-close')).classList.remove('show');return}
 if(e.target.classList&&e.target.classList.contains('ovl'))e.target.classList.remove('show');
 var f=e.target.closest('[data-flow]');if(f){FLOW=null;startFlow(f.getAttribute('data-flow'));return}
@@ -321,7 +321,7 @@ $('#form').addEventListener('submit',function(e){e.preventDefault();send(input.v
 $('#btnKey').onclick=function(){$('#inKey').value=KEY;$('#inModel').value=MODEL;$('#ovlKey').classList.add('show')};
 $('#btnSaveKey').onclick=function(){KEY=$('#inKey').value.trim();MODEL=$('#inModel').value.trim()||'gpt-4o-mini';put('settings',{k:'key',v:KEY});put('settings',{k:'model',v:MODEL});try{localStorage.setItem('fin_key',KEY);localStorage.setItem('fin_model',MODEL)}catch(e){}sync();$('#ovlKey').classList.remove('show');addMsg('b','<p><strong>Key saved — GPT live on '+esc(MODEL)+'.</strong> Ask anything, any topic.</p>');setChips(CHIPS)};
 $('#btnClearKey').onclick=function(){KEY='';$('#inKey').value='';put('settings',{k:'key',v:''});try{localStorage.removeItem('fin_key')}catch(e){}sync();$('#ovlKey').classList.remove('show');addMsg('b','<p>Back on the <strong>offline brain</strong> — full FIN knowledge, no key.</p>');setChips(CHIPS)};
-$('#btnClear').onclick=function(){var b=$('#btnClear');if(b.classList.contains('armed')){b.classList.remove('armed');clr('chat').then(function(){CHAT=[];chatEl.innerHTML='';greet(1);setChips(CHIPS)})}else{b.classList.add('armed');setTimeout(function(){b.classList.remove('armed')},2200)}};
+$('#btnClear').onclick=function(){CHAT_EPOCH++;BUSY=false;FLOW=null;clr('chat').then(function(){CHAT=[];chatEl.innerHTML='';greet(0);setChips(CHIPS);input.focus()}).catch(function(){toast('Could not clear the conversation. Please try again.')})};
 $('#btnTrain').onclick=function(){renderTrainer();$('#ovlTrain').classList.add('show')};
 function renderTrainer(){$('#trList').innerHTML=KNOW.map(function(e){return '<div class="kent'+(e.core?' core':'')+'" data-id="'+esc(e.id)+'"><div class="krow"><input class="t-topic" value="'+esc(e.topic)+'"><input class="t-kw" value="'+esc(e.kw)+'"></div><textarea class="t-content" rows="3">'+esc(e.c)+'</textarea><div class="kact"><button class="ksm t-save" type="button">Save</button>'+(e.core?'<span class="ksm" style="border:0;cursor:default;color:var(--muted)">Core</span>':'<button class="ksm del t-del" type="button">Delete</button>')+'</div></div>'}).join('')}
 $('#trList').addEventListener('click',function(e){var box=e.target.closest('.kent');if(!box)return;var id=box.getAttribute('data-id'),en=null;KNOW.forEach(function(x){if(x.id===id)en=x});
