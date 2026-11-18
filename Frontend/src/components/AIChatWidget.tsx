@@ -1,324 +1,74 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Super · AI Assistant — Fortune Intern Network</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
-<style>
-:root{--navy:#0A3161;--ink:#12365E;--gold:#EDB523;--gold-dk:#C89A3C;--paper:#F7F9FB;--paper2:#EEF2F7;--body:#475569;--muted:#64748B;--line:#E2E8F0;--mint:#E8F6EF;--green:#0F9D6E;--red:#DC2626;--sans:'Inter',system-ui,Arial,sans-serif;--head:'Poppins','Inter',sans-serif}
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{height:100%}
-body{background:var(--paper);color:var(--ink);font:400 15px/1.6 var(--sans);display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
-button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
-:focus-visible{outline:3px solid var(--gold);outline-offset:2px;border-radius:6px}
-.hdr{background:var(--navy);color:#fff;display:flex;align-items:center;gap:12px;padding:12px 14px;padding-top:calc(12px + env(safe-area-inset-top));flex:none}
-.hdr-av{width:44px;height:44px;border-radius:99px;background:var(--gold);display:grid;place-items:center;flex:none}
-.hdr-nm{font:700 16px var(--head);line-height:1.2}
-.hdr-sub{font:500 11px var(--sans);color:rgba(255,255,255,.72);margin-top:2px;display:flex;align-items:center;gap:6px}
-.hdr-sub .dot{width:7px;height:7px;border-radius:99px;background:var(--gold);animation:pulse 1.5s infinite}
-.hdr-sub.live .dot{background:var(--green)}.hdr-sub.live{color:#BFEAD2}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.75)}}
-.hdr-r{margin-left:auto;display:flex;gap:8px}
-.hbtn{width:38px;height:38px;border-radius:99px;border:1px solid rgba(255,255,255,.35);display:grid;place-items:center;color:#fff;transition:.2s}
-.hbtn:hover{background:var(--gold);color:var(--navy);border-color:var(--gold)}
-.hbtn.armed{border-color:var(--gold);color:var(--gold)}
-.chat{flex:1;overflow-y:auto;padding:16px 14px;min-height:0;-webkit-overflow-scrolling:touch}
-.m{display:flex;gap:9px;margin-bottom:14px;animation:up .28s ease}
-@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.m.u{flex-direction:row-reverse}
-.mav{width:28px;height:28px;border-radius:99px;background:var(--gold);display:grid;place-items:center;flex:none;margin-top:2px}
-.mc{max-width:84%;min-width:0}.m.u .mc{max-width:88%}
-.bub{padding:11px 14px;border-radius:4px 16px 16px 16px;font-size:14.5px;line-height:1.55;background:#fff;border:1px solid var(--line);box-shadow:0 2px 8px rgba(15,23,42,.05);word-wrap:break-word}
-.m.u .bub{background:var(--navy);color:#fff;border-color:var(--navy);border-radius:16px 4px 16px 16px;font-weight:500;box-shadow:none}
-.bub p{margin:0 0 7px}.bub p:last-child{margin:0}
-.bub ul{margin:4px 0 7px;padding:0;list-style:none}
-.bub li{padding:4px 0 4px 14px;border-bottom:1px dashed var(--line);font-size:13.5px;position:relative}
-.m.u .bub li{border-bottom-color:rgba(255,255,255,.2)}
-.bub li:last-of-type{border-bottom:0}
-.bub li::before{content:"";position:absolute;left:0;top:12px;width:6px;height:2px;background:var(--gold-dk)}
-.m.u .bub li::before{background:var(--gold)}
-.bub a{color:var(--gold-dk);font-weight:600}.m.u .bub a{color:var(--gold)}
-.tm{display:block;font-size:10px;color:var(--muted);margin-top:4px;padding:0 2px}.m.u .tm{text-align:right;color:rgba(255,255,255,.6)}
-.typing .bub{display:flex;gap:5px;align-items:center;padding:15px 16px}
-.typing .bub i{width:7px;height:7px;border-radius:99px;background:var(--muted);animation:pulse 1s infinite}
-.typing .bub i:nth-child(2){animation-delay:.18s}.typing .bub i:nth-child(3){animation-delay:.36s}
-.chips{display:flex;gap:8px;flex-wrap:wrap;padding:10px 14px;border-top:1px solid var(--line);background:var(--paper2);flex:none}
-.chip{border:1px solid var(--line);background:#fff;border-radius:99px;padding:10px 15px;font:600 12px/1 var(--sans);color:var(--body);transition:.2s;min-height:38px}
-.chip:hover{background:var(--gold);border-color:var(--gold);color:var(--navy)}
-.form{display:flex;gap:9px;padding:10px 14px;background:var(--paper);flex:none}
-.in{flex:1;border:1.5px solid var(--line);border-radius:99px;padding:12px 17px;font:500 15px var(--sans);background:#fff;color:var(--ink);min-width:0}
-.in:focus{outline:none;border-color:var(--navy)}.in::placeholder{color:var(--muted)}
-.send{width:46px;height:46px;border-radius:99px;background:var(--navy);color:var(--gold);display:grid;place-items:center;flex:none;transition:.2s}
-.send:hover{background:var(--gold);color:var(--navy)}
-.ct{display:flex;justify-content:center;gap:18px;padding:6px 14px;padding-bottom:calc(8px + env(safe-area-inset-bottom));background:var(--paper);flex:none;flex-wrap:wrap}
-.ct a{display:inline-flex;align-items:center;gap:6px;font:500 12px var(--sans);color:var(--muted);text-decoration:none;min-height:32px}
-.ct a:hover{color:var(--gold-dk)}.ct .ic{width:14px;height:14px}
-.dcard{border:1px solid var(--line);background:#fff;border-radius:14px;overflow:hidden;margin-top:9px;box-shadow:0 8px 24px rgba(15,23,42,.08)}
-.dcard-h{background:var(--navy);color:#fff;padding:8px 12px;font:700 9.5px/1 var(--sans);letter-spacing:.15em;text-transform:uppercase}
-.dcard-b{padding:12px}
-.dcard-a{display:flex;gap:8px;flex-wrap:wrap;padding:10px 12px;border-top:1px solid var(--line)}
-.dbtn{border:1px solid var(--line);background:var(--paper);padding:8px 12px;font:700 10px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;border-radius:99px;transition:.2s;color:var(--ink)}
-.dbtn:hover{background:var(--navy);color:#fff}
-.dbtn.gold{background:var(--gold);border-color:var(--gold);color:var(--navy)}
-.dbtn.gold:hover{background:var(--navy);color:var(--gold)}
-.crow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13px;color:var(--ink);text-decoration:none}
-.crow:last-child{border-bottom:0}.crow:hover{color:var(--gold-dk)}
-.crow em{font:700 10px/1 var(--sans);font-style:normal;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
-.doc{border:1px solid var(--line);background:#fff;padding:14px;max-height:260px;overflow-y:auto;font-size:12.5px;line-height:1.55;border-radius:10px}
-.docw{white-space:pre-wrap}
-.doc h5{font:700 17px var(--head);color:var(--navy)}
-.doc .dl1{font-size:10.5px;color:var(--muted);border-bottom:2px solid var(--gold);padding-bottom:7px;margin-bottom:8px}
-.doc h6{font:700 9px/1 var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--gold-dk);margin:11px 0 4px}
-.doc .ph{color:var(--gold-dk);font-weight:600}
-.ovl{position:fixed;inset:0;background:rgba(10,49,97,.55);backdrop-filter:blur(4px);z-index:200;display:none;align-items:center;justify-content:center;padding:16px;overflow-y:auto}
-.ovl.show{display:flex}
-.card{width:min(470px,100%);background:var(--paper);border:1px solid var(--line);border-radius:20px;box-shadow:0 20px 50px rgba(10,49,97,.25);animation:up .3s ease;max-height:calc(100dvh - 40px);display:flex;flex-direction:column}
-.chead{background:var(--navy);color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;flex:none;border-radius:20px 20px 0 0}
-.chead b{font:700 15px var(--head)}
-.cbody{padding:16px;overflow-y:auto}
-.xbtn{width:32px;height:32px;border-radius:99px;border:1px solid rgba(255,255,255,.35);display:grid;place-items:center;color:#fff}
-.xbtn:hover{background:var(--gold);color:var(--navy);border-color:var(--gold)}
-.fld{display:block;margin-bottom:13px}
-.fld>span{display:block;font:700 9.5px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
-.fld input,.fld textarea{width:100%;border:1.5px solid var(--line);background:#fff;padding:10px 12px;font:500 14px var(--sans);border-radius:10px;color:var(--ink)}
-.fld input:focus,.fld textarea:focus{outline:none;border-color:var(--gold)}
-.fld textarea{resize:vertical;line-height:1.5}
-.brow{display:flex;gap:9px;flex-wrap:wrap}
-.bgold{background:var(--gold);border:1px solid var(--gold);color:var(--navy);border-radius:99px;padding:12px 18px;font:700 11px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;transition:.2s}
-.bgold:hover{background:var(--navy);color:var(--gold);border-color:var(--navy)}
-.bghost{border:1px solid var(--line);color:var(--ink);background:#fff;border-radius:99px;padding:12px 16px;font:700 11px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;transition:.2s}
-.bghost:hover{background:var(--navy);color:#fff}
-.bghost.armed{color:var(--red);border-color:var(--red)}
-.note{font-size:12px;color:#0B6B4F;line-height:1.55;background:var(--mint);border:1px dashed #BFE8D6;border-radius:10px;padding:10px 12px;margin-bottom:14px}
-.note b{color:var(--ink)}
-.kent{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;background:#fff}
-.kent.core{border-left:4px solid var(--gold)}
-.kent .krow{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap}
-.kent .krow input{flex:1;min-width:120px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:500 13px var(--sans)}
-.kent textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font:500 13px/1.5 var(--sans);min-height:64px;resize:vertical}
-.kent .kact{display:flex;gap:8px;margin-top:9px;align-items:center}
-.ksm{border:1px solid var(--line);border-radius:99px;padding:8px 13px;font:700 10px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;transition:.2s;color:var(--ink);background:#fff}
-.ksm:hover{background:var(--navy);color:#fff}
-.ksm.del{color:var(--red);border-color:var(--red)}.ksm.del:hover{background:var(--red);color:#fff}
-@media (max-width:480px){.hdr-nm{font-size:15px}.mc{max-width:88%}}
-</style>
-</head>
-<body>
-<script>
-(function(){window.__superOK=false;
-function bad(h){var c=document.getElementById('chat');if(!c)return;var d=document.createElement('div');d.className='m b';d.innerHTML='<div class="mc"><div class="bub">'+h+'</div></div>';c.appendChild(d)}
-window.addEventListener('error',function(e){if(!window.__superOK)bad('<p><strong>Script error:</strong> '+String((e&&e.message)||'unknown')+'</p><p>Recopy the file fully — last line must be <strong>&lt;/html&gt;</strong>.</p>')},true);
-setTimeout(function(){if(!window.__superOK)bad('<p><strong>The script did not finish loading.</strong> The file was cut while copying — recopy it complete.</p>')},2500);
-})();
-</script>
-<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
-<symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m3 7 9 6 9-6" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
-<symbol id="i-wa" viewBox="0 0 448 512"><path fill="currentColor" d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/></symbol>
-<symbol id="i-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="square"/></symbol>
-<symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.5v3M12 18.5v3M4.8 6.9l2.1 2.1M17.1 15l2.1 2.1M2.5 12h3M18.5 12h3M4.8 17.1l2.1-2.1M17.1 9l2.1-2.1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
-<symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="square"/></symbol>
-<symbol id="i-book" viewBox="0 0 24 24"><path d="M5 4h14v16H5zM5 8h14M9 4v16" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
-<symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M16 8V4H4v12h4" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
-<symbol id="i-dl" viewBox="0 0 24 24"><path d="M12 4v11m-5-4 5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="square"/></symbol>
-</svg>
-<header class="hdr">
-<span class="hdr-av"><svg width="24" height="24" viewBox="0 0 48 48"><g stroke="#0A3161" stroke-width="3" stroke-linecap="round"><path d="M33.5 31h3M30.7 37.7l2.1 2.1M24 40.5v3M17.3 37.7l-2.1 2.1M14.5 31h-3M17.3 24.3l-2.1-2.1M30.7 24.3l2.1-2.1"/></g><polygon points="24,23 28,31 24,39 20,31" fill="#F7F9FB"/><polygon points="24,23 28,31 20,31" fill="#0A3161"/></svg></span>
-<div><div class="hdr-nm">Super · AI Assistant</div><div class="hdr-sub" id="hdrSub"><span class="dot"></span><span id="hdrSubTxt">Loading…</span></div></div>
-<div class="hdr-r">
-<button class="hbtn" id="btnTrain" title="Train Super — knowledge base"><svg width="17" height="17" viewBox="0 0 24 24"><use href="#i-book"/></svg></button>
-<button class="hbtn" id="btnClear" title="Clear conversation"><svg width="17" height="17" viewBox="0 0 24 24"><use href="#i-trash"/></svg></button>
-<button class="hbtn" id="btnKey" title="Optional: connect GPT"><svg width="17" height="17" viewBox="0 0 24 24"><use href="#i-gear"/></svg></button>
-</div></header>
-<main class="chat" id="chat"><div class="m b"><div class="mc"><div class="bub"><p>Loading Super…</p></div></div></div></main>
-<div class="chips" id="chips"></div>
-<form class="form" id="form"><input class="in" id="input" placeholder="Ask Super anything about FIN…" autocomplete="off" aria-label="Message Super">
-<button class="send" type="submit" aria-label="Send"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M3 12 21 4l-8 16-2.5-6.5L3 12Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></button></form>
-<div class="ct">
-<a href="mailto:fortuneintern.gh@gmail.com"><svg class="ic"><use href="#i-mail"/></svg>fortuneintern.gh@gmail.com</a>
-<a href="https://wa.me/233257038948" target="_blank" rel="noopener"><svg class="ic"><use href="#i-wa"/></svg>WhatsApp · +233 25 703 8948</a>
-</div>
-<div class="ovl" id="ovlKey"><div class="card"><div class="chead"><b>Connect GPT (optional)</b><button class="xbtn" data-close="ovlKey" type="button"><svg width="15" height="15" viewBox="0 0 24 24"><use href="#i-x"/></svg></button></div>
-<div class="cbody"><div class="note"><b>You don't need this.</b> Super's offline brain already answers everything about FIN — programs, the GHS 5 application, letters, certificates, the 15 active chapters, governance and contacts. A key only adds general-world topics.</div>
-<label class="fld"><span>OpenAI API key (optional)</span><input id="inKey" type="password" placeholder="sk-…" autocomplete="off"></label>
-<label class="fld"><span>Model</span><input id="inModel" placeholder="gpt-4o-mini" autocomplete="off"></label>
-<div class="brow"><button class="bgold" id="btnSaveKey" type="button">Save &amp; go live</button><button class="bghost" id="btnClearKey" type="button">Back to offline brain</button></div></div></div></div>
-<div class="ovl" id="ovlTrain"><div class="card"><div class="chead"><b>Train Super — FIN knowledge base</b><button class="xbtn" data-close="ovlTrain" type="button"><svg width="15" height="15" viewBox="0 0 24 24"><use href="#i-x"/></svg></button></div>
-<div class="cbody"><div class="note"><b>Offline database (IndexedDB), on this device.</b> Add, edit or delete entries — the brain and GPT use them instantly. Gold-barred entries are <b>core</b>: always attached.</div>
-<div class="kent"><div class="krow"><input id="trTopic" placeholder="Topic"><input id="trKw" placeholder="Keywords, comma separated"></div>
-<textarea id="trContent" rows="3" placeholder="The facts Super should know…"></textarea>
-<div class="kact"><button class="ksm" id="trAdd" type="button">Add knowledge</button></div></div>
-<div id="trList"></div>
-<div class="brow" style="margin-top:6px"><button class="bghost" id="trReset" type="button">Reset to FIN defaults</button></div></div></div></div>
-<script>
-(function(){'use strict';
-function $(s){return document.querySelector(s)}
-function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]})}
-function now12(){return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
-function words(s){return String(s||'').split(/\s+/).filter(Boolean).length}
-var GREET_V='ghs5-ch15-v1';
-var chatEl=$('#chat'),input=$('#input'),KEY='',MODEL='gpt-4o-mini',KNOW=[],CHAT=[],BUSY=false,FLOW=null,lastDoc='',USER={name:''};
-var PROG=[{t:'Paid Internships',d:'Connecting students with real-world industry opportunities — always paid.'},{t:'Skills Training',d:'Targeted professional development courses through the FIN Academy.'},{t:'Recruitment',d:'The application and placement pipeline for young talent, with professional mentorship.'},{t:'Entrepreneurship Training',d:'Resources and fundamentals for student ventures — FIN as an incubator.'}];
-var KB=[
-{id:'about',topic:'About FIN',core:1,kw:'fin fortune intern network about company who what motto bridging dreams careers accra kumasi ghana mission vision',c:'Fortune Intern Network (FIN) is a Ghanaian hiring and training house in Accra and Kumasi, motto "Bridging Dreams and Careers", online at fortuneintern.com. It takes students and graduates across the bridge to real work through four programs: Paid Internships, Skills Training (FIN Academy), Recruitment with mentorship, and Entrepreneurship Training (incubator). Every application is read by a human and answered within 72 hours, even to say no.'},
-{id:'programs',topic:'The four FIN programs',core:1,kw:'program programmes services pillars four offer available what opportunities',c:'FIN runs exactly four programs: (1) Paid Internships — real companies, real work, real pay; (2) Skills Training — short practical courses through the FIN Academy, free for applicants, certificate on completion; (3) Recruitment — application to placement pipeline with professional mentorship; (4) Entrepreneurship Training — venture fundamentals and incubator support for student founders.'},
-{id:'internships',topic:'Paid Internships',kw:'internship intern paid placement industry stipend salary attach work experience',c:'Paid Internships place students with partner companies for 3-6 months under a named supervisor. They are always paid — FIN refuses unpaid internships because they filter for family money, not talent. Stipends vary by placement and cohort; the customer service desk confirms current figures. Track your file through Applied → Review → Interview → Offer.'},
-{id:'skills',topic:'Skills Training — FIN Academy',kw:'skills training course courses academy learn certificate module upskill study free graphic design data communication',c:'The FIN Academy runs short practical courses: career foundations, data & analytics (Excel, Power BI), software craft, brand & marketing, graphic design (Photoshop, Canva), public speaking and AI productivity. Courses are free for applicants and end with a certificate; the one-month project bootcamp leaves you with a verified portfolio, CV and LinkedIn profile.'},
-{id:'recruitment',topic:'Recruitment & mentorship',kw:'recruitment recruit mentor mentorship pipeline placement stages track status hiring process',c:'Recruitment runs a five-stage pipeline over about four weeks: apply (a human reads every file) → blind screening with a 72-hour answer promise → a short paid work sample → a 30-minute conversation with the real team → placement. Professional mentorship pairs placed talent with experienced practitioners during and after placement.'},
-{id:'entrepreneurship',topic:'Entrepreneurship Training',kw:'entrepreneur startup venture business incubator founder idea own company',c:'Entrepreneurship Training is FIN\'s incubator: venture fundamentals, practical resources and structured support for students building their own businesses — the path for talent that would rather create jobs than apply for them.'},
-{id:'apply',topic:'How to apply',core:1,kw:'apply application form how steps submit register eligibility student graduate requirements documents resume cv portal',c:'Applying takes about ten minutes on fortuneintern.com: personal info (names, gender, phone, email), academic info (institution — Ghana\'s top 12 universities prelisted plus "Other", course, year, index number), placement info (host company, address, preferred partner company) and an optional PDF resume. Then pay the one-time GHS 5 processing fee via Paystack to submit. Eligibility: students of recognised tertiary institutions in Ghana; under 18 needs guardian or institution approval.'},
-{id:'fee',topic:'Fee, payment & refunds',kw:'fee pay payment price cost ghs charge paystack refund money debit duplicate five 5',c:'The application fee is a one-time GHS 5, paid securely through Paystack at submission; card and mobile-money details never touch FIN servers. Refunds are granted for duplicate payment, a debited-but-unverified transaction, a system fault, or FIN cancelling a cycle — request within 14 days by email quoting your Paystack reference; approved refunds return to the original channel in 7-14 working days. No refunds for change of mind after processing, disqualification, or non-selection by a company.'},
-{id:'letter',topic:'Internship letter',kw:'letter internship letter attachment letter placement letter download get obtain introduce',c:'Your official Internship/Attachment Letter unlocks immediately after your payment is verified. Open it from the portal (Documents / Downloads), check your details, then download as PNG or JPG or print to PDF. It carries your name, institution, index number, course, the addressee company, a unique reference (FIN/YYYY/xxxx) and the signature of Emmanuel Amoasi, Managing Director. Employers verify it through the desk.'},
-{id:'certificate',topic:'Certificate of completion',kw:'certificate cert completion graduate finished collect download obtain',c:'The Certificate of Completion is issued after your internship ends and your supervisor returns the Assessment Form with a positive recommendation. Download the landscape certificate (PNG or JPG) from the portal; it carries your name, institution, track, dates, duration, a Certificate No. (FIN/CERT/YYYY/xxxx), the Managing Director\'s signature and the FIN seal. Verify any certificate by quoting its number to the desk.'},
-{id:'assessment',topic:'Assessment form',kw:'assessment form supervisor evaluate rate rating section criteria stamp',c:'The Internship/Attachment Assessment Form is completed by your supervisor at the end of placement: Section A intern information; Section B rates ten criteria (punctuality, communication, teamwork, initiative, technical knowledge, adaptability, work quality, time management, professionalism, overall) from Excellent 5 to Poor 1; Section C supervisor\'s comments; Section D recommendation (highly recommend / with reservations / not recommended); then signature and organisation stamp. A returned form with a positive recommendation releases your certificate.'},
-{id:'chapters',topic:'Campus chapters',kw:'chapter campus chapters branch university list knust ug ucc how many where active expanding 15 41',c:'FIN currently runs 15 active campus chapters and is still expanding, on track to establish chapters at all 41 tertiary institutions on its directory — 14 public universities, 11 technical universities, 15 private and specialised institutions, plus colleges of education and nursing. Every chapter runs the same eleven-seat executive board under a faculty Patron. Browse the live list and each board on the Chapters page of the portal.'},
-{id:'governance',topic:'Chapter governance & roles',kw:'governance executive board roles ambassador president secretary treasurer media designer patron officers seats',c:'Every chapter runs an eleven-seat board: Campus Ambassador, Chapter President, Vice President/Operations Lead, General Secretary, Deputy General Secretary, Financial Secretary & Treasurer, PR & Communications Director, Media Head, Graphic Designer, Programs & Training Coordinator, plus a faculty Chapter Patron. Executives submit operational and financial reports to FIN Corporate by the 5th of every month.'},
-{id:'blueprint',topic:'Blueprint, SOPs & calendar',kw:'blueprint sop manual standard operating procedures timeline cadence calendar report meetings discipline events download pdf pptx',c:'The Campus Chapter Blueprint sets the year: one month onboarding & orientation; public speaking & leadership every 3 weeks; a one-month technical & digital skills project; internships & work-study drives pre-vacation; capstones & transition in the final phase. SOP 01-06 cover meetings & minutes, monthly reporting by the 5th, finance & dues with dual sign-off, recruitment & onboarding, events & media approval, and discipline escalation. Download the full blueprint as PDF or PowerPoint from the Chapters page.'},
-{id:'comms',topic:'Communication tiers',kw:'communication whatsapp group channel slack teams tier discord announcement',c:'FIN communicates in three tiers: Tier 1 (executive) Slack/MS Teams for directives and reports; Tier 2 (chapter) WhatsApp Group for coordination and WhatsApp Channel for one-way broadcasts; Tier 3 (public) fortuneintern.com, LinkedIn, Instagram, X and Discord. Official notices flow top-down; member feedback flows up through the General Secretary.'},
-{id:'partners',topic:'Partner companies',kw:'partner companies employers organisations list mtn ecobank placement hosts',c:'FIN places interns with 34 partner organisations including MTN Ghana, Ecobank, GCB Bank, Stanbic Bank, Fidelity Bank, AngloGold Ashanti, Tullow Oil, Telecel Ghana, AT Ghana, Unilever, Nestlé, Guinness, VRA, GRIDCo, Tema Oil Refinery, Korle-Bu and Komfo Anokye Teaching Hospitals, SIC Insurance and Enterprise Group. You pick a preferred company from this list when applying.'},
-{id:'unis',topic:'Universities covered',kw:'universities tertiary institutions schools list knust ug ucc ashesi upsa eligible 41',c:'The application prelists Ghana\'s top 12 universities — UG Legon, KNUST, UCC, Ashesi, UPSA, UEW, UMaT, UHAS, UDS, UENR, GCTU, UESD — plus an "Other" option for any recognised tertiary institution. FIN\'s chapter expansion targets all 41 tertiary institutions nationwide, including technical universities and colleges of education. All Ghanaian tertiary students are eligible today.'},
-{id:'contacts',topic:'Customer service desk',core:1,kw:'contact customer service support help desk human call phone whatsapp email hotline office accra reach agent social instagram linkedin',c:'The FIN desk is human, in Accra: hotline and WhatsApp +233 25 703 8948 and +233 20 031 3672 (Mon-Fri 9:00-17:00 GMT), email fortuneintern.gh@gmail.com (reply within 72 hours), LinkedIn "Fortune Intern Network", Instagram @fortuneintern, X @fortune_intern1, WhatsApp Channel for announcements. The desk confirms stipends, cohort dates, application status and verifies letters and certificates.'},
-{id:'privacy',topic:'Privacy & your data',kw:'privacy data gdpr act 843 cookies consent security share sell',c:'FIN processes data under Ghana\'s Data Protection Act 2012 (Act 843) and, for EEA/UK users, the GDPR. It collects only what each service needs, never stores card details, shares your profile only with companies you apply to plus Paystack and hosting, and never sells data. Cookies: necessary storage only unless you accept more; rejecting never limits access.'},
-{id:'deletion',topic:'Account deletion & retention',kw:'delete account removal erase retention how long keep data',c:'Request account deletion by emailing fortuneintern.gh@gmail.com with subject "Account Deletion Request"; FIN verifies identity and completes deletion within 30 days. Retained by law: payment references 7 years, issued documents and their verification references, and consent logs. Download your letters and certificates before deletion.'},
-{id:'workstudy',topic:'Work-study & national service',kw:'work study work-study earn campus tutoring insurance sales national service ns placement',c:'The Work & Study track runs continuously: flexible campus tutoring, event logistics and departmental support roles, plus insurance sales training and agency placements so members earn without compromising academics. Before each vacation the Internship Placement Drive opens corporate attachments, and graduating members get National Service placement advisory and priority onboarding.'},
-{id:'leadership',topic:'Leadership & public speaking',kw:'leadership public speaking debate pitch competition summit bootcamp confidence',c:'Leadership development runs through the Public Speaking & Executive Communication Masterclass every three weeks — speech drills, elevator pitches, inter-departmental debates — closing with the annual Chapter Pitch Competition whose winners advance to the FIN National Summit. Target: 85%+ pass rate on patron-assessed presentations.'},
-{id:'docs',topic:'All FIN documents & downloads',kw:'document documents download png jpg pdf pptx letter certificate assessment blueprint where get',c:'Three official documents plus the manual: (1) Internship/Attachment Letter — after verified payment; (2) Assessment Form — blank master for supervisors; (3) Certificate of Completion — after a returned positive assessment; (4) Campus Chapter Blueprint — the 24-page manual. Letters and certificates download as PNG or JPG (print to PDF); the blueprint downloads as PDF or PowerPoint. All from the Documents section of the portal.'},
-{id:'brand',topic:'Brand & motto',kw:'brand logo colours colors navy gold motto tagline believe learn succeed merch tshirt',c:'FIN brand: navy #0A3161 and gold #EDB523 on paper #F7F9FB; the logo is the sun-compass-graduation-cap mark; motto "Bridging Dreams and Careers"; member creed "Believe · Learn · Succeed". Official kit: chapter t-shirt, notebook, bottle and desk flag. Only approved lockups — no stretching or recoloring.'}
-];
-var CHIPS=['Available programs','How to apply','Get my certificate','Download my internship letter','Chapters & governance','Contact us'];
-var DB=null,MODE='mem',MEM={knowledge:[],chat:[],seq:0,settings:{}};
-function openDB(){return new Promise(function(res){var done=0;function fin(m){if(!done){done=1;MODE=m;res()}}
-if(!window.indexedDB)return fin('mem');
-try{var rq=indexedDB.open('fin_super_db',1);
-rq.onupgradeneeded=function(){var db=rq.result;['knowledge','chat','settings'].forEach(function(s){if(!db.objectStoreNames.contains(s))db.createObjectStore(s,{keyPath:s==='chat'?'id':(s==='settings'?'k':'id'),autoIncrement:s==='chat'})})};
-rq.onsuccess=function(){DB=rq.result;fin('idb')};rq.onerror=function(){fin('mem')};setTimeout(function(){fin(DB?'idb':'mem')},2000)}catch(e){fin('mem')}})}
-function tx(store,mode,fn){if(MODE!=='idb')return Promise.resolve(fn(1));return new Promise(function(res,rej){try{var t=DB.transaction(store,mode),r=fn(0,t.objectStore(store));t.oncomplete=function(){res(r&&r.result)};t.onerror=function(){rej(t.error)}}catch(e){rej(e)}})}
-function all(s){return tx(s,'readonly',function(m,os){return m?MEM[s].slice():os.getAll()})}
-function put(s,v){return tx(s,'readwrite',function(m,os){if(m){if(s==='chat'){v.id=++MEM.seq;MEM[s].push(v)}else if(s==='settings'){MEM.settings[v.k]=v.v}else{var i=-1;MEM[s].forEach(function(x,k){if(x.id===v.id)i=k});i>-1?MEM[s][i]=v:MEM[s].push(v)}return v}return os.put(v)})}
-function del(s,k){return tx(s,'readwrite',function(m,os){if(m){MEM[s]=MEM[s].filter(function(x){return x.id!==k});return}return os.delete(k)})}
-function clr(s){return tx(s,'readwrite',function(m,os){if(m){MEM[s]=[];if(s==='chat')MEM.seq=0;return}return os.clear()})}
-function cfg(k){if(MODE!=='idb')return Promise.resolve(MEM.settings[k]);return new Promise(function(res){try{var rq=DB.transaction('settings','readonly').objectStore('settings').get(k);rq.onsuccess=function(){res(rq.result?rq.result.v:undefined)};rq.onerror=function(){res(undefined)}}catch(e){res(undefined)}})}
-function loadKB(){return all('knowledge').then(function(l){if(!l||!l.length)return Promise.all(KB.map(function(e){return put('knowledge',e)})).then(function(){return KB.slice()});return l}).then(function(l){KNOW=l})}
-var STOP={the:1,a:1,an:1,is:1,are:1,i:1,my:1,me:1,for:1,of:1,to:1,and:1,in:1,on:1,at:1,it:1,do:1,does:1,did:1,with:1,about:1,how:1,what:1,who:1,can:1,you:1,your:1,please:1,get:1,got:1};
-function tok(s){return String(s||'').toLowerCase().split(/[^a-z0-9]+/).filter(function(w){return w&&!STOP[w]})}
-function score(e,q){var kw={};tok(e.kw+' '+e.topic).forEach(function(w){kw[w]=1});var ct={};tok(e.c).forEach(function(w){ct[w]=1});var s=0;tok(q).forEach(function(w){if(kw[w])s+=3;else if(ct[w])s+=1});return s}
-function top(q,n){return KNOW.map(function(e){return{e:e,s:score(e,q)}}).filter(function(x){return x.s>0}).sort(function(a,b){return b.s-a.s}).slice(0,n||3).map(function(x){return x.e})}
-function kbCtx(q){var p=top(q,3);KNOW.forEach(function(e){if(e.core&&p.indexOf(e)<0)p.push(e)});return '\n\n=== FIN KNOWLEDGE ===\n'+p.map(function(e){return '['+e.topic+'] '+e.c}).join('\n\n')}
-var GLYPH='<svg width="15" height="15" viewBox="0 0 48 48"><g stroke="#0A3161" stroke-width="4" stroke-linecap="round"><path d="M33.5 31h3M24 40.5v3M14.5 31h-3M17.3 24.3l-2.1-2.1M30.7 24.3l2.1-2.1"/></g><polygon points="24,23 28,31 24,39 20,31" fill="#F7F9FB"/><polygon points="24,23 28,31 20,31" fill="#0A3161"/></svg>';
-function addMsg(who,html,persist,text){var w=document.createElement('div');w.className='m '+(who==='u'?'u':'b');
-w.innerHTML=(who==='u'?'':'<span class="mav">'+GLYPH+'</span>')+'<div class="mc"><div class="bub">'+html+'</div><span class="tm">'+now12()+(who==='b'?' · Super':'')+'</span></div>';
-chatEl.appendChild(w);chatEl.scrollTop=chatEl.scrollHeight;
-if(persist){var r={role:who,text:text||'',html:html,ts:Date.now()};CHAT.push(r);put('chat',r)}return w}
-function typing(){var t=document.createElement('div');t.className='m b typing';t.innerHTML='<span class="mav">'+GLYPH+'</span><div class="mc"><div class="bub"><i></i><i></i><i></i></div></div>';chatEl.appendChild(t);chatEl.scrollTop=chatEl.scrollHeight;return t}
-function clean(h){return String(h).replace(/<a\s[^>]*href=["']([^"']+)["'][^>]*>/gi,'<a href="$1" target="_blank" rel="noopener">').replace(/<(?!\/?(?:a|p|strong|em|ul|li|br)\b)[a-zA-Z][^>]*>/g,'')}
-function setChips(a){$('#chips').innerHTML=(a||[]).map(function(c){return '<button class="chip" type="button">'+esc(c)+'</button>'}).join('')}
-function acts(b){return '<div class="dcard-a" style="padding:0;margin-top:7px;border:0">'+b.map(function(x){return '<button class="dbtn gold" type="button" data-flow="'+x[0]+'">'+x[1]+'</button>'}).join('')+'</div>'}
-function card(){return '<div class="dcard"><div class="dcard-h">Customer service — the desk</div><div class="dcard-b">'+
-'<a class="crow" href="tel:+233257038948"><span>Hotline · +233 25 703 8948</span><em>Call</em></a>'+
-'<a class="crow" href="https://wa.me/233257038948" target="_blank" rel="noopener"><span>WhatsApp · +233 25 703 8948</span><em>Chat</em></a>'+
-'<a class="crow" href="mailto:fortuneintern.gh@gmail.com"><span>fortuneintern.gh@gmail.com</span><em>Email</em></a>'+
-'<a class="crow" href="https://www.linkedin.com/company/fortune-intern-network/" target="_blank" rel="noopener"><span>LinkedIn · Fortune Intern Network</span><em>Visit</em></a></div></div>'}
-function toast(m){var t=document.createElement('div');t.style.cssText='position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:300;background:#0A3161;color:#fff;border-left:3px solid #EDB523;padding:12px 18px;font:600 13px Inter,Arial,sans-serif;border-radius:99px;box-shadow:0 10px 26px rgba(10,49,97,.4);max-width:90vw';t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.style.transition='opacity .4s';t.style.opacity='0';setTimeout(function(){t.remove()},420)},3200)}
-function copyText(t,msg){function fb(){var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy')}catch(e){}ta.remove();toast(msg)}
-if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){toast(msg)},fb);else fb()}
-function docCard(html,text,label){lastDoc=text;return '<div class="dcard"><div class="dcard-h">'+label+'</div><div class="dcard-b">'+html+'</div><div class="dcard-a"><button class="dbtn" type="button" data-copydoc><svg width="13" height="13" viewBox="0 0 24 24"><use href="#i-copy"/></svg>Copy text</button><button class="dbtn" type="button" data-dldoc><svg width="13" height="13" viewBox="0 0 24 24"><use href="#i-dl"/></svg>Download .txt</button></div></div>'}
-var FLOWS={cover:{s:[['name','First — your <strong>full name</strong>?'],['program','Which <strong>program</strong> is the letter for?'],['strengths','Now <strong>two or three strengths</strong>, in your own words.'],['achievement','Last: your <strong>proudest achievement</strong> — one or two sentences.']],chips:function(k){return k==='program'?PROG.map(function(p){return p.t}):[]}},
-cv:{s:[['name','First — your <strong>full name</strong>?'],['edu','Your <strong>programme and university</strong> — e.g. "BSc Mathematics, KNUST".'],['stage','Your <strong>stage</strong> — e.g. "Final-year student".'],['skills','Your <strong>skills</strong>, comma separated, honest only.'],['exp','Finally <strong>one project or experience</strong> — one line, or type "skip".']],chips:function(k){return k==='edu'?['BSc Computer Science, KNUST','BSc Business Administration, UG','BSc Nursing, UCC']:k==='stage'?['Final-year student','Graduate, 2025','Level 300 student']:k==='skills'?['Python, Excel, teamwork','Excel, Power BI, writing','Canva, social media, organisation']:k==='exp'?['skip']:[]}}};
-function startFlow(t){FLOW={type:t,i:0,d:{}};if(USER.name){FLOW.d.name=USER.name;FLOW.i=1;addMsg('b','<p>Using your name — <strong>'+esc(USER.name)+'</strong>. '+FLOWS[t].s[1][1]+'</p>');setChips(FLOWS[t].chips(FLOWS[t].s[1][0]));return}
-addMsg('b','<p><strong>'+(t==='cover'?'Let\'s write your cover letter.':'Building your KNUST-format CV.')+'</strong> '+FLOWS[t].s[0][1]+'</p>');setChips([])}
-function flowGo(t){var v=FLOW.d;
-if(t==='cover'){var L='Dear Selection Team at Fortune Intern Network,\n\nMy name is '+v.name+', and I am applying for the '+v.program+'. For me, FIN\'s promise of "bridging dreams and careers" is not a slogan — it is the exact crossing I am standing at.\n\nI bring '+v.strengths+'. The work I am proudest of so far: '+v.achievement+'. It taught me that I am at my best when the problem is real and the deadline is not pretend.\n\nI am ready to work, to learn quickly, and to give a partner company genuine value from week one.\n\nSincerely,\n'+v.name;
-addMsg('b','<p><strong>Done.</strong> Your draft:</p>'+docCard('<div class="doc docw">'+esc(L)+'</div>',L,'Your cover letter'));setChips(['Build my CV too','How to apply']);return}
-var ph=function(x){return '<span class="ph">['+x+']</span>'};
-var H='<div class="doc"><h5>'+esc(v.name)+'</h5><div class="dl1">'+ph('email')+' · '+ph('+233 phone')+' · Accra, Ghana · '+ph('linkedin')+'</div><h6>Profile</h6><p>'+esc(v.stage)+' at '+esc(v.edu)+' seeking an internship.</p><h6>Education</h6><p>'+esc(v.edu)+' — '+esc(v.stage)+'<br>WASSCE: '+ph('school, year, grades')+'</p><h6>National Service</h6><p>'+ph('organization — role — period — result')+'</p><h6>Projects & Research</h6><p>'+(v.exp?esc(v.exp):ph('final-year project: title, tools, outcome'))+'</p><h6>Experience</h6><p>'+ph('VERB + TASK + TOOL + RESULT bullets')+'</p><h6>Skills</h6><p>'+esc(v.skills)+'</p><h6>Referees</h6><p>'+ph('supervisor — title, department, email')+'</p></div>';
-var T=v.name.toUpperCase()+'\n[email] · [+233 phone] · Accra\n\nPROFILE\n'+v.stage+' at '+v.edu+'\n\nEDUCATION\n'+v.edu+'\nWASSCE: [school, year, grades]\n\nPROJECTS\n'+(v.exp||'[final-year project]')+'\n\nSKILLS\n'+v.skills+'\n\nREFEREES\n[supervisor — title, department, email]';
-addMsg('b','<p><strong>Your KNUST-format CV is ready.</strong> Gold brackets are honest placeholders — fill them and it\'s done.</p>'+docCard(H,T,'Your KNUST-format CV'));setChips(['Now write my cover letter','How to apply'])}
-function flowHandle(t){var f=FLOWS[FLOW.type],k=f.s[FLOW.i][0],v=t.trim();
-if(/^(cancel|stop|quit)$/i.test(v)){FLOW=null;addMsg('b','<p>Out of the builder — anything else?</p>');setChips(CHIPS);return}
-if(k==='program'){var hit=null;PROG.forEach(function(p){if(p.t.toLowerCase()===v.toLowerCase())hit=p.t});if(!hit){addMsg('b','<p>Pick one of the four chips below.</p>');setChips(f.chips(k));return}v=hit}
-if(!v){addMsg('b','<p>'+f.s[FLOW.i][1]+'</p>');return}
-FLOW.d[k]=/^(skip|none|no)$/i.test(v)&&k==='exp'?'':v;FLOW.i++;
-if(FLOW.i>=f.s.length){flowGo(FLOW.type);FLOW=null;return}
-addMsg('b','<p>'+f.s[FLOW.i][1]+'</p>');setChips(f.chips(f.s[FLOW.i][0]))}
-var INT=[[/(cover|motivation|application) letter/,'FLOW:cover'],[/\bcv\b|resume|curriculum/,'FLOW:cv'],
-[/certificat/,'certificate'],[/letter|placement letter|intro letter/,'letter'],
-[/assessment/,'assessment'],[/refund|fee|pay|price|cost|ghs|charge/,'fee'],[/chapter|campus|branch/,'chapters'],
-[/role|executive|board|governance|ambassador|president|secretary|patron/,'governance'],[/blueprint|sop|manual|cadence|timeline|report|meeting/,'blueprint'],
-[/tier|slack|communication channel/,'comms'],[/partner|employer|compan(y|ies)/,'partners'],[/universit|tertiary|school list/,'unis'],
-[/privacy|gdpr|data protect|cookie|consent/,'privacy'],[/delet|erase my|remove my account/,'deletion'],[/work.?study|national service|insurance sales|earn while/,'workstudy'],
-[/speak|debate|pitch|leadership|confidence/,'leadership'],[/document|download|png|jpg|pptx/,'docs'],[/brand|logo|colour|color|motto|merch|tshirt/,'brand'],
-[/mentor/,'recruitment'],[/academy|course|train|skill|learn|study module/,'skills'],[/entrepreneur|startup|incubator|venture|business idea|founder/,'entrepreneurship'],
-[/intern(ship|ships)?\b/,'internships'],[/apply|application|form|register|sign ?up|eligib|requirement/,'apply'],[/program|programme|service|offer|pillar|opportunit/,'programs'],
-[/social|instagram|linkedin|twitter|follow/,'contacts'],[/contact|call|phone|whatsapp|email|human|agent|desk|support/,'contacts'],
-[/about|who is fin|what is fin|fortune intern/,'about']];
-function kb(id){var r=null;KNOW.forEach(function(e){if(e.id===id)r=e});return r||KB.filter(function(e){return e.id===id})[0]}
-function first(){return USER.name?USER.name.split(' ')[0]:''}
-function captureName(t){var m=String(t).match(/(?:my name is|call me|i'?m called|name'?s)\s+([a-zA-Z][a-zA-Z' -]{1,25})/i)||String(t).match(/\bi'?m\s+([A-Z][a-z]{2,20})\b/);
-if(m){var n=m[1].trim().replace(/[.,!]+$/,'');if(['fine','good','ok','here','tired','back','new','done','ready'].indexOf(n.toLowerCase())<0)USER.name=n}}
-function brain(raw){var t=String(raw).trim(),m=t.toLowerCase();
-if(/^[0-9\s+\-*/().%]+$/.test(m)&&/[0-9]/.test(m)&&/[+\-*/]/.test(m)&&m.length<40){try{var v=Function('return ('+t.replace(/[^0-9\s+\-*/().%]/g,'')+')')();if(isFinite(v))return '<p>Quick maths: <strong>'+esc(t)+' = '+esc(String(Math.round(v*1e6)/1e6))+'</strong>.</p>'}catch(e){}}
-if(/(do you|what).*(my name)|remember my name/.test(m))return USER.name?'<p>You\'re <strong>'+esc(USER.name)+'</strong> — I keep the important things.</p>':'<p>Not yet — say "my name is …" and I\'ll remember it.</p>';
-if(/\b(hi|hello|hey|good (morning|afternoon|evening)|akwaaba)\b/.test(m)&&words(m)<5)return '<p><strong>Akwaaba'+(first()?', '+esc(first()):'')+'!</strong> I\'m Super, on my offline brain — no key needed. I know everything about FIN: the four programs, applying and the GHS 5 fee, your letter and certificate, our 15 active chapters (expanding to all 41 tertiary institutions), governance, SOPs and the desk. What can I help with?</p>';
-if(/how are you|how'?s it going/.test(m))return '<p>Running smoothly — brain warm, kettle on. More importantly, <strong>how are you</strong>'+(first()?', '+esc(first()):'')+'?</p>';
-if(/thank|thanks|appreciate/.test(m))return '<p>Anytime'+(first()?', '+esc(first()):'')+' — that\'s what I\'m here for.</p>';
-if(/\b(bye|goodbye|good ?night|see you|later)\b/.test(m))return '<p>Bye for now'+(first()?', '+esc(first()):'')+'! Go get that bridge crossed.</p>';
-if(/joke|make me laugh/.test(m))return '<p>Why did the intern bring a ladder to the interview? He heard the role had a clear path to the top.</p>';
-if(/what time|current time|today'?s date|what day/.test(m)){var d=new Date();return '<p>It\'s <strong>'+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+' on '+d.toLocaleDateString([],{weekday:'long',day:'numeric',month:'long',year:'numeric'})+'</strong>.</p>'}
-if(/who are you|what are you|are you (an? )?(ai|bot|robot|human)|what can you do/.test(m))return '<p>I\'m <strong>Super</strong>, FIN\'s assistant — fully working offline. I answer anything about FIN: the four programs, applying and the GHS 5 fee, downloading your internship letter and certificate, the assessment form, our 15 active chapters (expanding to all 41 tertiary institutions) and their boards, the blueprint SOPs, partner companies, privacy and the customer desk. I also build KNUST-format CVs and cover letters, remember your name, and do quick maths. Add an OpenAI key (gear) for general-world topics.</p>'+acts([['cv','Build my CV'],['cover','Write my cover letter']]);
-if(/reject|declined|not (chosen|selected)|failed/.test(m))return '<p>That stings, and it\'s real. Read the feedback once, calmly, then take one concrete step today — finish an Academy module or ask the desk which program fits you better. FIN reroutes applications to better-fitting programs and tells you.</p>';
-if(/nervous|anxious|scared|worried|stress/.test(m))return '<p>Completely normal. Shrink the task: not "apply for a program" — just "open the form and fill one field." Ten minutes total, and I\'ll help with the hard paragraph.</p>';
-if(/sad|depress|hopeless|alone|worthless/.test(m))return '<p>I hear you'+(first()?', '+esc(first()):'')+', and I won\'t wave a chatbot wand at that. Please talk to a person today — the FIN desk listens, and professional support or someone you trust is the right step.</p>'+card();
-for(var i=0;i<INT.length;i++){if(INT[i][0].test(m)){var r=INT[i][1];
-if(r.indexOf('FLOW:')===0){startFlow(r.slice(5));return null}
-var e=kb(r);var extra=(r==='contacts')?card():(r==='certificate'||r==='letter')?acts([['cv','Build my CV'],['cover','Cover letter']]):(r==='apply')?acts([['cv','Build my CV']]):'';
-var next={certificate:['How do I get my letter?','Assessment form','Contact us'],letter:['How do I get my certificate?','Fee & refunds','Contact us'],apply:['Fee & refunds','The four programs','Build my CV'],fee:['How to apply','Refund rules','Contact us'],chapters:['Chapter roles','Blueprint & SOPs','Contact us'],programs:['How to apply','Skills Training','Paid Internships']}[r]||CHIPS;
-setChips(next);return '<p><strong>'+esc(e.topic)+'.</strong></p><p>'+esc(e.c)+'</p>'+extra}}
-var best=top(t,1)[0];if(best&&score(best,t)>=3)return '<p><strong>'+esc(best.topic)+'.</strong></p><p>'+esc(best.c)+'</p>';
-return '<p>Honest answer: my offline brain covers all of FIN, and I couldn\'t match that exactly. Closest things I know:</p><ul>'+top(t,3).map(function(e){return '<li>'+esc(e.topic)+'</li>'}).join('')+'</ul><p>Try a chip below, or reach the desk — a human answers:</p>'+card()}
-var SYS='You are Super, AI assistant of Fortune Intern Network (FIN), Ghana ("Bridging Dreams and Careers"), inside the FIN portal. Warm, personal, friendly; remember the user\'s name. FIN facts: four programs (Paid Internships, Skills Training via FIN Academy, Recruitment with mentorship, Entrepreneurship Training incubator); application ~10 min + one-time GHS 5 via Paystack; letter unlocks after payment; certificate after supervisor Assessment Form returns positive; 15 active campus chapters expanding to all 41 tertiary institutions, each with an eleven-seat board; reports due 5th monthly; contacts +233 25 703 8948 / +233 20 031 3672 / fortuneintern.gh@gmail.com, Accra & Kumasi. Use ONLY the knowledge below for FIN facts; never invent dates or stipends — point to the desk. Answer general topics freely like a normal AI. Format: only p,strong,em,ul,li,br,a tags; under 150 words unless drafting. Safety: distress → brief, kind, point to desk and professional support; never ask passwords, payments or ID numbers.';
-function attempt(msgs,nt){var b={model:MODEL,messages:msgs};b[nt?'max_completion_tokens':'max_tokens']=700;
-return fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+KEY},body:JSON.stringify(b)}).then(function(r){if(!r.ok)return r.json().catch(function(){return{}}).then(function(d){var msg=(d&&d.error&&d.error.message)||('HTTP '+r.status);if(!nt&&/max_tokens/i.test(msg))return attempt(msgs,1);throw{status:r.status,message:msg}});return r.json()})}
-function errTxt(e){var s=(e&&e.status)||0;return s===401?'invalid API key.':s===404?'model not on your account.':s===429?'quota/billing limit.':'couldn\'t reach OpenAI.'}
-function send(text){text=String(text||'').trim();if(BUSY||!text)return;captureName(text);addMsg('u',esc(text),1,text);input.value='';input.focus();
-if(FLOW){flowHandle(text);return}
-var ty=typing();BUSY=true;
-if(KEY&&window.fetch){var msgs=[{role:'system',content:SYS+kbCtx(text)}].concat(CHAT.slice(-13).map(function(x){return{role:x.role==='u'?'user':'assistant',content:x.text}}));
-attempt(msgs,0).then(function(d){ty.remove();BUSY=false;var r=d&&d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content;
-if(r){var tmp=document.createElement('div');tmp.innerHTML=clean(r);addMsg('b',clean(r),1,tmp.textContent||r);setChips(CHIPS)}else fallback(ty,text,'empty reply.')}).catch(function(e){fallback(ty,text,errTxt(e))});return}
-setTimeout(function(){ty.remove();BUSY=false;var r=brain(text);if(r==null){setChips([]);return}addMsg('b',r,1,r.replace(/<[^>]+>/g,' ').trim());setChips(CHIPS)},420+Math.min(700,text.length*7))}
-function fallback(ty,text,why){ty.remove();BUSY=false;addMsg('b','<p><strong>GPT hiccup — '+esc(why)+'</strong> Offline brain instead:</p>');var r=brain(text);if(r!=null){addMsg('b',r,1,r.replace(/<[^>]+>/g,' ').trim());setChips(CHIPS)}}
-document.addEventListener('click',function(e){var c=e.target.closest('[data-close]');if(c){$('#'+c.getAttribute('data-close')).classList.remove('show');return}
-if(e.target.classList&&e.target.classList.contains('ovl'))e.target.classList.remove('show');
-var f=e.target.closest('[data-flow]');if(f){FLOW=null;startFlow(f.getAttribute('data-flow'));return}
-if(e.target.closest('[data-copydoc]')){copyText(lastDoc,'Copied — paste anywhere');return}
-if(e.target.closest('[data-dldoc]')){var b=new Blob([lastDoc],{type:'text/plain;charset=utf-8'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='FIN-document.txt';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},400);toast('Downloaded')}});
-$('#chips').addEventListener('click',function(e){if(e.target.classList.contains('chip'))send(e.target.textContent)});
-$('#form').addEventListener('submit',function(e){e.preventDefault();send(input.value)});
-$('#btnKey').onclick=function(){$('#inKey').value=KEY;$('#inModel').value=MODEL;$('#ovlKey').classList.add('show')};
-$('#btnSaveKey').onclick=function(){KEY=$('#inKey').value.trim();MODEL=$('#inModel').value.trim()||'gpt-4o-mini';put('settings',{k:'key',v:KEY});put('settings',{k:'model',v:MODEL});try{localStorage.setItem('fin_key',KEY);localStorage.setItem('fin_model',MODEL)}catch(e){}sync();$('#ovlKey').classList.remove('show');addMsg('b','<p><strong>Key saved — GPT live on '+esc(MODEL)+'.</strong> Ask anything, any topic.</p>');setChips(CHIPS)};
-$('#btnClearKey').onclick=function(){KEY='';$('#inKey').value='';put('settings',{k:'key',v:''});try{localStorage.removeItem('fin_key')}catch(e){}sync();$('#ovlKey').classList.remove('show');addMsg('b','<p>Back on the <strong>offline brain</strong> — full FIN knowledge, no key.</p>');setChips(CHIPS)};
-$('#btnClear').onclick=function(){var b=$('#btnClear');if(b.classList.contains('armed')){b.classList.remove('armed');clr('chat').then(function(){CHAT=[];chatEl.innerHTML='';greet(1);setChips(CHIPS)})}else{b.classList.add('armed');setTimeout(function(){b.classList.remove('armed')},2200)}};
-$('#btnTrain').onclick=function(){renderTrainer();$('#ovlTrain').classList.add('show')};
-function renderTrainer(){$('#trList').innerHTML=KNOW.map(function(e){return '<div class="kent'+(e.core?' core':'')+'" data-id="'+esc(e.id)+'"><div class="krow"><input class="t-topic" value="'+esc(e.topic)+'"><input class="t-kw" value="'+esc(e.kw)+'"></div><textarea class="t-content" rows="3">'+esc(e.c)+'</textarea><div class="kact"><button class="ksm t-save" type="button">Save</button>'+(e.core?'<span class="ksm" style="border:0;cursor:default;color:var(--muted)">Core</span>':'<button class="ksm del t-del" type="button">Delete</button>')+'</div></div>'}).join('')}
-$('#trList').addEventListener('click',function(e){var box=e.target.closest('.kent');if(!box)return;var id=box.getAttribute('data-id'),en=null;KNOW.forEach(function(x){if(x.id===id)en=x});
-if(e.target.classList.contains('t-save')&&en){en.topic=box.querySelector('.t-topic').value.trim()||en.topic;en.kw=box.querySelector('.t-kw').value.trim();en.c=box.querySelector('.t-content').value.trim();put('knowledge',en).then(function(){e.target.textContent='Saved';setTimeout(function(){e.target.textContent='Save'},1200)})}
-if(e.target.classList.contains('t-del'))del('knowledge',id).then(function(){KNOW=KNOW.filter(function(x){return x.id!==id});renderTrainer()})});
-$('#trAdd').onclick=function(){var t=$('#trTopic').value.trim(),c=$('#trContent').value.trim();if(!t||!c)return;var id='k'+Date.now();put('knowledge',{id:id,topic:t,kw:$('#trKw').value.trim(),c:c}).then(function(){KNOW.push({id:id,topic:t,kw:$('#trKw').value.trim(),c:c});$('#trTopic').value=$('#trKw').value=$('#trContent').value='';renderTrainer()})};
-$('#trReset').onclick=function(){var b=$('#trReset');if(b.classList.contains('armed')){b.classList.remove('armed');b.textContent='Reset to FIN defaults';clr('knowledge').then(function(){return Promise.all(KB.map(function(e){return put('knowledge',e)}))}).then(function(){KNOW=KB.slice();renderTrainer()})}else{b.classList.add('armed');b.textContent='Confirm reset?';setTimeout(function(){b.classList.remove('armed');b.textContent='Reset to FIN defaults'},2400)}};
-function sync(){$('#hdrSub').classList.toggle('live',!!KEY);$('#hdrSubTxt').textContent=KEY?('Powered by '+MODEL+' · Online'):'Offline brain · full FIN knowledge'}
-function greet(p){addMsg('b','<p><strong>Hello! I\'m Super</strong> — FIN\'s assistant, fully working <strong>without any key</strong>.</p><p>FIN runs four programs:</p><ul>'+PROG.map(function(x){return '<li><strong>'+x.t+'</strong> — '+x.d+'</li>'}).join('')+'</ul><p>I can explain any of them, walk you through applying (one-time <strong>GHS 5</strong> via Paystack), tell you how to get your internship letter or certificate, open any of our <strong>15 active chapter boards</strong> — expanding to all 41 tertiary institutions — or build your KNUST-format CV and cover letter.</p><p>How can I help today?</p>',p,'Greeting: four programs, GHS 5 fee, 15 active chapters expanding to 41 institutions.')}
-function boot(){openDB().then(function(){var pk='',pm='';try{pk=localStorage.getItem('fin_key')||'';pm=localStorage.getItem('fin_model')||''}catch(e){}
-return cfg('key').then(function(k){KEY=(k!=null&&k!=='')?k:pk;return cfg('model')}).then(function(m){MODEL=m||pm||'gpt-4o-mini';
-return cfg('greetV')}).then(function(gv){if(gv===GREET_V)return;return clr('chat').then(function(){return put('settings',{k:'greetV',v:GREET_V})})}).then(loadKB)})
-.then(function(){return all('chat')}).then(function(l){
-chatEl.innerHTML='';(l||[]).slice().sort(function(a,b){return a.id-b.id}).slice(-30).forEach(function(x){CHAT.push({role:x.role,text:x.text,html:x.html});
-var w=document.createElement('div');w.className='m '+(x.role==='u'?'u':'b');w.innerHTML=(x.role==='u'?'':'<span class="mav">'+GLYPH+'</span>')+'<div class="mc"><div class="bub">'+x.html+'</div><span class="tm">'+esc(new Date(x.ts||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}))+(x.role==='b'?' · Super':'')+'</span></div>';chatEl.appendChild(w)});
-sync();if(!CHAT.length)greet(1);setChips(CHIPS);chatEl.scrollTop=chatEl.scrollHeight;input.focus()}).catch(function(){chatEl.innerHTML='';sync();greet(0);setChips(CHIPS)})}
-boot();
-window.SuperAI={ask:send,flow:startFlow};
-window.__superOK=true;
-})();
-</script>
-</body>
-</html>
+import { useEffect, useRef, useState } from "react"
+import type { AppUser } from "../App"
+import logo from "../assets/attach1.png"
+
+export default function AIChatWidget({ user }: { user: AppUser }) {
+  const [open, setOpen] = useState(false)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (
+        event.origin !== window.location.origin ||
+        event.source !== iframeRef.current?.contentWindow ||
+        !event.data ||
+        typeof event.data !== "object" ||
+        !("type" in event.data) ||
+        event.data.type !== "fin-super-close"
+      ) {
+        return
+      }
+
+      setOpen(false)
+    }
+
+    window.addEventListener("message", handleMessage)
+    return () => window.removeEventListener("message", handleMessage)
+  }, [])
+
+  return (
+    <div className="chat-widget">
+      {open && (
+        <div className="fixed inset-0 z-[105] overflow-hidden bg-white sm:absolute sm:inset-auto sm:bottom-[calc(100%+0.75rem)] sm:right-0 sm:h-[min(700px,calc(100dvh-8rem))] sm:w-[420px] sm:rounded-2xl sm:border sm:border-border sm:shadow-2xl">
+          <iframe
+            ref={iframeRef}
+            src="/super-ai.html?embedded=1"
+            title={`Super AI assistant for ${user.name}`}
+            className="block h-full w-full border-0"
+          />
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={() => setOpen((currentlyOpen) => !currentlyOpen)}
+        className="relative flex h-14 w-14 items-center justify-center rounded-full shadow-2xl transition-transform hover:scale-105"
+        style={{ background: "linear-gradient(135deg, #2D3561, #3d4a8a)" }}
+        aria-label={open ? "Close Super AI Assistant" : "Open Super AI Assistant"}
+        aria-expanded={open}
+      >
+        {open ? (
+          <svg
+            className="h-6 w-6 text-white"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        ) : (
+          <img
+            src={logo}
+            alt=""
+            className="h-11 w-11 rounded-full bg-white object-contain"
+          />
+        )}
+      </button>
+    </div>
+  )
+}
