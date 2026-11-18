@@ -63,6 +63,25 @@ class UserResponse(BaseModel):
     is_admin: bool = False
 
 
+class FoundingMemberResponse(BaseModel):
+    id: str
+    name: str
+    title: str
+    bio: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    photo: str | None = None
+
+
+class FoundingMemberUpdate(BaseModel):
+    name: str = Field(max_length=200)
+    title: str = Field(min_length=1, max_length=200)
+    bio: str = Field(default="", max_length=4000)
+    email: str = Field(default="", max_length=254)
+    phone: str = Field(default="", max_length=100)
+    photo: str | None = Field(default=None, max_length=2_000_000)
+
+
 class AdminUserResponse(UserResponse):
     is_admin: bool
     is_suspended: bool
