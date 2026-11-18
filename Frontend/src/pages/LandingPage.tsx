@@ -740,26 +740,20 @@ export default function LandingPage({
 
         <section className="px-4 sm:px-6 pb-16 bg-white">
           <div className="max-w-7xl mx-auto rounded-3xl bg-surface border border-border px-6 py-12 sm:p-14 text-center">
-            <p className="section-eyebrow">Connect. Apply. Grow.</p>
+            <p className="section-eyebrow">Find your FIN community</p>
             <h2 className="font-display text-3xl sm:text-5xl text-primary mt-3">
-              Your Next Opportunity Is Waiting.
+              Explore Fortune Intern Network Chapters
             </h2>
             <p className="text-muted-foreground mt-4">
-              Take the next step toward building the career you want.
+              Discover the campus communities connecting students across Ghana, meet the founding team, and see how FIN helps students learn, lead, and grow.
             </p>
-            <div className="flex flex-col sm:flex-row justify-center gap-3 mt-8">
-              <button
-                onClick={() => goTo("internships")}
-                className="px-6 py-3.5 hover:cursor-pointer rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors"
+            <div className="flex justify-center mt-8">
+              <a
+                href="/chapters.html"
+                className="px-6 py-3.5 inline-flex items-center justify-center rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors"
               >
-                Find an Internship
-              </button>
-              <button
-                onClick={() => onStudentPortal("register")}
-                className="px-6 py-3.5 hover:cursor-pointer hover:bg-secondary rounded-xl bg-white border border-border text-primary text-sm font-bold hover:border-primary/30 transition-colors"
-              >
-                Join Fortune Intern Network
-              </button>
+                Explore FIN Chapters
+              </a>
             </div>
           </div>
         </section>

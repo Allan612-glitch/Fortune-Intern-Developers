@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, Date, DateTime, Float, ForeignKey, Index, Integer, JSON, String, Uuid, text
+from sqlalchemy import Boolean, Column, Date, DateTime, Float, ForeignKey, Index, Integer, JSON, String, Text, Uuid, text
 from sqlmodel import Field, SQLModel
 from uuid import UUID, uuid4
 from datetime import date, datetime,timezone
@@ -245,3 +245,13 @@ class password_reset(SQLModel, table=True):
     expires_at: datetime = Field(sa_column=Column("expires_at", DateTime(timezone=True), nullable=False))
     used: bool = Field(default=False, sa_column=Column("used", Boolean, nullable=False, default=False))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
+
+class founding_member(SQLModel, table=True):
+    __tablename__ = "founding_members"
+    id: str = Field(primary_key=True)
+    name: str = Field(sa_column=Column("name", String, nullable=False))
+    title: str = Field(sa_column=Column("title", String, nullable=False))
+    bio: str | None = Field(default=None, sa_column=Column("bio", Text, nullable=True))
+    email: str | None = Field(default=None, sa_column=Column("email", String, nullable=True))
+    phone: str | None = Field(default=None, sa_column=Column("phone", String, nullable=True))
+    photo: str | None = Field(default=None, sa_column=Column("photo", Text, nullable=True))
