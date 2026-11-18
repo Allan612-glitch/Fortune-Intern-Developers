@@ -2,6 +2,7 @@ from sqlalchemy import Boolean, Column, Date, DateTime, Float, ForeignKey, Index
 from sqlmodel import Field, SQLModel
 from uuid import UUID, uuid4
 from datetime import date, datetime,timezone
+from typing import Any
 
 #---------USER AND PROFILE MODELS---------#
 class user(SQLModel, table=True):
@@ -255,3 +256,33 @@ class founding_member(SQLModel, table=True):
     email: str | None = Field(default=None, sa_column=Column("email", String, nullable=True))
     phone: str | None = Field(default=None, sa_column=Column("phone", String, nullable=True))
     photo: str | None = Field(default=None, sa_column=Column("photo", Text, nullable=True))
+
+class chapter_application(SQLModel, table=True):
+    __tablename__ = "chapter_applications"
+    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+    user_id: UUID = Field(sa_column=Column("user_id", Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True))
+    chapter_id: str = Field(sa_column=Column("chapter_id", String, nullable=False))
+    chapter_name: str = Field(sa_column=Column("chapter_name", String, nullable=False))
+    position_title: str = Field(sa_column=Column("position_title", String, nullable=False))
+    motivation: str = Field(sa_column=Column("motivation", Text, nullable=False))
+    status: str = Field(default="pending", sa_column=Column("status", String, nullable=False, default="pending"))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
+    __table_args__ = (
+        Index(
+            "uq_chapter_applications_active_user_position",
+            "user_id",
+            "chapter_id",
+            "position_title",
+            unique=True,
+            postgresql_where=text("status IN ('pending', 'under_review', 'accepted')"),
+            sqlite_where=text("status IN ('pending', 'under_review', 'accepted')"),
+        ),
+    )
+
+class chapter_directory(SQLModel, table=True):
+    __tablename__ = "chapter_directory"
+    id: str = Field(primary_key=True)
+    chapters: list[dict[str, Any]] = Field(sa_column=Column("chapters", JSON, nullable=False))
+    executives: list[dict[str, Any]] = Field(sa_column=Column("executives", JSON, nullable=False))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))

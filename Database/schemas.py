@@ -1,7 +1,8 @@
 
 from datetime import date
+from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class LoginRequest(BaseModel):
@@ -80,6 +81,78 @@ class FoundingMemberUpdate(BaseModel):
     email: str = Field(default="", max_length=254)
     phone: str = Field(default="", max_length=100)
     photo: str | None = Field(default=None, max_length=2_000_000)
+
+
+class ChapterApplicationCreateRequest(BaseModel):
+    chapter_id: str = Field(min_length=1, max_length=80)
+    chapter_name: str = Field(min_length=1, max_length=200)
+    position_title: str = Field(min_length=1, max_length=200)
+    motivation: str = Field(min_length=20, max_length=4000)
+
+    @field_validator("chapter_id", "chapter_name", "position_title", "motivation")
+    @classmethod
+    def require_non_whitespace(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("This field cannot be blank")
+        return normalized
+
+
+class ChapterApplicationStatusUpdate(BaseModel):
+    status: Literal["pending", "under_review", "accepted", "rejected"]
+
+
+class ChapterApplicationResponse(BaseModel):
+    id: str
+    chapter_id: str
+    chapter_name: str
+    position_title: str
+    motivation: str
+    status: str
+    created_at: str
+    updated_at: str
+    applicant_name: str | None = None
+    applicant_email: str | None = None
+
+
+class ChapterRecord(BaseModel):
+    id: str = Field(min_length=1, max_length=80)
+    name: str = Field(min_length=1, max_length=200)
+    inst: str = Field(min_length=1, max_length=300)
+    city: str = Field(default="", max_length=100)
+    region: str = Field(default="", max_length=100)
+    type: str = Field(min_length=1, max_length=100)
+
+
+class ChapterExecutiveRecord(BaseModel):
+    id: str = Field(min_length=1, max_length=100)
+    name: str = Field(default="", max_length=200)
+    role: str = Field(min_length=1, max_length=200)
+    chapter: str = Field(min_length=1, max_length=80)
+    status: Literal["seat", "active"] = "seat"
+    email: str = Field(default="", max_length=254)
+    phone: str = Field(default="", max_length=100)
+    bio: str = Field(default="", max_length=4000)
+    resp: list[str] = Field(default_factory=list, max_length=30)
+    photo: str | None = Field(default=None, max_length=2_000_000)
+
+    @field_validator("photo")
+    @classmethod
+    def allow_jpeg_data_urls_only(cls, value: str | None) -> str | None:
+        if value is not None and not value.startswith("data:image/jpeg;base64,"):
+            raise ValueError("Chapter photos must be compressed JPEG data URLs")
+        return value
+
+
+class ChapterDirectoryUpdate(BaseModel):
+    chapters: list[ChapterRecord] = Field(min_length=1, max_length=100)
+    executives: list[ChapterExecutiveRecord] = Field(max_length=1500)
+
+
+class ChapterDirectoryResponse(BaseModel):
+    chapters: list[ChapterRecord]
+    executives: list[ChapterExecutiveRecord]
+    updated_at: str
 
 
 class AdminUserResponse(UserResponse):

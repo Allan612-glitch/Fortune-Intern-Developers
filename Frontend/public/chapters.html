@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Campus Chapters · Fortune Intern Network</title>
+<script>document.documentElement.classList.add('auth-checking');</script>
+<style>
+html.auth-checking body>*:not(#authGate){display:none!important}
+#authGate{display:none;min-height:100vh;align-items:center;justify-content:center;padding:24px;background:#F8FAFC;color:#0F172A;text-align:center}
+html.auth-checking #authGate{display:flex!important}
+.btn[hidden]{display:none!important}
+</style>
 <!-- Frontend/public/chapters.html — Chapters · Founding Team · Blueprint -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
@@ -299,20 +306,23 @@ h1.st,h2.st{page-break-after:avoid;break-after:avoid}
 </style>
 </head>
 <body>
+<div id="authGate" role="status" aria-live="polite">
+<div><h1 style="font-size:24px;color:#0A3161">Checking your FIN account…</h1><p id="authGateMessage" style="margin-top:8px;color:#475569">Campus chapters are available to signed-in members.</p><a id="authGateSignIn" href="/login?returnTo=%2Fchapters.html" style="display:inline-block;margin-top:18px;padding:10px 18px;border-radius:999px;background:#0A3161;color:#fff;font-weight:700">Sign in</a><button id="authGateRetry" style="display:none;margin:18px 0 0 10px;padding:10px 18px;border-radius:999px;background:#F5B927;color:#0A3161;font-weight:700">Retry</button></div>
+</div>
 
 <nav class="nav"><div class="nav-in">
 <a class="logo" href="/"><svg viewBox="0 0 200 170" aria-hidden="true"><g fill="#F5B927"><path d="M100 4 L105 26 L95 26 Z"/><path d="M134 10 L130 32 L139 29 Z"/><path d="M162 26 L149 42 L156 47 Z"/><path d="M178 52 L158 58 L160 66 Z"/><path d="M66 10 L70 32 L61 29 Z"/><path d="M38 26 L51 42 L44 47 Z"/><path d="M22 52 L42 58 L40 66 Z"/></g><path d="M100 24 C124 24 141 40 145 62 L100 62 Z" fill="#F5B927"/><path d="M100 24 C76 24 59 40 55 62 L100 62 Z" fill="#F5B927"/><g fill="none" stroke="#F5B927" stroke-width="7" stroke-linejoin="round"><path d="M100 50 L178 82 L100 114 L22 82 Z"/><path d="M48 94 L48 118 C48 126 62 132 78 135"/><path d="M152 94 L152 118 C152 126 138 132 122 135"/><path d="M72 138 L100 150 L128 138"/><path d="M62 150 L100 166 L138 150"/></g><path d="M178 82 L178 112" stroke="#F5B927" stroke-width="4" fill="none"/><circle cx="178" cy="117" r="5" fill="#F5B927"/><path d="M178 121 L172 140 L184 140 Z" fill="#F5B927"/><path d="M122 30 L110 80 L98 73 Z" fill="#F5B927"/><path d="M98 73 L110 80 L116 114 L104 88 L78 112 Z" fill="#0A3161"/><circle cx="105" cy="78" r="7.5" fill="#F5B927"/></svg><span><span class="t1">Fortune</span><br><span class="t2">Intern Network</span></span></a>
 <div class="nav-links"><a href="/">Home</a><button data-tab="chapters" class="on">Chapters</button><button data-tab="founders">Founding Team</button><button data-tab="blueprint">Blueprint</button></div>
-<a class="nav-cta" href="/login">Sign In</a>
+<a class="nav-cta" href="/login?returnTo=%2Fchapters.html">Sign In</a>
 <button class="burger" id="gBurger" aria-label="Menu"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
-</div><div class="mnav" id="gMob"><a href="/">Home</a><button data-tab="chapters">Chapters</button><button data-tab="founders">Founding Team</button><button data-tab="blueprint">Blueprint &amp; SOP</button><a href="/login" style="color:var(--gold-dk)">Sign In →</a></div></nav>
+</div><div class="mnav" id="gMob"><a href="/">Home</a><button data-tab="chapters">Chapters</button><button data-tab="founders">Founding Team</button><button data-tab="blueprint">Blueprint &amp; SOP</button><a href="/login?returnTo=%2Fchapters.html" style="color:var(--gold-dk)">Sign In →</a></div></nav>
 
 <header class="hero"><div class="container">
 <div class="crumb">Docs <b>/</b> Platform <b>/</b> Chapters</div>
 <h1>Campus Chapters</h1>
-<p>Every Fortune Intern Network tertiary chapter runs on the same constitution, the same eleven seat executive board and the same reporting cadence. Browse chapters, meet the founding team, and open the full operational blueprint with PDF and PowerPoint export.</p>
+<p>Every Fortune Intern Network tertiary chapter runs on the same constitution, the same eleven seat executive board and the same reporting cadence. Browse chapters, meet the founding team, and open the full operational blueprint. Signed-in members can apply for open chapter positions and track their applications.</p>
 <div class="pills"><span class="pill" id="apiPill">Local seed data</span><span class="pill gold">Bridging Dreams and Careers</span><span class="pill grey">v1.1 · chapters + blueprint</span></div>
-<div class="hero-cta"><button class="btn btn-gold" data-tab="chapters">Browse Chapters</button><button class="btn btn-navy" data-tab="founders">Founding Team</button><button class="btn btn-ghost" data-tab="blueprint">📘 Blueprint &amp; SOP</button><button class="btn btn-ghost" id="heroImport">⬆ Import Directory</button></div>
+<div class="hero-cta"><button class="btn btn-gold" data-tab="chapters">Browse Chapters</button><button class="btn btn-navy" data-tab="founders">Founding Team</button><button class="btn btn-ghost" data-tab="blueprint">📘 Blueprint &amp; SOP</button><button class="btn btn-ghost" id="heroImport" hidden>⬆ Import Directory</button></div>
 </div></header>
 
 <div class="tabsbar"><div class="tabs">
@@ -331,8 +341,9 @@ h1.st,h2.st{page-break-after:avoid;break-after:avoid}
 <div class="controls">
 <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input id="chSearch" type="search" placeholder="Search chapter, institution, city…"></div>
 <select class="sel" id="chSort"><option value="az">Sort: A–Z</option><option value="filled">Sort: Most filled</option><option value="type">Sort: Type</option></select>
-<button class="btn btn-navy btn-sm" id="chAdd">+ Add Chapter</button><button class="btn btn-gold btn-sm" id="chImport">⬆ Import</button>
+<button class="btn btn-navy btn-sm" id="chAdd" hidden>+ Add Chapter</button><button class="btn btn-gold btn-sm" id="chImport" hidden>⬆ Import</button>
 <button class="btn btn-soft" id="chExport">JSON</button><button class="btn btn-soft" id="chCsv">CSV</button></div>
+<div class="controls" style="padding-top:0"><button class="btn btn-soft" id="myChapterApps">My position applications</button><button class="btn btn-navy" id="manageChapterApps" hidden>Review applications</button></div>
 <div class="chips" id="chChips"></div><div class="count" id="chCount"></div><div class="grid" id="chGrid"></div><div style="height:60px"></div>
 </section>
 
@@ -383,7 +394,7 @@ h1.st,h2.st{page-break-after:avoid;break-after:avoid}
 <footer>© 2026 Fortune Intern Network · <a href="/">Portal</a> · Bridging Dreams and Careers</footer>
 
 <div class="overlay" id="drOverlay"></div>
-<aside class="drawer" id="drawer"><div class="dr-head"><span class="k" id="drType">Chapter</span><h3 id="drName">—</h3><p id="drInst">—</p><button class="dr-x" id="drClose" aria-label="Close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div class="dr-body" id="drBody"></div><div class="dr-foot"><button class="btn btn-soft" id="drExportCh">Export chapter</button><button class="btn btn-navy" id="drAddSeat">+ Add seat</button></div></aside>
+<aside class="drawer" id="drawer"><div class="dr-head"><span class="k" id="drType">Chapter</span><h3 id="drName">—</h3><p id="drInst">—</p><button class="dr-x" id="drClose" aria-label="Close"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div class="dr-body" id="drBody"></div><div class="dr-foot"><button class="btn btn-soft" id="drExportCh">Export chapter</button><button class="btn btn-navy" id="drAddSeat" hidden>+ Add seat</button></div></aside>
 
 <div class="modal" id="editModal"><div class="mcard"><h3 id="emTitle">Executive</h3><p>Profile, role and photo. Saves to this device; syncs when the API is connected.</p>
 <div class="mphoto"><div class="pv" id="emPhoto"></div><label class="btn btn-soft" style="cursor:pointer">Upload photo<input type="file" id="emPhotoInput" accept="image/*" hidden></label><button class="btn btn-soft" id="emPhotoClear">Remove</button></div>
@@ -408,6 +419,11 @@ h1.st,h2.st{page-break-after:avoid;break-after:avoid}
 <div class="imp-prev" id="impPrev">Nothing parsed yet.</div>
 <div class="macts"><button class="btn btn-soft" id="impPreview">Preview</button><button class="btn btn-soft" id="impCancel">Cancel</button><button class="btn btn-gold" id="impApply">Apply Import</button></div></div></div>
 
+<div class="modal" id="positionApplicationModal"><div class="mcard"><h3>Apply for a chapter position</h3><p id="positionApplicationContext"></p>
+<div class="frow"><label for="positionApplicationMotivation">Why are you interested in this role?</label><textarea id="positionApplicationMotivation" minlength="20" maxlength="4000" required placeholder="Share your relevant experience, skills, and what you would contribute."></textarea></div>
+<div class="macts"><button class="btn btn-soft" id="positionApplicationCancel">Cancel</button><button class="btn btn-gold" id="positionApplicationSubmit">Submit application</button></div></div></div>
+<div class="modal" id="chapterApplicationsModal"><div class="mcard"><h3 id="chapterApplicationsTitle">Position applications</h3><p id="chapterApplicationsDescription"></p><div id="chapterApplicationsList"></div><div class="macts"><button class="btn btn-soft" id="chapterApplicationsClose">Close</button></div></div></div>
+
 <div class="modal" id="fModal"><div class="mcard"><h3 id="fmTitle">Founding Member</h3><p>Founding registry record — kept separate from chapter boards.</p>
 <div class="mphoto"><div class="pv" id="fmPhoto"></div><label class="btn btn-soft" style="cursor:pointer">Upload photo<input type="file" id="fmPhotoInput" accept="image/*" hidden></label><button class="btn btn-soft" id="fmPhotoClear">Remove</button></div>
 <div class="f2"><div class="frow"><label>Full name</label><input id="fmName" placeholder="Blank = open founding seat"></div><div class="frow"><label>Founding title</label><input id="fmRole"></div></div>
@@ -426,15 +442,33 @@ var $=function(s){return document.querySelector(s)},$$=function(s){return[].slic
 var isAdmin=false,founderApiAvailable=false;
 var API_BASE=(location.hostname==='localhost'||location.hostname==='127.0.0.1')?'':'https://fortune-intern-developers-backend.vercel.app';
 function canEditFounders(){return isAdmin&&founderApiAvailable}
-function verifyAdmin(){
-var token=localStorage.getItem('fortune-intern-access-token')||sessionStorage.getItem('fortune-intern-access-token');
-if(!token)return;
-fetch(API_BASE+'/api/auth/me',{headers:{Authorization:'Bearer '+token},credentials:'include'}).then(function(r){if(!r.ok)return null;return r.json()}).then(function(account){
+var sessionToken=localStorage.getItem('fortune-intern-access-token')||sessionStorage.getItem('fortune-intern-access-token');
+if(!sessionToken){location.replace('/login?returnTo=%2Fchapters.html');return}
+function setAdminControls(){
+['chAdd','chImport','heroImport','drAddSeat','manageChapterApps'].forEach(function(id){var el=document.getElementById(id);if(el)el.hidden=!isAdmin});
+$('#fAdd').hidden=!canEditFounders();
+}
+function verifySession(){
+return fetch(API_BASE+'/api/auth/me',{headers:{Authorization:'Bearer '+sessionToken},credentials:'include'}).then(function(r){
+if(r.status===401||r.status===403){localStorage.removeItem('fortune-intern-access-token');sessionStorage.removeItem('fortune-intern-access-token');location.replace('/login?returnTo=%2Fchapters.html');return null}
+if(!r.ok)throw new Error('Account verification failed ('+r.status+')');
+return r.json()
+}).then(function(account){
 if(!account)return;
 isAdmin=account.is_admin===true;
-$('#fAdd').hidden=!canEditFounders();
-if(currentTab==='founders')renderFounders();
-}).catch(function(){toast('Could not verify administrator access. Founder editing is disabled.')})}
+setAdminControls();
+$('#authGateMessage').textContent='Loading the shared chapter directory…';
+return loadDirectory().then(function(){
+document.documentElement.classList.remove('auth-checking');
+if(currentTab==='founders')renderFounders()
+})
+}).catch(function(){
+$('#authGateMessage').textContent='We could not verify your account right now. Please try again or sign in again.';
+$('#authGateRetry').style.display='inline-block';
+$('#authGateRetry').onclick=verifySession;
+$('#authGateSignIn').textContent='Go to sign in';
+$('#authGateSignIn').href='/login?returnTo=%2Fchapters.html'
+})}
 var toastT;function toast(m,u){var t=$('#toast');t.innerHTML='';t.appendChild(document.createTextNode(m));if(u){var b=document.createElement('button');b.textContent='Undo';b.onclick=function(){u();t.classList.remove('show')};t.appendChild(b)}t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove('show')},u?7000:2800)}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function initials(n){if(!n)return'FIN';return n.trim().split(/\s+/).slice(0,2).map(function(w){return w[0]}).join('').toUpperCase()}
@@ -513,7 +547,14 @@ var DIR=loadLS('fin_dir_v6',null);if(!Array.isArray(DIR)||!DIR.length){DIR=build
 var FOUND=loadLS('fin_found_v6',null);if(!Array.isArray(FOUND)||!FOUND.length){FOUND=FOUND_SEED.slice();saveLS('fin_found_v6',FOUND)}
 window.FIN_SEED={chapters:CH,executives:DIR,founders:FOUND};
 function chapter(id){for(var i=0;i<CH.length;i++)if(CH[i].id===id)return CH[i];return{id:id,name:id,inst:'',city:'',region:'',type:'Other Institution'}}
-function persist(){saveLS('fin_dir_v6',DIR);saveLS('fin_ch_v6',CH);saveLS('fin_found_v6',FOUND)}
+var directorySaveTimer=null,directorySaveQueue=Promise.resolve();
+function persist(){
+saveLS('fin_dir_v6',DIR);saveLS('fin_ch_v6',CH);saveLS('fin_found_v6',FOUND);
+if(!isAdmin)return;
+clearTimeout(directorySaveTimer);
+directorySaveTimer=setTimeout(function(){
+directorySaveQueue=directorySaveQueue.catch(function(error){toast('Chapter directory sync failed: '+error.message)}).then(saveDirectory).catch(function(error){toast('Chapter directory sync failed: '+error.message)})
+},350)}
 function findExec(id){for(var i=0;i<DIR.length;i++)if(DIR[i].id===id)return DIR[i];return null}
 function findFounder(id){for(var i=0;i<FOUND.length;i++)if(FOUND[i].id===id)return FOUND[i];return null}
 function displayName(e){return e.name||e.role}
@@ -525,6 +566,68 @@ return fetch(API_BASE+'/api/founders/'+encodeURIComponent(id),{method:method,hea
 if(r.status===204)return null;
 if(!r.ok)return r.text().then(function(text){var message='Unable to save the founding profile ('+r.status+').';try{var body=JSON.parse(text);if(typeof body.detail==='string')message=body.detail}catch(e){}throw new Error(message)});
 return r.json()})}
+function chapterRequest(path,method,data){
+return fetch(API_BASE+path,{method:method||'GET',headers:{Authorization:'Bearer '+sessionToken,'Content-Type':'application/json'},credentials:'include',body:data?JSON.stringify(data):undefined}).then(function(r){
+return r.text().then(function(text){var body=null;try{body=text?JSON.parse(text):null}catch(e){}
+if(!r.ok)throw new Error(body&&typeof body.detail==='string'?body.detail:'Chapter request failed ('+r.status+').');
+return body})})}
+function saveDirectory(){
+return chapterRequest('/api/chapters','PUT',{chapters:CH,executives:DIR}).then(function(){
+$('#apiPill').textContent='Shared directory · Live'
+})}
+function loadDirectory(){
+return chapterRequest('/api/chapters').then(function(directory){
+if(directory&&Array.isArray(directory.chapters)&&Array.isArray(directory.executives)){
+CH.length=0;directory.chapters.forEach(function(c){CH.push(c)});
+DIR.length=0;directory.executives.forEach(function(e){DIR.push(e)});
+saveLS('fin_ch_v6',CH);saveLS('fin_dir_v6',DIR);
+$('#apiPill').textContent='Shared directory · Live';refreshAll();return
+}
+if(isAdmin)return saveDirectory()
+}).catch(function(error){toast('Chapter directory is unavailable: '+error.message)})}
+var activePosition=null;
+function openPositionApplication(position){
+if(!position||position.status!=='seat'){toast('This chapter position is currently filled.');return}
+var c=chapter(position.chapter);
+activePosition={chapter_id:c.id,chapter_name:c.name,position_title:position.role};
+$('#positionApplicationContext').textContent=c.name+' · '+position.role;
+$('#positionApplicationMotivation').value='';
+$('#positionApplicationModal').classList.add('open')}
+function renderChapterApplications(applications,admin){
+var list=$('#chapterApplicationsList');
+if(!applications.length){list.textContent='No position applications yet.';return}
+list.innerHTML=applications.map(function(a){
+var applicant=admin?'<p><b>'+esc(a.applicant_name||'FIN member')+'</b> · '+esc(a.applicant_email||'')+'</p>':'';
+var controls=admin?'<div class="macts"><select data-app-status="'+esc(a.id)+'"><option value="pending"'+(a.status==='pending'?' selected':'')+'>Pending</option><option value="under_review"'+(a.status==='under_review'?' selected':'')+'>Under review</option><option value="accepted"'+(a.status==='accepted'?' selected':'')+'>Accepted</option><option value="rejected"'+(a.status==='rejected'?' selected':'')+'>Rejected</option></select><button class="btn btn-navy btn-sm" data-app-save="'+esc(a.id)+'">Save status</button></div>':'';
+return '<article style="border:1px solid var(--line);border-radius:12px;padding:14px;margin:12px 0"><b>'+esc(a.chapter_name)+' · '+esc(a.position_title)+'</b><p>Status: '+esc(a.status.replace('_',' '))+' · '+esc(new Date(a.created_at).toLocaleDateString())+'</p>'+applicant+'<p style="white-space:pre-wrap;margin-top:8px">'+esc(a.motivation)+'</p>'+controls+'</article>'
+}).join('');
+if(admin)$$('[data-app-save]').forEach(function(button){button.onclick=function(){
+var id=button.getAttribute('data-app-save'),select=$('[data-app-status="'+id+'"]');
+chapterRequest('/api/chapter-applications/'+encodeURIComponent(id)+'/status','PATCH',{status:select.value}).then(function(){toast('Application status updated')}).catch(function(error){toast(error.message)})
+}})
+}
+function openChapterApplications(admin){
+if(admin&&!isAdmin){toast('Administrator access is required.');return}
+$('#chapterApplicationsTitle').textContent=admin?'Review position applications':'My position applications';
+$('#chapterApplicationsDescription').textContent=admin?'Review applicants and update each application status.':'Applications submitted from your FIN account.';
+$('#chapterApplicationsList').textContent='Loading applications…';
+$('#chapterApplicationsModal').classList.add('open');
+chapterRequest(admin?'/api/chapter-applications':'/api/chapter-applications/mine').then(function(applications){
+renderChapterApplications(applications,admin)
+}).catch(function(error){$('#chapterApplicationsList').textContent=error.message})
+}
+$('#positionApplicationCancel').onclick=function(){$('#positionApplicationModal').classList.remove('open')};
+$('#positionApplicationSubmit').onclick=function(){
+var motivation=$('#positionApplicationMotivation').value.trim();
+if(!activePosition)return;
+if(motivation.length<20){toast('Please write at least 20 characters about your interest.');return}
+chapterRequest('/api/chapter-applications','POST',{chapter_id:activePosition.chapter_id,chapter_name:activePosition.chapter_name,position_title:activePosition.position_title,motivation:motivation}).then(function(){
+$('#positionApplicationModal').classList.remove('open');toast('Your application was submitted to FIN administrators.')
+}).catch(function(error){toast(error.message)})
+};
+$('#myChapterApps').onclick=function(){openChapterApplications(false)};
+$('#manageChapterApps').onclick=function(){openChapterApplications(true)};
+$('#chapterApplicationsClose').onclick=function(){$('#chapterApplicationsModal').classList.remove('open')};
 function loadFounders(){
 fetch(API_BASE+'/api/founders').then(function(r){if(!r.ok)throw new Error('Founding team API returned '+r.status);return r.json()}).then(function(founders){
 if(!Array.isArray(founders))throw new Error('Founding team API returned invalid data');
@@ -534,12 +637,10 @@ function saveFounder(data){
 return founderRequest('PUT',data.id,data).then(function(founder){
 var i=-1;FOUND.forEach(function(existing,index){if(existing.id===founder.id)i=index});
 if(i===-1)FOUND.push(founder);else FOUND[i]=founder;
-persist();refreshAll();return founder})}
+saveLS('fin_found_v6',FOUND);refreshAll();return founder})}
 function deleteFounder(id){
 return founderRequest('DELETE',id).then(function(){
-var remaining=FOUND.filter(function(founder){return founder.id!==id});FOUND.length=0;remaining.forEach(function(founder){FOUND.push(founder)});persist();refreshAll()})}
-fetch(API_BASE+'/api/chapters').then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){if(Array.isArray(d)&&d.length){CH.length=0;d.forEach(function(c){CH.push(c)});$('#apiPill').textContent='Live API · /api/chapters';refreshAll()}}).catch(function(){});
-
+var remaining=FOUND.filter(function(founder){return founder.id!==id});FOUND.length=0;remaining.forEach(function(founder){FOUND.push(founder)});saveLS('fin_found_v6',FOUND);refreshAll()})}
 var currentTab='chapters';
 function setTab(t){currentTab=t;$$('.tab').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-tab')===t)});
 $$('.panel').forEach(function(p){p.classList.toggle('on',p.id==='panel-'+t)});
@@ -573,9 +674,9 @@ d.innerHTML='<span class="ty">'+esc(c.type)+'</span><h3>'+esc(c.name)+'</h3><div
 d.onclick=function(){openBoard(c.id)};g.appendChild(d)})}
 $('#chSearch').addEventListener('input',function(){chState.q=this.value;renderChapters()});
 $('#chSort').addEventListener('change',function(){chState.sort=this.value;renderChapters()});
-$('#chAdd').onclick=function(){$('#cmName').value='';$('#cmInst').value='';$('#cmCity').value='';$('#cmRegion').value='';$('#chapterModal').classList.add('open')};
+$('#chAdd').onclick=function(){if(!isAdmin)return;$('#cmName').value='';$('#cmInst').value='';$('#cmCity').value='';$('#cmRegion').value='';$('#chapterModal').classList.add('open')};
 $('#cmCancel').onclick=function(){$('#chapterModal').classList.remove('open')};
-$('#cmSave').onclick=function(){var n=$('#cmName').value.trim();if(!n){toast('Chapter name is required');return}
+$('#cmSave').onclick=function(){if(!isAdmin){toast('Administrator access is required.');return}var n=$('#cmName').value.trim();if(!n){toast('Chapter name is required');return}
 var id=slug(n)+'-'+Date.now().toString().slice(-4);
 CH.push({id:id,name:n,inst:$('#cmInst').value.trim()||n,city:$('#cmCity').value.trim(),region:$('#cmRegion').value.trim(),type:$('#cmType').value});
 ROLES.forEach(function(r,i){DIR.push({id:'n'+Date.now()+i,name:'',role:r.role,chapter:id,status:'seat',email:'',phone:'',bio:'',resp:r.resp.slice(),photo:null})});
@@ -586,21 +687,21 @@ DIR.forEach(function(e){var c=chapter(e.chapter);rows.push([c.name,c.inst,e.name
 dl(new Blob([rows.map(function(r){return r.map(function(v){return'"'+String(v||'').replace(/"/g,'""')+'"'}).join(',')}).join('\n')],{type:'text/csv'}),'FIN_Chapters.csv');toast('CSV exported')};
 
 var boardId=null;
-function openBoard(id){boardId=id;var c=chapter(id);
+function openBoard(id){boardId=id;$('#drAddSeat').hidden=!isAdmin;var c=chapter(id);
 $('#drType').textContent=c.type;$('#drName').textContent=c.name;$('#drInst').textContent=c.inst+(c.city?' · '+c.city:'');
 var b=$('#drBody');b.innerHTML='';
 DIR.filter(function(e){return e.chapter===id}).forEach(function(e){var d=document.createElement('div');d.className='seat';
-d.innerHTML='<span class="av">'+(e.photo?'<img src="'+e.photo+'" alt="">':'<span class="ini">'+esc(initials(e.name||e.role))+'</span>')+'</span><span class="nm"><b>'+esc(displayName(e))+'</b><span>'+esc(e.role)+'</span></span><span class="st'+(e.status==='seat'?' open':'')+'">'+(e.status==='seat'?'Open':'Active')+'</span>';
-d.onclick=function(){openEdit(e.id)};b.appendChild(d)});
+d.innerHTML='<span class="av">'+(e.photo?'<img src="'+e.photo+'" alt="">':'<span class="ini">'+esc(initials(e.name||e.role))+'</span>')+'</span><span class="nm"><b>'+esc(displayName(e))+'</b><span>'+esc(e.role)+'</span></span><span class="st'+(e.status==='seat'?' open':'')+'">'+(e.status==='seat'?(isAdmin?'Open':'Apply →'):'Active')+'</span>';
+d.onclick=function(){if(isAdmin){openEdit(e.id);return}if(e.status==='seat'){openPositionApplication(e);return}toast('This chapter position is currently filled.')};b.appendChild(d)});
 $('#drawer').classList.add('open');$('#drOverlay').classList.add('open')}
 function closeBoard(){$('#drawer').classList.remove('open');$('#drOverlay').classList.remove('open');boardId=null}
 $('#drClose').onclick=closeBoard;$('#drOverlay').onclick=closeBoard;
-$('#drAddSeat').onclick=function(){openEdit(null,boardId)};
+$('#drAddSeat').onclick=function(){if(isAdmin)openEdit(null,boardId)};
 $('#drExportCh').onclick=function(){if(!boardId)return;var c=chapter(boardId);dl(new Blob([JSON.stringify({chapter:c,executives:DIR.filter(function(e){return e.chapter===boardId})},null,2)],{type:'application/json'}),'FIN_'+slug(c.name)+'.json');toast('Chapter exported')};
 
 var editId=null,editPhoto=null;
 function fillChapters(sel,val){var el=$(sel);el.innerHTML='';CH.forEach(function(c){var o=document.createElement('option');o.value=c.id;o.textContent=c.name;el.appendChild(o)});if(val)el.value=val}
-function openEdit(id,preCh){editId=id;var e=id?findExec(id):null;editPhoto=e?e.photo:null;
+function openEdit(id,preCh){if(!isAdmin)return;editId=id;var e=id?findExec(id):null;editPhoto=e?e.photo:null;
 $('#emTitle').textContent=e?displayName(e):'New seat';
 $('#emName').value=e?e.name:'';$('#emRole').value=e?e.role:'';$('#emEmail').value=e?e.email:'';$('#emPhone').value=e?e.phone:'';$('#emBio').value=e?e.bio:'';$('#emResp').value=e&&e.resp?e.resp.join('\n'):'';
 fillChapters('#emChapter',e?e.chapter:(preCh||boardId||'knust'));$('#emStatus').value=e?e.status:'seat';renderEmPhoto();$('#editModal').classList.add('open')}
@@ -609,8 +710,8 @@ $('#emName').addEventListener('input',renderEmPhoto);$('#emRole').addEventListen
 $('#emPhotoInput').addEventListener('change',function(){processImage(this.files[0],function(d){editPhoto=d;renderEmPhoto()});this.value=''});
 $('#emPhotoClear').onclick=function(){editPhoto=null;renderEmPhoto()};
 $('#emCancel').onclick=function(){$('#editModal').classList.remove('open')};
-$('#emDelete').onclick=function(){if(!editId)return;var i=-1;DIR.forEach(function(x,k){if(x.id===editId)i=k});var rec=DIR[i];DIR.splice(i,1);persist();$('#editModal').classList.remove('open');refreshAll();if(boardId)openBoard(boardId);toast('Seat deleted',function(){DIR.splice(i,0,rec);persist();refreshAll()})};
-$('#emSave').onclick=function(){var role=$('#emRole').value.trim();if(!role){toast('A role is required');return}
+$('#emDelete').onclick=function(){if(!isAdmin||!editId)return;var i=-1;DIR.forEach(function(x,k){if(x.id===editId)i=k});var rec=DIR[i];DIR.splice(i,1);persist();$('#editModal').classList.remove('open');refreshAll();if(boardId)openBoard(boardId);toast('Seat deleted',function(){DIR.splice(i,0,rec);persist();refreshAll()})};
+$('#emSave').onclick=function(){if(!isAdmin){toast('Administrator access is required.');return}var role=$('#emRole').value.trim();if(!role){toast('A role is required');return}
 var name=$('#emName').value.trim();
 var data={name:name,role:role,chapter:$('#emChapter').value,status:name?$('#emStatus').value:'seat',email:$('#emEmail').value.trim(),phone:$('#emPhone').value.trim(),bio:$('#emBio').value.trim(),resp:$('#emResp').value.split('\n').map(function(s){return s.trim()}).filter(Boolean),photo:editPhoto};
 if(editId){Object.assign(findExec(editId),data)}else{data.id='n'+Date.now();DIR.push(data)}
@@ -666,10 +767,10 @@ var bD=DIR.slice(),bC=CH.slice();parsed=parseImport(txt,$('#impChapter').value);
 $('#impPrev').innerHTML='<b>'+parsed.length+'</b> records across <b>'+Object.keys(chs).length+'</b> chapters.<br><br>'+parsed.slice(0,12).map(function(p){return esc(chapter(p.chapter).name)+' → <b>'+esc(p.name)+'</b> · '+esc(p.role)}).join('<br>')+(parsed.length>12?'<br>…and '+(parsed.length-12)+' more':'');
 if(!parsed.length){DIR=bD;CH=bC}}
 $('#impPreview').onclick=doPreview;
-function openImport(){fillChapters('#impChapter','knust');$('#impPrev').textContent='Nothing parsed yet.';parsed=null;$('#importModal').classList.add('open')}
+function openImport(){if(!isAdmin)return;fillChapters('#impChapter','knust');$('#impPrev').textContent='Nothing parsed yet.';parsed=null;$('#importModal').classList.add('open')}
 $('#chImport').onclick=openImport;$('#heroImport').onclick=openImport;
 $('#impCancel').onclick=function(){$('#importModal').classList.remove('open')};
-$('#impApply').onclick=function(){if(!parsed)doPreview();if(!parsed||!parsed.length){toast('Nothing to import — check the format');return}
+$('#impApply').onclick=function(){if(!isAdmin){toast('Administrator access is required.');return}if(!parsed)doPreview();if(!parsed||!parsed.length){toast('Nothing to import — check the format');return}
 if($('#impMode').value==='replace'){DIR=buildSeats();CH.forEach(function(c){if(!DIR.some(function(e){return e.chapter===c.id}))ROLES.forEach(function(r,i){DIR.push({id:'r'+Date.now()+i+c.id,name:'',role:r.role,chapter:c.id,status:'seat',email:'',phone:'',bio:'',resp:r.resp.slice(),photo:null})})})}
 var filled=0,added=0;
 parsed.forEach(function(p){var slot=null,i;
@@ -777,7 +878,7 @@ document.addEventListener('touchstart',function(e){if(currentTab==='blueprint')x
 document.addEventListener('touchend',function(e){if(currentTab!=='blueprint'||x0===null)return;var d=e.changedTouches[0].clientX-x0;if(Math.abs(d)>50)bpShow(bpCur+(d<0?1:-1));x0=null},{passive:true});
 function refreshAll(){renderMetrics();renderChapters();renderFounders()}
 refreshAll();
-verifyAdmin();
+verifySession();
 loadFounders();
 setTimeout(function(){toast('Chapters, Founding Team and the full 24 page Blueprint are ready')},800);
 })();
