@@ -4,6 +4,7 @@ import logo from "../assets/attach1.png"
 
 export default function AIChatWidget({ user }: { user: AppUser }) {
   const [open, setOpen] = useState(false)
+  const [loaded, setLoaded] = useState(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
   useEffect(() => {
@@ -28,16 +29,26 @@ export default function AIChatWidget({ user }: { user: AppUser }) {
 
   return (
     <div className="chat-widget">
-      {open && (
-        <div className="fixed inset-0 z-[105] overflow-hidden bg-white sm:absolute sm:inset-auto sm:bottom-[calc(100%+0.75rem)] sm:right-0 sm:h-[min(700px,calc(100dvh-8rem))] sm:w-[420px] sm:rounded-2xl sm:border sm:border-border sm:shadow-2xl">
+      <div
+        className={
+          open
+            ? "fixed inset-0 z-[105] overflow-hidden bg-white sm:absolute sm:inset-auto sm:bottom-[calc(100%+0.75rem)] sm:right-0 sm:h-[min(700px,calc(100dvh-8rem))] sm:w-[420px] sm:rounded-2xl sm:border sm:border-border sm:shadow-2xl"
+            : "hidden"
+        }
+      >
+        {!loaded && open && (
+          <div className="absolute inset-0 z-10 grid place-items-center bg-white">
+            <div className="h-7 w-7 animate-spin rounded-full border-2 border-[#0A3161]/20 border-t-[#0A3161]" aria-label="Loading Super AI" />
+          </div>
+        )}
           <iframe
             ref={iframeRef}
-            src="/super-ai.html?embedded=1"
+            src={`/super-ai.html?embedded=1&admin=${user.isAdmin ? "1" : "0"}`}
             title={`Super AI assistant for ${user.name}`}
             className="block h-full w-full border-0"
+            onLoad={() => setLoaded(true)}
           />
-        </div>
-      )}
+      </div>
       <button
         type="button"
         onClick={() => setOpen((currentlyOpen) => !currentlyOpen)}

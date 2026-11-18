@@ -159,6 +159,13 @@ function now12(){return new Date().toLocaleTimeString([],{hour:'2-digit',minute:
 function words(s){return String(s||'').split(/\s+/).filter(Boolean).length}
 var GREET_V='ghs5-ch15-v1';
 var chatEl=$('#chat'),input=$('#input'),KEY='',MODEL='gpt-4o-mini',KNOW=[],CHAT=[],BUSY=false,FLOW=null,lastDoc='',USER={name:''};
+var IS_ADMIN=new URLSearchParams(location.search).get('admin')==='1';
+if(!IS_ADMIN){
+if($('#btnTrain'))$('#btnTrain').style.display='none';
+if($('#btnKey'))$('#btnKey').style.display='none';
+if($('#ovlTrain'))$('#ovlTrain').style.display='none';
+if($('#ovlKey'))$('#ovlKey').style.display='none';
+}
 var PROG=[{t:'Paid Internships',d:'Connecting students with real-world industry opportunities — always paid.'},{t:'Skills Training',d:'Targeted professional development courses through the FIN Academy.'},{t:'Recruitment',d:'The application and placement pipeline for young talent, with professional mentorship.'},{t:'Entrepreneurship Training',d:'Resources and fundamentals for student ventures — FIN as an incubator.'}];
 var KB=[
 {id:'about',topic:'About FIN',core:1,kw:'fin fortune intern network about company who what motto bridging dreams careers accra kumasi ghana mission vision',c:'Fortune Intern Network (FIN) is a Ghanaian hiring and training house in Accra and Kumasi, motto "Bridging Dreams and Careers", online at fortuneintern.com. It takes students and graduates across the bridge to real work through four programs: Paid Internships, Skills Training (FIN Academy), Recruitment with mentorship, and Entrepreneurship Training (incubator). Every application is read by a human and answered within 72 hours, even to say no.'},
@@ -312,9 +319,12 @@ closeButton.onclick=function(){window.parent.postMessage({type:'fin-super-close'
 $('.hdr-r').appendChild(closeButton)}
 function sync(){$('#hdrSub').classList.toggle('live',!!KEY);$('#hdrSubTxt').textContent=KEY?('Powered by '+MODEL+' · Online'):'Offline brain · full FIN knowledge'}
 function greet(p){addMsg('b','<p><strong>Hello! I\'m Super</strong> — FIN\'s assistant, fully working <strong>without any key</strong>.</p><p>FIN runs four programs:</p><ul>'+PROG.map(function(x){return '<li><strong>'+x.t+'</strong> — '+x.d+'</li>'}).join('')+'</ul><p>I can explain any of them, walk you through applying (one-time <strong>GHS 5</strong> via Paystack), tell you how to get your internship letter or certificate, open any of our <strong>15 active chapter boards</strong> — expanding to all 41 tertiary institutions — or build your KNUST-format CV and cover letter.</p><p>How can I help today?</p>',p,'Greeting: four programs, GHS 5 fee, 15 active chapters expanding to 41 institutions.')}
-function boot(){openDB().then(function(){var pk='',pm='';try{pk=localStorage.getItem('fin_key')||'';pm=localStorage.getItem('fin_model')||''}catch(e){}
-return cfg('key').then(function(k){KEY=(k!=null&&k!=='')?k:pk;return cfg('model')}).then(function(m){MODEL=m||pm||'gpt-4o-mini';
-return cfg('greetV')}).then(function(gv){if(gv===GREET_V)return;return clr('chat').then(function(){return put('settings',{k:'greetV',v:GREET_V})})}).then(loadKB)})
+function boot(){openDB().then(function(){
+if(IS_ADMIN){var pk='',pm='';try{pk=localStorage.getItem('fin_key')||'';pm=localStorage.getItem('fin_model')||''}catch(e){}
+return cfg('key').then(function(k){KEY=(k!=null&&k!=='')?k:pk;return cfg('model')}).then(function(m){MODEL=m||pm||'gpt-4o-mini';return cfg('greetV')}).then(function(gv){if(gv===GREET_V)return loadKB();return clr('chat').then(function(){return put('settings',{k:'greetV',v:GREET_V})}).then(loadKB)})
+}
+KEY='';MODEL='gpt-4o-mini';return cfg('greetV').then(function(gv){if(gv===GREET_V)return loadKB();return clr('chat').then(function(){return put('settings',{k:'greetV',v:GREET_V})}).then(loadKB)})
+})
 .then(function(){return all('chat')}).then(function(l){
 chatEl.innerHTML='';(l||[]).slice().sort(function(a,b){return a.id-b.id}).slice(-30).forEach(function(x){CHAT.push({role:x.role,text:x.text,html:x.html});
 var w=document.createElement('div');w.className='m '+(x.role==='u'?'u':'b');w.innerHTML=(x.role==='u'?'':'<span class="mav">'+GLYPH+'</span>')+'<div class="mc"><div class="bub">'+x.html+'</div><span class="tm">'+esc(new Date(x.ts||Date.now()).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}))+(x.role==='b'?' · Super':'')+'</span></div>';chatEl.appendChild(w)});
