@@ -20,7 +20,7 @@ $('#mnavAccount').hidden=false
 var sessionToken=localStorage.getItem('fortune-intern-access-token')||sessionStorage.getItem('fortune-intern-access-token');
 if(!sessionToken){location.replace('/login?returnTo=%2Fchapters');return}
 function setAdminControls(){
-['chAdd','chImport','heroImport','drAddSeat','manageChapterApps'].forEach(function(id){var el=document.getElementById(id);if(el)el.hidden=!isAdmin});
+['chAdd','chImport','heroImport','drAddSeat','manageChapterApps','tInsert'].forEach(function(id){var el=document.getElementById(id);if(el)el.hidden=!isAdmin});
 $('#fAdd').hidden=!canEditFounders();
 }
 function verifySession(){
@@ -392,9 +392,9 @@ $('#bpPrev').onclick=function(){bpShow(bpCur-1)};$('#bpNext').onclick=function()
 function bpApply(k,d){BP[k]=d;saveLS('fin_bp_v6',BP);var a=$('.art[data-art="'+k+'"]'),p=a.closest('.poster');var im=a.querySelector('img.rep');if(!im){im=document.createElement('img');im.className='rep';a.appendChild(im)}im.src=d;p.classList.add('has-rep');bpRenderInsert()}
 function bpRevert(k){delete BP[k];saveLS('fin_bp_v6',BP);var a=$('.art[data-art="'+k+'"]'),p=a.closest('.poster');var im=a.querySelector('img.rep');if(im)im.remove();p.classList.remove('has-rep');bpRenderInsert()}
 function bpRenderInsert(){var l=$('#bpInsertList');l.innerHTML='';SLOTS.forEach(function(s){var r=document.createElement('div');r.className='arow';r.innerHTML='<span class="th">'+(BP[s.k]?'<img src="'+BP[s.k]+'">':ART[s.k])+'</span><span class="nm"><b>'+s.n+'</b><span>Page '+s.pg+'</span></span><span class="acts"><label>Choose<input type="file" accept="image/*" data-bpk="'+s.k+'"></label><button class="rev" data-bprev="'+s.k+'">Revert</button></span>';l.appendChild(r)})}
-$('#bpInsertList').addEventListener('change',function(e){var i=e.target.closest('input[data-bpk]');if(!i)return;processImage(i.files[0],function(d){bpApply(i.getAttribute('data-bpk'),d);toast('Photo inserted')});i.value=''});
-$('#bpInsertList').addEventListener('click',function(e){var b=e.target.closest('[data-bprev]');if(b){bpRevert(b.getAttribute('data-bprev'));toast('Artwork restored')}});
-$('#tInsert').onclick=function(){bpRenderInsert();$('#bpInsertModal').classList.add('open')};
+$('#bpInsertList').addEventListener('change',function(e){if(!isAdmin)return;var i=e.target.closest('input[data-bpk]');if(!i)return;processImage(i.files[0],function(d){bpApply(i.getAttribute('data-bpk'),d);toast('Photo inserted')});i.value=''});
+$('#bpInsertList').addEventListener('click',function(e){if(!isAdmin)return;var b=e.target.closest('[data-bprev]');if(b){bpRevert(b.getAttribute('data-bprev'));toast('Artwork restored')}});
+$('#tInsert').onclick=function(){if(!isAdmin){toast('Administrator access is required.');return}bpRenderInsert();$('#bpInsertModal').classList.add('open')};
 $('#bpInsertClose').onclick=function(){$('#bpInsertModal').classList.remove('open')};
 Object.keys(BP).forEach(function(k){if(ART[k])bpApply(k,BP[k])});
 function strB(s){var u=new Uint8Array(s.length);for(var i=0;i<s.length;i++)u[i]=s.charCodeAt(i)&255;return u}
