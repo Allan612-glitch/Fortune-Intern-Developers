@@ -49,6 +49,22 @@ export type AppPage =
   | "profile"
   | "admin"
 
+function ExternalRedirect({ to }: { to: string }) {
+  useEffect(() => {
+    window.location.replace(to)
+  }, [to])
+
+  return (
+    <div
+      className="flex min-h-screen items-center justify-center bg-cream text-sm text-muted-foreground"
+      role="status"
+      aria-live="polite"
+    >
+      Opening campus chapters...
+    </div>
+  )
+}
+
 export default function App() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -84,6 +100,10 @@ export default function App() {
     pendingProgramId ||
     new URLSearchParams(location.search).get("program")
   const authenticatedPath = selectedProgramId ? "/app/programs" : "/app/home"
+  const chaptersReturnTo =
+    new URLSearchParams(location.search).get("returnTo") === "/chapters.html"
+      ? "/chapters.html"
+      : null
   const programIdFromUrl = new URLSearchParams(location.search).get("program")
 
   useEffect(() => {
@@ -94,13 +114,16 @@ export default function App() {
 
   const navigateAuth = (
     path: "/login" | "/register" | "/forgot-password" | "/reset-password",
-  ) =>
+  ) => {
+    const search = new URLSearchParams()
+    if (selectedProgramId) search.set("program", selectedProgramId)
+    if (chaptersReturnTo) search.set("returnTo", chaptersReturnTo)
+    const searchString = search.toString()
     navigate({
       pathname: path,
-      search: selectedProgramId
-        ? `?program=${encodeURIComponent(selectedProgramId)}`
-        : "",
+      search: searchString ? `?${searchString}` : "",
     })
+  }
 
   useEffect(() => {
     if (getAccessToken()) {
@@ -169,6 +192,10 @@ export default function App() {
       setUser({ ...pendingUser, verified: true })
       setPendingUser(null)
       setShowOTP(false)
+      if (chaptersReturnTo) {
+        window.location.assign(chaptersReturnTo)
+        return
+      }
       navigate(selectedProgram ? "/app/programs" : "/app/home")
     }
   }
@@ -177,6 +204,10 @@ export default function App() {
     if (selectedProgram) {
       pendingProgramIdRef.current = selectedProgram
       setPendingProgramId(selectedProgram)
+    }
+    if (chaptersReturnTo) {
+      window.location.assign(chaptersReturnTo)
+      return
     }
     setUser(userData)
     navigate(selectedProgram ? "/app/programs" : "/app/home")
@@ -197,7 +228,10 @@ export default function App() {
 
   const authPage = (mode: "login" | "register") =>
     user ? (
-      <Navigate to={authenticatedPath} replace />
+      <Navigate
+        to={chaptersReturnTo ? "/chapters" : authenticatedPath}
+        replace
+      />
     ) : (
       // Google's sign-in script now loads only on the login/register pages
       <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
@@ -265,6 +299,16 @@ export default function App() {
         />
         <Route path="/login" element={authPage("login")} />
         <Route path="/register" element={authPage("register")} />
+        <Route
+          path="/chapters"
+          element={
+            user ? (
+              <ExternalRedirect to="/chapters.html" />
+            ) : (
+              <Navigate to="/login?returnTo=%2Fchapters.html" replace />
+            )
+          }
+        />
         <Route
           path="/forgot-password"
           element={
