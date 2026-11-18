@@ -117,14 +117,13 @@ var FOUND_SEED=[
 function buildSeats(){var out=[],n=0;CHAPTERS.forEach(function(c){ROLES.forEach(function(r){out.push({id:'s'+(++n),name:'',role:r.role,chapter:c.id,status:'seat',email:'',phone:'',bio:'',resp:r.resp.slice(),photo:null})})});
 for(var i=0;i<out.length;i++)if(out[i].chapter==='knust'&&out[i].role==='General Secretary'){Object.assign(out[i],{name:'Mawuli Diekpor',status:'active',bio:'General Secretary of the KNUST Chapter. Keeps chapter records, minutes and official correspondence in order.'});break}
 return out}
-var CH=loadLS('fin_ch_v6',null);if(!Array.isArray(CH)||!CH.length){CH=CHAPTERS.slice();saveLS('fin_ch_v6',CH)}
-var DIR=loadLS('fin_dir_v6',null);if(!Array.isArray(DIR)||!DIR.length){DIR=buildSeats();saveLS('fin_dir_v6',DIR)}
+var CH=[],DIR=[],directoryLoadState='loading';
 var FOUND=loadLS('fin_found_v6',null);if(!Array.isArray(FOUND)||!FOUND.length){FOUND=FOUND_SEED.slice();saveLS('fin_found_v6',FOUND)}
 window.FIN_SEED={chapters:CH,executives:DIR,founders:FOUND};
 function chapter(id){for(var i=0;i<CH.length;i++)if(CH[i].id===id)return CH[i];return{id:id,name:id,inst:'',city:'',region:'',type:'Other Institution'}}
 var directorySaveTimer=null,directorySaveQueue=Promise.resolve();
 function persist(){
-saveLS('fin_dir_v6',DIR);saveLS('fin_ch_v6',CH);saveLS('fin_found_v6',FOUND);
+saveLS('fin_found_v6',FOUND);
 if(!isAdmin)return;
 clearTimeout(directorySaveTimer);
 directorySaveTimer=setTimeout(function(){
@@ -147,19 +146,33 @@ return r.text().then(function(text){var body=null;if(text){try{body=JSON.parse(t
 if(!r.ok)throw new Error(body&&typeof body.detail==='string'?body.detail:'Chapter request failed ('+r.status+').');
 return body})})}
 function saveDirectory(){
-return chapterRequest('/api/chapters','PUT',{chapters:CH,executives:DIR}).then(function(){
-$('#apiPill').textContent='Shared directory · Live'
+return chapterRequest('/api/chapters','PUT',{chapters:CH,executives:DIR}).then(function(directory){
+if(!directory||!Array.isArray(directory.chapters)||!Array.isArray(directory.executives))throw new Error('The server did not return the saved chapter directory.');
+$('#apiPill').textContent='Shared directory · Live';
+directoryLoadState='ready'
 })}
 function loadDirectory(){
 return chapterRequest('/api/chapters').then(function(directory){
-if(directory&&Array.isArray(directory.chapters)&&Array.isArray(directory.executives)){
+if(directory!==null){
+if(!Array.isArray(directory.chapters)||!Array.isArray(directory.executives))throw new Error('The server returned an invalid chapter directory.');
 CH.length=0;directory.chapters.forEach(function(c){CH.push(c)});
 DIR.length=0;directory.executives.forEach(function(e){DIR.push(e)});
-saveLS('fin_ch_v6',CH);saveLS('fin_dir_v6',DIR);
+directoryLoadState='ready';
 $('#apiPill').textContent='Shared directory · Live';refreshAll();return
 }
-if(isAdmin)return saveDirectory()
-}).catch(function(error){toast('Chapter directory is unavailable: '+error.message)})}
+if(isAdmin){
+CHAPTERS.forEach(function(c){CH.push(c)});
+buildSeats().forEach(function(e){DIR.push(e)});
+directoryLoadState='ready';refreshAll();return saveDirectory()
+}
+directoryLoadState='empty';
+$('#apiPill').textContent='Awaiting admin setup';
+refreshAll()
+}).catch(function(error){
+CH.length=0;DIR.length=0;directoryLoadState='error';
+$('#apiPill').textContent='Directory unavailable';
+refreshAll();toast('Chapter directory is unavailable: '+error.message)
+})}
 var activePosition=null;
 function openPositionApplication(position){
 if(!position||position.status!=='seat'){toast('This chapter position is currently filled.');return}
@@ -227,7 +240,7 @@ $('#gBurger').onclick=function(){$('#gMob').classList.toggle('open')};
 
 function renderMetrics(){var filled=DIR.filter(function(e){return e.name}).length;
 $('#stChapters').textContent=CH.length;$('#stSeats').textContent=DIR.length;$('#stFilled').textContent=filled;
-$('#stPct').textContent='('+Math.round(filled/DIR.length*100)+'%)';
+$('#stPct').textContent='('+Math.round(filled/(DIR.length||1)*100)+'%)';
 $('#stPhotos').textContent=DIR.filter(function(e){return e.photo}).length+FOUND.filter(function(f){return f.photo}).length;
 $('#tabChN').textContent=CH.length;$('#tabFoN').textContent=FOUND.length;$('#tabBpN').textContent=TOTAL}
 var chState={q:'',type:'All',sort:'az'};
@@ -242,6 +255,7 @@ if(chState.sort==='type')arr.sort(function(a,b){return a.type.localeCompare(b.ty
 if(chState.sort==='filled')arr.sort(function(a,b){var x=chStats(a.id),y=chStats(b.id);return(y.f/(y.t||1))-(x.f/(x.t||1))});
 $('#chCount').textContent=arr.length+' chapters shown · '+DIR.length+' seats tracked';
 var g=$('#chGrid');g.innerHTML='';
+if(!arr.length){var empty=document.createElement('p');empty.className='directory-empty';empty.textContent=CH.length?'No chapters match your search or filters.':directoryLoadState==='error'?'The shared directory could not be loaded. Refresh to try again.':directoryLoadState==='empty'?'No chapters have been published yet. Please check back soon.':'Loading the shared directory…';g.appendChild(empty);return}
 arr.forEach(function(c){var s=chStats(c.id),pct=s.t?Math.round(s.f/s.t*100):0;
 var cls=c.type==='Technical University'?'tech':c.type==='Private / Specialised'?'priv':c.type==='Other Institution'?'other':'';
 var d=document.createElement('article');d.className='chcard '+cls;
@@ -455,5 +469,4 @@ function refreshAll(){renderMetrics();renderChapters();renderFounders()}
 refreshAll();
 verifySession();
 loadFounders();
-setTimeout(function(){toast('Chapters, Founding Team and the full 24 page Blueprint are ready')},800);
 })();
