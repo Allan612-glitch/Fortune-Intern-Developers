@@ -749,7 +749,7 @@ export default function LandingPage({
             </p>
             <div className="flex justify-center mt-8">
               <a
-                href="/chapters.html"
+                href="/chapters"
                 className="px-6 py-3.5 inline-flex items-center justify-center rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors"
               >
                 Explore FIN Chapters

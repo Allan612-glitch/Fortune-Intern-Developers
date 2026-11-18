@@ -100,9 +100,10 @@ export default function App() {
     pendingProgramId ||
     new URLSearchParams(location.search).get("program")
   const authenticatedPath = selectedProgramId ? "/app/programs" : "/app/home"
+  const requestedReturnTo = new URLSearchParams(location.search).get("returnTo")
   const chaptersReturnTo =
-    new URLSearchParams(location.search).get("returnTo") === "/chapters.html"
-      ? "/chapters.html"
+    requestedReturnTo === "/chapters" || requestedReturnTo === "/chapters.html"
+      ? "/chapters"
       : null
   const programIdFromUrl = new URLSearchParams(location.search).get("program")
 
@@ -305,7 +306,7 @@ export default function App() {
             user ? (
               <ExternalRedirect to="/chapters.html" />
             ) : (
-              <Navigate to="/login?returnTo=%2Fchapters.html" replace />
+              <Navigate to="/login?returnTo=%2Fchapters" replace />
             )
           }
         />
