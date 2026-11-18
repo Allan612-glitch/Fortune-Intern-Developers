@@ -1,6 +1,7 @@
 
 (function(){
 'use strict';
+if(location.pathname==='/chapters.html')window.history.replaceState(window.history.state,'','/chapters'+location.search+location.hash);
 var $=function(s){return document.querySelector(s)},$$=function(s){return[].slice.call(document.querySelectorAll(s))};
 var isAdmin=false,founderApiAvailable=false;
 var API_BASE=(location.hostname==='localhost'||location.hostname==='127.0.0.1')?'':'https://fortune-intern-developers-backend.vercel.app';
@@ -17,14 +18,14 @@ $('#mnavSignIn').hidden=true;
 $('#mnavAccount').hidden=false
 }
 var sessionToken=localStorage.getItem('fortune-intern-access-token')||sessionStorage.getItem('fortune-intern-access-token');
-if(!sessionToken){location.replace('/login?returnTo=%2Fchapters.html');return}
+if(!sessionToken){location.replace('/login?returnTo=%2Fchapters');return}
 function setAdminControls(){
 ['chAdd','chImport','heroImport','drAddSeat','manageChapterApps'].forEach(function(id){var el=document.getElementById(id);if(el)el.hidden=!isAdmin});
 $('#fAdd').hidden=!canEditFounders();
 }
 function verifySession(){
 return fetch(API_BASE+'/api/auth/me',{headers:{Authorization:'Bearer '+sessionToken},credentials:'include'}).then(function(r){
-if(r.status===401||r.status===403){localStorage.removeItem('fortune-intern-access-token');sessionStorage.removeItem('fortune-intern-access-token');location.replace('/login?returnTo=%2Fchapters.html');return null}
+if(r.status===401||r.status===403){localStorage.removeItem('fortune-intern-access-token');sessionStorage.removeItem('fortune-intern-access-token');location.replace('/login?returnTo=%2Fchapters');return null}
 if(!r.ok)throw new Error('Account verification failed ('+r.status+')');
 return r.json()
 }).then(function(account){
@@ -42,7 +43,7 @@ $('#authGateMessage').textContent='We could not verify your account right now. P
 $('#authGateRetry').style.display='inline-block';
 $('#authGateRetry').onclick=verifySession;
 $('#authGateSignIn').textContent='Go to sign in';
-$('#authGateSignIn').href='/login?returnTo=%2Fchapters.html'
+$('#authGateSignIn').href='/login?returnTo=%2Fchapters'
 })}
 var toastT;function toast(m,u){var t=$('#toast');t.innerHTML='';t.appendChild(document.createTextNode(m));if(u){var b=document.createElement('button');b.textContent='Undo';b.onclick=function(){u();t.classList.remove('show')};t.appendChild(b)}t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove('show')},u?7000:2800)}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -219,7 +220,7 @@ $('#chapterApplicationsClose').onclick=function(){$('#chapterApplicationsModal')
 function loadFounders(){
 fetch(API_BASE+'/api/founders').then(function(r){if(!r.ok)throw new Error('Founding team API returned '+r.status);return r.json()}).then(function(founders){
 if(!Array.isArray(founders))throw new Error('Founding team API returned invalid data');
-FOUND.length=0;founders.forEach(function(f){FOUND.push(f)});founderApiAvailable=true;persist();$('#fAdd').hidden=!canEditFounders();if(currentTab==='founders')renderFounders();
+FOUND.length=0;founders.forEach(function(f){FOUND.push(f)});founderApiAvailable=true;saveLS('fin_found_v6',FOUND);$('#fAdd').hidden=!canEditFounders();if(currentTab==='founders')renderFounders();
 }).catch(function(){founderApiAvailable=false;$('#fAdd').hidden=true;if(isAdmin)toast('Founding team service is unavailable. Editing is disabled.');if(currentTab==='founders')renderFounders()})}
 function saveFounder(data){
 return founderRequest('PUT',data.id,data).then(function(founder){
