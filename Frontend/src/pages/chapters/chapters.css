@@ -1,0 +1,577 @@
+/*
+  Campus Chapter Blueprint (24-page document viewer).
+  Everything is scoped under .bp-stage so it cannot clash with the rest of the
+  app. The page around the viewer uses the app's Tailwind tokens; the pages
+  themselves keep the blueprint's own document colours (they state them on the
+  "Brand, Merch & Member Identity" page and they are baked into the PDF/PPTX).
+  No green: ticks and chips use gold/navy.
+*/
+.bp-stage {
+  --bp-navy: #0a3161;
+  --bp-ink: #12365e;
+  --bp-gold: #f5b927;
+  --bp-gold-dk: #c89a3c;
+  --bp-body: #475569;
+  --bp-muted: #64748b;
+  --bp-line: #e2e8f0;
+  --bp-bg: #f8fafc;
+  position: relative;
+  height: calc(100vh - 300px);
+  min-height: 460px;
+  background: var(--footer, #11182d);
+  font-family: "Inter", system-ui, sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+.bp-stage .slide {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  background: var(--bp-bg);
+  color: #0f172a;
+  padding: 10mm 16mm;
+  overflow: hidden;
+}
+.bp-stage .slide.active {
+  display: flex;
+}
+.bp-stage .slide.dark {
+  background: linear-gradient(135deg, #0a3161, #12365e 60%, #0a2540);
+  color: #eaf0f8;
+}
+.bp-stage .slide :is(h1, h2, h3, h4) {
+  font-family: "Inter", system-ui, sans-serif;
+}
+.bp-stage .wm {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(42vh, 30vw);
+  opacity: 0.06;
+  pointer-events: none;
+  z-index: 0;
+}
+.bp-stage .slide.dark .wm {
+  opacity: 0.09;
+}
+.bp-stage .s-head {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 14mm;
+  flex-shrink: 0;
+  margin-bottom: 3mm;
+}
+.bp-stage .s-logo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.bp-stage .s-mark {
+  display: block;
+  height: 11mm;
+}
+.bp-stage .s-mark svg {
+  height: 11mm;
+  width: auto;
+}
+.bp-stage .s-logo em {
+  font-style: normal;
+  font-weight: 800;
+  font-size: 14.5px;
+  color: var(--bp-navy);
+  line-height: 1.05;
+}
+.bp-stage .s-logo em b {
+  display: block;
+  color: var(--bp-gold-dk);
+  font-size: 8.2px;
+  letter-spacing: 2.4px;
+}
+.bp-stage .slide.dark .s-logo em {
+  color: #fff;
+}
+.bp-stage .slide.dark .s-logo em b {
+  color: var(--bp-gold);
+}
+.bp-stage .s-kick {
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 2.6px;
+  color: var(--bp-gold-dk);
+  text-transform: uppercase;
+}
+.bp-stage .slide.dark .s-kick {
+  color: var(--bp-gold);
+}
+.bp-stage .s-body {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+.bp-stage .s-body::-webkit-scrollbar {
+  width: 6px;
+}
+.bp-stage .s-body::-webkit-scrollbar-thumb {
+  background: var(--bp-gold-dk);
+  border-radius: 8px;
+}
+.bp-stage .s-foot {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  height: 8mm;
+  align-items: center;
+  flex-shrink: 0;
+  margin-top: 3mm;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #8a94a2;
+  text-transform: uppercase;
+}
+.bp-stage .slide.dark .s-foot {
+  color: #9fb2cc;
+}
+.bp-stage h1.st {
+  font-weight: 800;
+  font-size: clamp(22px, 4.2vh, 38px);
+  color: var(--bp-navy);
+  line-height: 1.12;
+  letter-spacing: -0.5px;
+}
+.bp-stage h2.st {
+  font-weight: 800;
+  font-size: clamp(19px, 3.2vh, 28px);
+  color: var(--bp-navy);
+  margin-bottom: 3mm;
+  letter-spacing: -0.3px;
+}
+.bp-stage .slide.dark h1.st,
+.bp-stage .slide.dark h2.st {
+  color: #fff;
+}
+.bp-stage .st .hl {
+  color: var(--bp-gold-dk);
+}
+.bp-stage .slide.dark .st .hl {
+  color: var(--bp-gold);
+}
+.bp-stage .sub {
+  color: var(--bp-body);
+  font-size: clamp(12.5px, 1.85vh, 15px);
+  margin-top: 2.5mm;
+  max-width: 72ch;
+}
+.bp-stage .slide.dark .sub {
+  color: #c7d2e4;
+}
+.bp-stage .two {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 8mm;
+  align-items: start;
+  flex: 1;
+  min-height: 0;
+}
+.bp-stage .center {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.bp-stage .center .sub {
+  margin-left: auto;
+  margin-right: auto;
+}
+.bp-stage .card {
+  background: #fff;
+  border: 1px solid var(--bp-line);
+  border-radius: 16px;
+  padding: 4.5mm 5.5mm;
+}
+.bp-stage .slide.dark .card {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+.bp-stage .card h3 {
+  font-size: clamp(13.5px, 1.95vh, 16px);
+  color: var(--bp-navy);
+  margin-bottom: 2mm;
+  font-weight: 700;
+}
+.bp-stage .slide.dark .card h3 {
+  color: var(--bp-gold);
+}
+.bp-stage .card p,
+.bp-stage .card li {
+  font-size: clamp(11.5px, 1.7vh, 13.5px);
+  color: var(--bp-body);
+  line-height: 1.6;
+}
+.bp-stage .slide.dark .card p,
+.bp-stage .slide.dark .card li {
+  color: #d7e0ee;
+}
+.bp-stage .stack {
+  display: grid;
+  gap: 10px;
+}
+.bp-stage ul.tick {
+  display: grid;
+  gap: 2.4mm;
+}
+.bp-stage ul.tick li {
+  padding-left: 24px;
+  position: relative;
+  font-size: clamp(11.5px, 1.75vh, 14px);
+  color: var(--bp-body);
+  line-height: 1.6;
+}
+.bp-stage .slide.dark ul.tick li {
+  color: #d7e0ee;
+}
+.bp-stage ul.tick li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--bp-gold-dk);
+  font-weight: 800;
+}
+.bp-stage .slide.dark ul.tick li::before {
+  color: var(--bp-gold);
+}
+.bp-stage ul.tick b {
+  color: var(--bp-navy);
+}
+.bp-stage .slide.dark ul.tick b {
+  color: #fff;
+}
+.bp-stage .bchips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4mm;
+}
+.bp-stage .bchip {
+  background: rgba(245, 185, 39, 0.15);
+  color: var(--bp-gold-dk);
+  border: 1px solid rgba(245, 185, 39, 0.5);
+  font-weight: 700;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 99px;
+}
+.bp-stage .slide.dark .bchip {
+  background: rgba(245, 185, 39, 0.14);
+  color: var(--bp-gold);
+  border-color: rgba(245, 185, 39, 0.4);
+}
+.bp-stage .roles {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.bp-stage .role {
+  background: #fff;
+  border: 1px solid var(--bp-line);
+  border-left: 4px solid var(--bp-gold);
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+.bp-stage .role b {
+  display: block;
+  font-size: 13px;
+  color: var(--bp-navy);
+  font-weight: 700;
+}
+.bp-stage .role span {
+  font-size: 11.5px;
+  color: var(--bp-body);
+  line-height: 1.45;
+  display: block;
+}
+.bp-stage .tl {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-top: 5mm;
+}
+.bp-stage .tl .ph {
+  background: #fff;
+  border: 1px solid var(--bp-line);
+  border-top: 5px solid var(--bp-gold);
+  border-radius: 14px;
+  padding: 12px;
+}
+.bp-stage .tl .ph:nth-child(even) {
+  border-top-color: var(--bp-navy);
+}
+.bp-stage .tl .m {
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 1.4px;
+  color: var(--bp-gold-dk);
+  text-transform: uppercase;
+}
+.bp-stage .tl h4 {
+  font-size: 13.5px;
+  color: var(--bp-navy);
+  margin: 4px 0 3px;
+  font-weight: 700;
+}
+.bp-stage .tl p {
+  font-size: 11.5px;
+  color: var(--bp-body);
+  line-height: 1.45;
+}
+.bp-stage .tiers {
+  display: grid;
+  gap: 10px;
+  margin-top: 3mm;
+}
+.bp-stage .tier {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  gap: 14px;
+  background: #fff;
+  border: 1px solid var(--bp-line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  align-items: center;
+}
+.bp-stage .tier .lb {
+  font-weight: 800;
+  font-size: 12.5px;
+  color: #fff;
+  background: var(--bp-navy);
+  border-radius: 10px;
+  padding: 8px 10px;
+  text-align: center;
+}
+.bp-stage .tier:nth-child(2) .lb {
+  background: var(--bp-ink);
+}
+.bp-stage .tier:nth-child(3) .lb {
+  background: var(--bp-gold-dk);
+}
+.bp-stage .tier p {
+  font-size: 12.5px;
+  color: var(--bp-body);
+  line-height: 1.5;
+}
+.bp-stage .tier b {
+  color: var(--bp-navy);
+}
+.bp-stage .steps {
+  display: grid;
+  gap: 10px;
+  margin-top: 3mm;
+  counter-reset: st;
+}
+.bp-stage .step {
+  display: flex;
+  gap: 14px;
+  background: #fff;
+  border: 1px solid var(--bp-line);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+.bp-stage .slide.dark .step {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+.bp-stage .step .n {
+  counter-increment: st;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--bp-gold);
+  color: var(--bp-navy);
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+}
+.bp-stage .step .n::before {
+  content: counter(st);
+}
+.bp-stage .step b {
+  font-size: 14px;
+  color: var(--bp-navy);
+  display: block;
+  font-weight: 700;
+}
+.bp-stage .slide.dark .step b {
+  color: #fff;
+}
+.bp-stage .step p {
+  font-size: 12.5px;
+  color: var(--bp-body);
+  line-height: 1.5;
+}
+.bp-stage .slide.dark .step p {
+  color: #d7e0ee;
+}
+.bp-stage .imgbody {
+  align-items: center;
+  justify-content: center;
+  gap: 5mm;
+}
+.bp-stage .poster {
+  height: min(46vh, 110mm);
+  background: #fff;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--bp-line);
+  flex-shrink: 0;
+  position: relative;
+}
+.bp-stage .poster .art {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+.bp-stage .poster .art-svg,
+.bp-stage .poster .art-svg svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.bp-stage .poster img.rep {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.bp-stage .poster .rep-tag {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  background: var(--bp-gold);
+  color: var(--bp-navy);
+  font-weight: 800;
+  font-size: 10px;
+  padding: 4px 9px;
+  border-radius: 99px;
+  text-transform: uppercase;
+}
+.bp-stage .pcap {
+  text-align: center;
+  max-width: 70ch;
+}
+.bp-stage .pcap b {
+  font-size: clamp(13.5px, 2vh, 16px);
+  color: var(--bp-navy);
+  display: block;
+  font-weight: 700;
+}
+.bp-stage .pcap span {
+  font-size: clamp(11px, 1.65vh, 12.5px);
+  color: var(--bp-body);
+}
+.bp-stage .sop-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 4mm;
+}
+.bp-stage .sop {
+  background: #fff;
+  border: 1px solid var(--bp-line);
+  border-left: 5px solid var(--bp-gold);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.bp-stage .sop .code {
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 1.6px;
+  color: var(--bp-gold-dk);
+}
+.bp-stage .sop h4 {
+  font-size: 14px;
+  color: var(--bp-navy);
+  margin: 3px 0 4px;
+  font-weight: 700;
+}
+.bp-stage .sop p {
+  font-size: 12px;
+  color: var(--bp-body);
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .bp-stage .tl {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 820px) {
+  .bp-stage .two,
+  .bp-stage .roles,
+  .bp-stage .sop-grid {
+    grid-template-columns: 1fr;
+  }
+  .bp-stage .tier {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Print: only the blueprint pages, one per sheet. The page chrome is hidden
+   with Tailwind's print: variant in ChaptersPage. */
+@media print {
+  .bp-stage {
+    height: auto;
+    background: #fff;
+  }
+  .bp-stage .slide {
+    position: relative;
+    display: flex !important;
+    height: auto;
+    min-height: 200mm;
+    overflow: visible;
+    padding: 10mm 16mm;
+    page-break-after: always;
+    break-after: page;
+  }
+  .bp-stage .slide:last-of-type {
+    page-break-after: auto;
+    break-after: auto;
+  }
+  .bp-stage .s-body {
+    overflow: visible;
+  }
+  .bp-stage .poster {
+    height: 110mm;
+  }
+  .bp-stage .card,
+  .bp-stage .role,
+  .bp-stage .step,
+  .bp-stage .tier,
+  .bp-stage .tl .ph,
+  .bp-stage .poster,
+  .bp-stage .pcap,
+  .bp-stage .bchips,
+  .bp-stage .sop {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .bp-stage h1.st,
+  .bp-stage h2.st {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+}

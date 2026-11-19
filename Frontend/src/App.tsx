@@ -27,6 +27,7 @@ const Contact = lazy(() => import("./pages/companypages/ContactUs"))
 const PrivacyPolicy = lazy(() => import("./pages/companypages/PrivacyPolicy"))
 const Terms = lazy(() => import("./pages/companypages/TAC"))
 const VerifyLetterPage = lazy(() => import("./pages/VerifyLetterPage"))
+const ChaptersPage = lazy(() => import("./pages/ChaptersPage"))
 
 export type AppUser = {
   name: string
@@ -48,22 +49,6 @@ export type AppPage =
   | "apply"
   | "profile"
   | "admin"
-
-function ExternalRedirect({ to }: { to: string }) {
-  useEffect(() => {
-    window.location.replace(to)
-  }, [to])
-
-  return (
-    <div
-      className="flex min-h-screen items-center justify-center bg-cream text-sm text-muted-foreground"
-      role="status"
-      aria-live="polite"
-    >
-      Opening campus chapters...
-    </div>
-  )
-}
 
 export default function App() {
   const navigate = useNavigate()
@@ -304,12 +289,33 @@ export default function App() {
           path="/chapters"
           element={
             user ? (
-              <ExternalRedirect to="/chapters.html" />
+              <ChaptersPage user={user} />
             ) : (
               <Navigate to="/login?returnTo=%2Fchapters" replace />
             )
           }
         />
+        {/* TEMPORARY: sign-in-free preview of the chapters page. Dev server only
+            (import.meta.env.DEV is false in a production build). Delete before launch. */}
+        {import.meta.env.DEV && (
+          <Route
+            path="/chapters-preview"
+            element={
+              <ChaptersPage
+                user={{
+                  name: "Preview Visitor",
+                  email: "preview@example.com",
+                  school: "",
+                  major: "",
+                  avatar: "PV",
+                  isAdmin: true,
+                  verified: true,
+                  role: "student",
+                }}
+              />
+            }
+          />
+        )}
         <Route
           path="/forgot-password"
           element={
