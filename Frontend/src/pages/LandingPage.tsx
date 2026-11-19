@@ -9,7 +9,6 @@ import {
 import { flushSync } from "react-dom"
 import logo from "../assets/logo.webp"
 import heroImage from "../assets/Hero.webp"
-import studentImage from "../assets/About.webp"
 
 import Footer from "../components/layout/Footer"
 
@@ -23,8 +22,6 @@ interface LandingPageProps {
 
 const navLinks = [
   ["Opportunities", "internships"],
-
-  ["How It Works", "how-it-works"],
 
   ["About", "about-us"],
 
@@ -65,33 +62,7 @@ const benefits = [
   },
 ]
 
-const steps = [
-  {
-    number: "01",
-
-    title: "Create Your Profile",
-
-    text: "Showcase your skills, education, interests, and the type of career you want to build.",
-  },
-
-  {
-    number: "02",
-
-    title: "Discover & Apply",
-
-    text: "Find opportunities aligned with your goals and submit a professional application.",
-  },
-
-  {
-    number: "03",
-
-    title: "Start Your Journey",
-
-    text: "Connect with organizations, gain experience, and take your next confident step.",
-  },
-]
-
-// These four sections never change, so they are created once here instead of
+// These three sections never change, so they are created once here instead of
 // on every render. React skips re-rendering an unchanged element, so typing in
 // the search box or opening the menu no longer re-renders them.
 const whyFinSection = (
@@ -124,36 +95,8 @@ const whyFinSection = (
   </section>
 )
 
-const stepsSection = (
-  <section id="how-it-works" className="section-space bg-surface scroll-mt-[4.5rem]">
-    <div className="landing-container">
-      <SectionHeading
-        eyebrow="Simple to apply"
-        title="Your Internship Journey Starts Here"
-        text="Three clear steps take you from creating your profile to beginning your professional journey."
-      />
-      <div className="grid md:grid-cols-3 gap-5 mt-12 relative">
-        <div className="hidden md:block absolute top-8 left-[16%] right-[16%] h-px bg-border" />
-        {steps.map((step) => (
-          <article key={step.number} className="relative text-center">
-            <div className="relative z-10 w-16 h-16 rounded-full bg-white border-2 border-accent text-primary mx-auto flex items-center justify-center font-mono font-bold shadow-sm">
-              {step.number}
-            </div>
-            <h3 className="font-display text-xl text-primary mt-5">
-              {step.title}
-            </h3>
-            <p className="text-sm text-muted-foreground leading-relaxed mt-3 max-w-xs mx-auto">
-              {step.text}
-            </p>
-          </article>
-        ))}
-      </div>
-    </div>
-  </section>
-)
-
 const aboutUsSection = (
-  <section id="about-us" className="section-space bg-white scroll-mt-[4.5rem]">
+  <section id="about-us" className="section-space bg-surface scroll-mt-[4.5rem]">
     <div className="landing-container">
       <div className="max-w-3xl">
         <p className="section-eyebrow">About us</p>
@@ -669,72 +612,6 @@ export default function LandingPage({
         </section>
 
         {whyFinSection}
-
-        {stepsSection}
-
-        <section className="section-space bg-surface">
-          <div className="landing-container grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-            <div className="relative">
-              <div className="rounded-3xl overflow-hidden aspect-[4/3]">
-                <img
-                  src={studentImage}
-                  alt="Fortune Intern Network's Public Speaking Program Flyer"
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </div>
-              <div className="absolute -bottom-5 right-5 bg-white rounded-2xl border border-border p-4 max-w-52">
-                <p className="font-display text-2xl text-primary">
-                  Connect. Apply. Grow.
-                </p>
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  Your career journey, supported.
-                </p>
-              </div>
-            </div>
-            <div>
-              <p className="section-eyebrow">For students</p>
-              <h2 className="section-title">
-                Your First Opportunity Can Change Your Future.
-              </h2>
-              <p className="section-copy">
-                Whether you&apos;re looking for your first internship, building your
-                CV, or gaining experience in your field, FIN helps you discover
-                opportunities designed to move your career forward.
-              </p>
-              <ul className="grid sm:grid-cols-2 gap-3 mt-6">
-                {[
-                  "Discover relevant internships",
-
-                  "Build your professional profile",
-
-                  "Track your applications",
-
-                  "Gain real-world experience",
-
-                  "Connect with organizations",
-                ].map((item) => (
-                  <li
-                    key={item}
-                    className="flex items-center gap-2 text-sm text-foreground"
-                  >
-                    <span className="check-dot">
-                      <Icon name="check" className="w-3.5 h-3.5" />
-                    </span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <button
-                onClick={() => onStudentPortal("register")}
-                className="mt-8 px-6 py-3.5 hover:cursor-pointer rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary-hover transition-colors"
-              >
-                Start Your Career Journey
-              </button>
-            </div>
-          </div>
-        </section>
 
         {aboutUsSection}
 

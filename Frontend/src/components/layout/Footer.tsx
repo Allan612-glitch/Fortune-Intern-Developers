@@ -49,7 +49,6 @@ export default function Footer() {
           title="Platform"
           links={[
             { name: "Find Internships", href: "/#internships" },
-            { name: "How It Works", href: "/#how-it-works" },
             { name: "Application Tracking", href: "/app/applications" },
             { name: "Student Dashboard", href: "/app/dashboard" },
           ]}
