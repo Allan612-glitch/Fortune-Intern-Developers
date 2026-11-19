@@ -36,7 +36,6 @@
     }
   ],
   "rewrites": [
-    { "source": "/chapters", "destination": "/chapters.html" },
     { "source": "/(.*)", "destination": "/" }
   ]
 }
