@@ -83,6 +83,18 @@ function InternshipJourney() {
     const update = () => {
       frame = 0
       if (!visible) return
+      const stage = stageRef.current!
+      const layout = getComputedStyle(stage)
+      if (layout.position === "sticky") {
+        const distance = section.offsetHeight - stage.offsetHeight
+        const travelled = parseFloat(layout.top) - section.getBoundingClientRect().top
+        const progress = Math.max(0, Math.min(1, travelled / Math.max(1, distance)))
+        const position = progress * (benefits.length - 1)
+        section.style.setProperty("--journey-position", String(position))
+        setActiveStep(Math.round(position))
+        return
+      }
+
       const bounds = viewport.getBoundingClientRect()
       const center = bounds.left + bounds.width / 2
       let nearest = 0
@@ -166,7 +178,7 @@ function InternshipJourney() {
         <div className="landing-container journey-intro">
           <p className="section-eyebrow">The FIN journey</p>
           <h2 id="journey-title">From first search to first day.</h2>
-          <p className="journey-scroll-hint">Scroll or choose a stage to explore</p>
+          <p className="journey-scroll-hint">Scroll down to move through the stages</p>
           <p className="journey-swipe-hint">Swipe or choose a stage to explore</p>
           <nav className="journey-controls" aria-label="Choose a journey stage">
             {benefits.map((item, index) => (
@@ -197,6 +209,7 @@ function InternshipJourney() {
                 key={item.title}
                 className="journey-step landing-container"
                 data-active={activeStep === index}
+                style={{ "--step-index": index } as CSSProperties}
               >
                 <div className="journey-step-copy">
                   <h3>{item.title}</h3>
@@ -323,6 +336,37 @@ export default function LandingPage({
 
   onApplyToProgram,
 }: LandingPageProps) {
+  const heroRef = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    const hero = heroRef.current!
+    const motion = window.matchMedia("(prefers-reduced-motion: no-preference)")
+    let frame = 0
+
+    const update = () => {
+      frame = 0
+      const bounds = hero.getBoundingClientRect()
+      if (bounds.bottom < 0) return
+      const distance = Math.max(0, -bounds.top)
+      hero.style.setProperty("--hero-scroll", `${distance}px`)
+      hero.style.setProperty("--hero-angle", String(distance * .62))
+    }
+    const schedule = () => {
+      if (motion.matches && !frame) frame = requestAnimationFrame(update)
+    }
+    window.addEventListener("scroll", schedule, { passive: true })
+    window.addEventListener("resize", schedule)
+    motion.addEventListener("change", schedule)
+    schedule()
+
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener("scroll", schedule)
+      window.removeEventListener("resize", schedule)
+      motion.removeEventListener("change", schedule)
+    }
+  }, [])
+
   const [mobileMenu, setMobileMenu] = useState(false)
 
   const [search, setSearch] = useState("")
@@ -527,8 +571,8 @@ export default function LandingPage({
       </header>
 
       <main>
-        <section className="story-hero">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-14 md:py-20 lg:py-24 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center relative">
+        <section className="story-hero" ref={heroRef}>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 md:py-16 lg:py-20 grid lg:grid-cols-2 gap-7 lg:gap-16 items-center relative">
             <div className="story-hero-copy">
               <h1 className="font-display font-extrabold">
                 Build Your Future Through the{" "}
@@ -560,20 +604,24 @@ export default function LandingPage({
 
             <div className="story-hero-visual" onPointerMove={tiltHero} onPointerLeave={resetHeroTilt}>
               <div className="story-hero-orbit" aria-hidden="true"><i /><i /></div>
-              <div className="story-hero-media">
-                <img
-                  src={heroImage}
-                  alt="Two students laughing as they walk up campus steps"
-                  className="w-full h-full object-cover"
-                  width="900"
-                  height="1125"
-                  fetchPriority="high"
-                  decoding="async"
-                />
+              <div className="story-hero-depth">
+                <div className="story-hero-media">
+                  <img
+                    src={heroImage}
+                    alt="Two students laughing as they walk up campus steps"
+                    className="w-full h-full object-cover"
+                    width="900"
+                    height="1125"
+                    fetchPriority="high"
+                    decoding="async"
+                  />
+                </div>
               </div>
             </div>
           </div>
         </section>
+
+        <InternshipJourney />
 
         <section id="internships" className="relative -mt-3 z-10 px-4 sm:px-6 scroll-mt-[6rem]">
           <div className="max-w-6xl mx-auto bg-white rounded-3xl border border-border p-5 sm:p-8">
@@ -751,8 +799,6 @@ export default function LandingPage({
               )}
           </div>
         </section>
-
-        <InternshipJourney />
 
         {aboutUsSection}
 

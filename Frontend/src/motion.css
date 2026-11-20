@@ -8,6 +8,7 @@
   --motion-depth: 3rem;
   --motion-turn: 1turn;
   --motion-tilt: 14deg;
+  --motion-parallax: .32;
   --landing-header: 4.5rem;
   --story-gold: var(--gold);
   --story-ink: var(--navy-dark);
@@ -24,7 +25,27 @@
 
 .story-hero {
   overflow: clip;
-  background-image: radial-gradient(ellipse at 82% 42%, var(--navy-light), transparent 58%);
+  position: relative;
+  background-image: radial-gradient(ellipse at 82% 42%, var(--navy-light), transparent 65%);
+}
+
+.story-hero::before {
+  content: "";
+  position: absolute;
+  inset: -20% 0;
+  background: repeating-radial-gradient(circle at 76% 46%, transparent 0 63px, var(--story-line) 64px 65px);
+  opacity: .22;
+  pointer-events: none;
+}
+
+.story-hero-depth {
+  width: min(100%, 26rem);
+}
+
+@media (width < 44rem) {
+  .story-hero-depth { width: min(74%, 22rem); }
+  .story-hero-depth .story-hero-media { aspect-ratio: 5 / 4; }
+  .story-hero-media img { object-position: center 38%; }
 }
 
 .story-hero h1,
@@ -136,7 +157,7 @@
 :is(.story-hero-orbit, .journey-orbit) i:last-of-type { inset: 50% auto auto 100%; }
 
 .story-hero-media {
-  width: min(100%, 25rem);
+  width: 100%;
   aspect-ratio: 4 / 5;
   overflow: hidden;
   border: 1px solid var(--story-line);
@@ -342,6 +363,20 @@
     animation: step-pop var(--motion-scene) var(--motion-ease);
   }
 
+  .story-hero::before {
+    translate: 0 calc(var(--hero-scroll, 0px) * var(--motion-parallax) * .55);
+  }
+  .story-hero-depth {
+    translate: 0 calc(var(--hero-scroll, 0px) * var(--motion-parallax));
+  }
+  .story-hero-copy {
+    translate: 0 calc(var(--hero-scroll, 0px) * var(--motion-parallax) * -.65);
+  }
+  .story-hero-orbit {
+    rotate: calc(var(--hero-angle, 0) * 1deg);
+    transform: translateY(calc(var(--hero-scroll, 0px) * var(--motion-parallax) * 1.45));
+  }
+
   @media (hover: hover) and (pointer: fine) {
     .story-hero-media {
       transform: perspective(50rem) rotateX(calc(var(--hero-y, 0) * -1 * var(--motion-tilt))) rotateY(calc(var(--hero-x, 0) * var(--motion-tilt)));
@@ -355,12 +390,6 @@
   }
 
   @supports (animation-timeline: view()) {
-    .story-hero-orbit {
-      animation: orbit-turn linear both;
-      animation-timeline: scroll(root block);
-      animation-range: 0 100vh;
-    }
-
     .story-about-media img {
       animation: photo-drift linear both;
       animation-timeline: view();
@@ -427,64 +456,91 @@
   }
 }
 
-@supports (animation-timeline: view()) and (animation-range: contain) {
-  @media (min-width: 56rem) and (min-height: 42rem) and (prefers-reduced-motion: no-preference) {
-    .journey {
-      --journey-height: calc(100svh - var(--landing-header));
-      min-height: calc(var(--journey-height) + (var(--journey-steps) - 1) * 58svh);
-      view-timeline: --journey block;
-      view-timeline-inset: var(--landing-header) 0;
-    }
-
-    .journey-stage {
-      position: sticky;
-      top: var(--landing-header);
-      min-height: var(--journey-height);
-      padding-block: 2rem;
-    }
-
-    .journey-controls { display: flex; }
-
-    .journey-scroll-hint {
-      display: block;
-      margin-top: .5rem;
-      font-size: .875rem;
-    }
-
-    .journey-viewport { min-width: 0; overflow: clip; }
-
-    .journey-track {
-      grid-auto-flow: column;
-      grid-auto-columns: 100%;
-      align-items: stretch;
-      gap: 0;
-      animation: journey-pan linear both;
-      animation-timeline: --journey;
-      animation-range: contain;
-    }
-
-    .journey-progress {
-      display: block;
-      height: 2px;
-      background: var(--story-line);
-    }
-
-    .journey-progress span {
-      display: block;
-      height: 100%;
-      background: var(--story-gold);
-      transform-origin: left;
-      animation: journey-progress linear both;
-      animation-timeline: --journey;
-      animation-range: contain;
-    }
-
-    .journey-orbit {
-      animation: orbit-turn linear both;
-      animation-timeline: --journey;
-      animation-range: contain;
-    }
+@media screen and (min-height: 37rem) and (prefers-reduced-motion: no-preference) {
+  .journey {
+    --journey-height: calc(100svh - var(--landing-header));
+    --journey-travel: 52svh;
+    min-height: calc(var(--journey-height) + (var(--journey-steps) - 1) * var(--journey-travel));
   }
+
+  .journey-stage {
+    position: sticky;
+    top: var(--landing-header);
+    min-height: var(--journey-height);
+    gap: clamp(.75rem, 2.5vh, 2rem);
+    padding-block: clamp(.75rem, 3vh, 2rem);
+  }
+
+  .journey-swipe-hint { display: none; }
+  .journey-controls { display: flex; }
+
+  .journey-scroll-hint {
+    display: block;
+    margin-top: .5rem;
+    font-size: .875rem;
+  }
+
+  .journey-viewport {
+    min-width: 0;
+    overflow: clip;
+  }
+
+  .journey-track {
+    grid-auto-flow: column;
+    grid-auto-columns: 100%;
+    gap: 0;
+    padding: 0;
+    translate: calc(var(--journey-position, 0) * -100%) 0;
+  }
+
+  .journey-step {
+    width: min(100% - 2.5rem, 78rem);
+    position: relative;
+    overflow: clip;
+    min-height: clamp(12rem, 37vh, 25rem);
+    border-color: color-mix(in srgb, var(--step-accent) 48%, transparent);
+    --step-offset: clamp(-1, calc(var(--journey-position, 0) - var(--step-index)), 1);
+  }
+
+  .journey-step::before {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0 -30%;
+    background-image: repeating-radial-gradient(circle at 72% 53%, transparent 0 37px, var(--step-accent) 38px 39px);
+    opacity: .12;
+    translate: calc(var(--step-offset) * 14%) 0;
+  }
+
+  .journey-step-copy { position: relative; }
+
+  .journey-illustration {
+    width: clamp(3.5rem, 24vw, 18rem);
+    translate: calc(var(--step-offset) * 50%) 0;
+  }
+
+  .journey-orbit {
+    rotate: calc(var(--journey-position, 0) * var(--motion-turn));
+  }
+
+  .journey-progress {
+    display: block;
+    height: .2rem;
+    background: var(--story-line);
+  }
+
+  .journey-progress span {
+    display: block;
+    height: 100%;
+    background: var(--story-gold);
+    transform-origin: left;
+    scale: calc((1 + var(--journey-position, 0)) / var(--journey-steps)) 1;
+  }
+}
+
+@media screen and (width < 35rem) and (min-height: 37rem) and (prefers-reduced-motion: no-preference) {
+  .journey-stage { align-content: start; padding-top: clamp(1.25rem, 8vh, 4rem); }
+  .journey-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @keyframes scene-enter {
@@ -497,11 +553,8 @@
   to { scale: 1; opacity: 1; }
 }
 
-@keyframes orbit-turn { to { rotate: var(--motion-turn); } }
 @keyframes photo-drift { to { translate: 0 calc(-1 * min(10%, var(--motion-depth))); } }
-@keyframes journey-pan { to { translate: calc((1 - var(--journey-steps)) * 100%) 0; } }
 @keyframes reading-progress { from { scale: 0 1; } to { scale: 1 1; } }
-@keyframes journey-progress { from { scale: calc(1 / var(--journey-steps)) 1; } to { scale: 1 1; } }
 
 @media print {
   .journey { min-height: auto; }
