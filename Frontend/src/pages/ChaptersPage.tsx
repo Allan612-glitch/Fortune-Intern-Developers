@@ -285,7 +285,7 @@ export default function ChaptersPage({ user }: { user: AppUser }) {
         ) : null}
       </header>
 
-      <section className="border-b border-border bg-white print:hidden">
+      <section className="chapters-intro border-b border-border bg-white print:hidden">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
           <p className="text-xs font-semibold text-muted-foreground">
             Docs <b className={goldText}>/</b> Platform <b className={goldText}>/</b> Chapters
@@ -361,7 +361,7 @@ export default function ChaptersPage({ user }: { user: AppUser }) {
         </div>
       </div>
 
-      <main>
+      <main className="chapters-content">
         <section hidden={tab !== "chapters"}>
           <ChaptersTab
             chapters={chapters}

@@ -1,5 +1,6 @@
 /* Fonts are now loaded from index.html (faster: the browser finds them straight away). */
 @import "tailwindcss";
+@import "./motion.css";
 
 @theme inline {
   --color-background: var(--background);
@@ -62,7 +63,7 @@
 }
 
 body {
-  font-family:"Inter", "Poppins", sans-serif, ;
+  font-family:"Inter", "Poppins", sans-serif;
   background-color: var(--cream);
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
@@ -380,7 +381,7 @@ html {
 
 /* Animations */
 .slide-in {
-  animation: slideIn 0.25s ease-out;
+  animation: slideIn var(--motion-enter) var(--motion-ease);
 }
 @keyframes slideIn {
   from {
@@ -393,7 +394,7 @@ html {
   }
 }
 .fade-in {
-  animation: fadeIn 0.3s ease-out;
+  animation: fadeIn var(--motion-quick) var(--motion-ease);
 }
 @keyframes fadeIn {
   from {
@@ -419,8 +420,8 @@ html {
 
 .hover-lift {
   transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease;
+    transform var(--motion-quick) var(--motion-ease),
+    box-shadow var(--motion-quick) var(--motion-ease);
 }
 .hover-lift:hover {
   transform: translateY(-2px);
@@ -463,4 +464,11 @@ html {
     bottom: 24px;
     right: 24px;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .slide-in, .fade-in, .pulse-dot { animation: none; }
+  .hover-lift { transition: none; }
+  .hover-lift:hover { transform: none; }
 }

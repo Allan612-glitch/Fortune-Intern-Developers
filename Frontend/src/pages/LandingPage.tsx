@@ -5,10 +5,14 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type PointerEvent,
 } from "react"
 import { flushSync } from "react-dom"
 import logo from "../assets/logo.webp"
-import heroImage from "../assets/Hero.webp"
+import heroImage from "../assets/Hero-campus.webp"
+import aboutImage from "../assets/About.webp"
 
 import Footer from "../components/layout/Footer"
 
@@ -62,42 +66,174 @@ const benefits = [
   },
 ]
 
-// These three sections never change, so they are created once here instead of
-// on every render. React skips re-rendering an unchanged element, so typing in
-// the search box or opening the menu no longer re-renders them.
-const whyFinSection = (
-  <section id="about" className="section-space bg-white scroll-mt-[4.5rem]">
-    <div className="landing-container">
-      <SectionHeading
-        eyebrow="Why Fortune Intern Network?"
-        title="Everything You Need to Start Your Career Journey"
-        text="A focused platform built to help emerging professionals move from discovery to meaningful experience."
-      />
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-10">
-        {benefits.map((item) => (
-          <article
-            key={item.title}
-            className="group rounded-2xl border border-border p-6 bg-white hover-lift hover:border-primary/30"
-          >
-            <div className="w-11 h-11 rounded-xl bg-secondary text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
-              <Icon name={item.icon} className="w-5 h-5" />
-            </div>
-            <h3 className="font-display text-xl text-primary mt-6">
-              {item.title}
-            </h3>
-            <p className="text-sm text-muted-foreground leading-relaxed mt-3">
-              {item.text}
-            </p>
-          </article>
-        ))}
+function InternshipJourney() {
+  const sectionRef = useRef<HTMLElement>(null)
+  const stageRef = useRef<HTMLDivElement>(null)
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const trackRef = useRef<HTMLOListElement>(null)
+  const [activeStep, setActiveStep] = useState(0)
+
+  useEffect(() => {
+    const viewport = viewportRef.current!
+    const track = trackRef.current!
+    const section = sectionRef.current!
+    let frame = 0
+    let visible = false
+
+    const update = () => {
+      frame = 0
+      if (!visible) return
+      const bounds = viewport.getBoundingClientRect()
+      const center = bounds.left + bounds.width / 2
+      let nearest = 0
+      let distance = Infinity
+      Array.from(track.children).forEach((step, index) => {
+        const card = step.getBoundingClientRect()
+        const offset = Math.abs(card.left + card.width / 2 - center)
+        if (offset < distance) {
+          nearest = index
+          distance = offset
+        }
+      })
+      setActiveStep(nearest)
+    }
+
+    const schedule = () => {
+      if (visible && !frame) frame = requestAnimationFrame(update)
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting
+      schedule()
+    })
+    observer.observe(section)
+    window.addEventListener("scroll", schedule, { passive: true })
+    window.addEventListener("resize", schedule)
+    viewport.addEventListener("scroll", schedule, { passive: true })
+
+    return () => {
+      observer.disconnect()
+      cancelAnimationFrame(frame)
+      window.removeEventListener("scroll", schedule)
+      window.removeEventListener("resize", schedule)
+      viewport.removeEventListener("scroll", schedule)
+    }
+  }, [])
+
+  const jumpToStep = (index: number) => {
+    const section = sectionRef.current!
+    const stage = stageRef.current!
+    const viewport = viewportRef.current!
+    const track = trackRef.current!
+    const stageStyle = getComputedStyle(stage)
+
+    if (stageStyle.position === "sticky") {
+      const start = scrollY + section.getBoundingClientRect().top - parseFloat(stageStyle.top)
+      const distance = section.offsetHeight - stage.offsetHeight
+      window.scrollTo({ top: start + distance * index / (benefits.length - 1), behavior: "smooth" })
+    } else {
+      const left = track.children[index].getBoundingClientRect().left -
+        track.children[0].getBoundingClientRect().left
+      viewport.scrollTo({ left, behavior: "smooth" })
+    }
+  }
+
+  const handleRailKeys = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (getComputedStyle(event.currentTarget).overflowX === "visible") return
+
+    const last = benefits.length - 1
+    const destinations = {
+      Home: 0,
+      End: last,
+      ArrowLeft: Math.max(0, activeStep - 1),
+      ArrowRight: Math.min(last, activeStep + 1),
+    }
+    const index = destinations[event.key as keyof typeof destinations]
+    if (typeof index !== "number") return
+
+    event.preventDefault()
+    jumpToStep(index)
+  }
+
+  return (
+    <section
+      ref={sectionRef}
+      id="about"
+      className="journey"
+      aria-labelledby="journey-title"
+      style={{ "--journey-steps": benefits.length } as CSSProperties}
+    >
+      <div className="journey-stage" ref={stageRef}>
+        <div className="landing-container journey-intro">
+          <p className="section-eyebrow">The FIN journey</p>
+          <h2 id="journey-title">From first search to first day.</h2>
+          <p className="journey-scroll-hint">Scroll or choose a stage to explore</p>
+          <p className="journey-swipe-hint">Swipe or choose a stage to explore</p>
+          <nav className="journey-controls" aria-label="Choose a journey stage">
+            {benefits.map((item, index) => (
+              <button
+                key={item.title}
+                type="button"
+                aria-controls="journey-track"
+                aria-current={activeStep === index ? "step" : undefined}
+                onClick={() => jumpToStep(index)}
+              >
+                <Icon name={item.icon} className="size-4" />
+                {item.title}
+              </button>
+            ))}
+          </nav>
+        </div>
+        <div
+          ref={viewportRef}
+          className="journey-viewport"
+          role="region"
+          aria-label="Internship journey stages"
+          tabIndex={0}
+          onKeyDown={handleRailKeys}
+        >
+          <ol ref={trackRef} id="journey-track" className="journey-track">
+            {benefits.map((item, index) => (
+              <li
+                key={item.title}
+                className="journey-step landing-container"
+                data-active={activeStep === index}
+              >
+                <div className="journey-step-copy">
+                  <h3>{item.title}</h3>
+                  <p>{item.text}</p>
+                </div>
+                <div className="journey-illustration" aria-hidden="true">
+                  <div className="journey-orbit"><i /><i /></div>
+                  <Icon name={item.icon} className="journey-icon" />
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+        <div className="landing-container journey-progress" aria-hidden="true"><span /></div>
       </div>
-    </div>
-  </section>
-)
+    </section>
+  )
+}
+
+function tiltHero(event: PointerEvent<HTMLDivElement>) {
+  if (event.pointerType !== "mouse" ||
+      !window.matchMedia("(prefers-reduced-motion: no-preference)").matches) return
+
+  const target = event.currentTarget
+  const bounds = target.getBoundingClientRect()
+  target.style.setProperty("--hero-x", String((event.clientX - bounds.left) / bounds.width - .5))
+  target.style.setProperty("--hero-y", String((event.clientY - bounds.top) / bounds.height - .5))
+}
+
+function resetHeroTilt(event: PointerEvent<HTMLDivElement>) {
+  event.currentTarget.style.removeProperty("--hero-x")
+  event.currentTarget.style.removeProperty("--hero-y")
+}
 
 const aboutUsSection = (
-  <section id="about-us" className="section-space bg-surface scroll-mt-[4.5rem]">
-    <div className="landing-container">
+  <section id="about-us" className="section-space story-about scroll-mt-[4.5rem]">
+    <div className="landing-container story-about-grid">
       <div className="max-w-3xl">
         <p className="section-eyebrow">About us</p>
         <h2 className="section-title">Bridging Dreams and Careers</h2>
@@ -116,6 +252,9 @@ const aboutUsSection = (
           Super AI assistant supports students with applications, CVs and
           cover letters every day of the year.
         </p>
+      </div>
+      <div className="story-about-media" aria-hidden="true">
+        <img src={aboutImage} alt="" width="843" height="1054" loading="lazy" decoding="async" />
       </div>
     </div>
   </section>
@@ -303,12 +442,12 @@ export default function LandingPage({
     // closes makes the scroll land too far down.
     flushSync(() => setMobileMenu(false))
 
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" })
+    document.getElementById(id)?.scrollIntoView()
   }
 
   return (
     <div id="home" className="landing-fonts min-h-screen bg-white text-foreground">
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-border/70">
+      <header className="story-header sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-border/70">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-18 flex items-center">
           <button
             onClick={() => goTo("home")}
@@ -388,12 +527,12 @@ export default function LandingPage({
       </header>
 
       <main>
-        <section className="relative overflow-hidden bg-surface">
+        <section className="story-hero">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-14 md:py-20 lg:py-24 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center relative">
-            <div className="fade-in">
-              <h1 className="font-display font-extrabold text-4xl sm:text-5xl lg:text-[4.2rem] leading-[1.04] text-primary">
+            <div className="story-hero-copy">
+              <h1 className="font-display font-extrabold">
                 Build Your Future Through the{" "}
-                <span className="text-[#c89a3c]">Right Internship.</span>
+                <span>Right Internship.</span>
               </h1>
               <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mt-6 max-w-xl">
                 Fortune Intern Network connects students and internship seekers
@@ -414,18 +553,20 @@ export default function LandingPage({
                   Create an Account
                 </button>
               </div>
-              <p className="mt-5 text-xs text-muted-foreground flex items-center gap-2">
-                <Icon name="check" className="w-4 h-4 text-primary" />{" "}
-                Connecting students with opportunities that matter.
-              </p>
+              <a className="story-hero-link" href="#about">
+                Explore the FIN journey
+              </a>
             </div>
 
-            <div className="relative pb-8 sm:px-8 lg:px-0">
-              <div className="rounded-[2rem] overflow-hidden aspect-[4/4.3] bg-muted">
+            <div className="story-hero-visual" onPointerMove={tiltHero} onPointerLeave={resetHeroTilt}>
+              <div className="story-hero-orbit" aria-hidden="true"><i /><i /></div>
+              <div className="story-hero-media">
                 <img
                   src={heroImage}
-                  alt="Fortune Intern Network's testimonials flyer"
+                  alt="Two students laughing as they walk up campus steps"
                   className="w-full h-full object-cover"
+                  width="900"
+                  height="1125"
                   fetchPriority="high"
                   decoding="async"
                 />
@@ -611,12 +752,12 @@ export default function LandingPage({
           </div>
         </section>
 
-        {whyFinSection}
+        <InternshipJourney />
 
         {aboutUsSection}
 
         <section className="px-4 sm:px-6 pb-16 bg-white">
-          <div className="max-w-7xl mx-auto rounded-3xl bg-surface border border-border px-6 py-12 sm:p-14 text-center">
+          <div className="chapter-callout max-w-7xl mx-auto rounded-3xl px-6 py-12 sm:p-14 text-center">
             <p className="section-eyebrow">Find your FIN community</p>
             <h2 className="font-display text-3xl sm:text-5xl text-primary mt-3">
               Explore Fortune Intern Network Chapters
@@ -775,7 +916,7 @@ const OpportunityCard = memo(function OpportunityCard({
   onView: (program: Program, trigger: HTMLElement) => void
 }) {
   return (
-    <article className="rounded-2xl border border-border p-5 bg-white hover-lift hover:border-primary/30">
+    <article className="opportunity-card rounded-2xl border border-border p-5 bg-white hover-lift hover:border-primary/30">
       <div className="flex items-center gap-3">
         <span
           className="w-11 h-11 rounded-xl bg-secondary text-primary flex items-center justify-center text-xs font-bold"

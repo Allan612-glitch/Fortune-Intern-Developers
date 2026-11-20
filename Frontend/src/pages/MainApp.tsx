@@ -142,8 +142,8 @@ export default function MainApp({
         onLogout={() => setShowLogout(true)}
       />
 
-      <main className="flex-1 pt-14 lg:pl-56 pb-safe">
-        <div className="min-h-[calc(100vh-3.5rem)]">
+      <main className="platform-main flex-1 pt-14 lg:pl-56 pb-safe">
+        <div className="platform-page min-h-[calc(100vh-3.5rem)]">
           {page === "home" && <HomePage user={user} setPage={goTo} />}
           {page === "dashboard" && (
             <DashboardPage

@@ -219,7 +219,7 @@ export default function ProgramsPage({
       <div className="w-full lg:w-96 flex-shrink-0 border-b lg:border-b-0 lg:border-r border-border flex flex-col bg-white">
         <div className="p-4 border-b border-border space-y-3">
           <h2
-            className="font-bold text-base"
+            className="platform-heading font-bold text-base"
             style={{ fontFamily: "Inter, sans-serif" }}
           >
             Browse Programs

@@ -337,7 +337,7 @@ export default function AuthPage({
   };
 
   return (
-    <div className="min-h-screen bg-surface flex items-center justify-center">
+    <div className="auth-scene min-h-screen bg-surface flex items-center justify-center">
       {onBack && (
         <button
           onClick={onBack}
@@ -377,7 +377,7 @@ export default function AuthPage({
             ))}
           </div>
 
-          <div className="bg-white rounded-2xl border border-border shadow-sm p-8">
+          <div className="auth-panel bg-white rounded-2xl border border-border shadow-sm p-8">
             <h2
               className="text-2xl font-bold mb-1"
               style={{

@@ -470,7 +470,11 @@ export default function AdminPage() {
             key={t}
             onClick={(event) => {
               setTab(t);
-              event.currentTarget.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+              event.currentTarget.scrollIntoView({
+                inline: "center",
+                block: "nearest",
+                behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+              });
             }}
             className={`flex-shrink-0 px-4 py-2.5 sm:px-2 rounded-lg text-sm font-semibold capitalize text-center transition-all ${tab === t ? "text-white shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
             style={
