@@ -36,19 +36,9 @@ def upgrade() -> None:
         "applications",
         sa.Column("certificate_approved_at", sa.DateTime(timezone=True), nullable=True),
     )
-    op.add_column(
-        "applications",
-        sa.Column("internship_start_date", sa.Date(), nullable=True),
-    )
-    op.add_column(
-        "applications",
-        sa.Column("internship_end_date", sa.Date(), nullable=True),
-    )
 
 
 def downgrade() -> None:
-    op.drop_column("applications", "internship_end_date")
-    op.drop_column("applications", "internship_start_date")
     op.drop_column("applications", "certificate_approved_at")
     op.drop_column("applications", "certificate_approved")
     op.drop_column("applications", "supervisor_assessment_path")

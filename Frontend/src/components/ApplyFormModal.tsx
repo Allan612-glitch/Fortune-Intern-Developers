@@ -1,4 +1,10 @@
-import { useState } from "react";
+import { getOpportunityState, updateOpportunityState, type OpportunityDraft } from "../services/opportunities";
+import { useRef } from "react";
+import { apiBlob, apiRequest } from "../services/api";
+import { previewPdf, saveFile } from "./AdminReportActions";
+import ProfilePhotoField from "./ProfilePhotoField";
+import { downloadProfileDocument, getProfile, listProfileDocuments, type ProfileDocument } from "../services/auth";
+import { useEffect, useId, useState } from "react";
 import {
   fromBackendApplication,
   type ApplicationRecord,
@@ -78,6 +84,7 @@ interface Props {
   prefilledRole?: string;
   programId?: string;
   ownerEmail?: string;
+  ownerName?: string;
   onClose: () => void;
   onViewApplications?: () => void;
   onBackDashboard?: () => void;
@@ -87,20 +94,34 @@ export default function ApplyFormModal({
   prefilledRole = "",
   programId,
   ownerEmail = "",
+  ownerName = "",
   onClose,
   onViewApplications,
   onBackDashboard,
 }: Props) {
+  const [photo, setPhoto] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
   const [step, setStep] = useState<"form" | "success">("form");
   const [loading, setLoading] = useState(false);
   const [reference, setReference] = useState("");
+  const paymentKey = `fortune-pending-payment:${ownerEmail}:${programId || prefilledRole}`;
+  const [retryPayment, setRetryPayment] = useState(() => localStorage.getItem(paymentKey) || "");
+  const [receiptId, setReceiptId] = useState("");
+  const [testPayment, setTestPayment] = useState(false);
+  const [receiptError, setReceiptError] = useState("");
   const [submittedApplication, setSubmittedApplication] =
     useState<ApplicationRecord | null>(null);
   const [error, setError] = useState("");
+  const resumeInputId = useId();
   const [resume, setResume] = useState<File | null>(null);
+  const edited = useRef(new Set<string>());
+  const [documents, setDocuments] = useState<ProfileDocument[]>([]);
+  const [draftNotice, setDraftNotice] = useState("");
+  const [draftBusy, setDraftBusy] = useState(false);
+  const [cvBusy, setCvBusy] = useState(false);
   const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
+    firstName: ownerName.trim().split(/\s+/)[0] || "",
+    lastName: ownerName.trim().split(/\s+/).slice(1).join(" "),
     dateOfBirth: "",
     gender: "",
     phone: "",
@@ -114,8 +135,76 @@ export default function ApplyFormModal({
     companyAddress: "",
     suggestedCompany: "",
   });
-  const set = (key: keyof typeof form, value: string) =>
-    setForm((current) => ({ ...current, [key]: value }));
+  useEffect(() => {
+    let active = true;
+    void Promise.allSettled([
+      getProfile(), programId ? getOpportunityState(programId) : Promise.resolve(null),
+    ]).then(([profileResult, draftResult]) => {
+      if (!active) return;
+      const profile = profileResult.status === "fulfilled" ? profileResult.value : null;
+      setPhoto(profile?.profile_picture || null);
+      const school = profile?.university || "";
+      const year = profile?.year_of_study ? "Level " + profile.year_of_study * 100 : "";
+      const prefill: OpportunityDraft = {
+        phone: profile?.phone_number || "",
+        institution: school && !universities.includes(school) ? "Other" : school,
+        otherInstitution: school && !universities.includes(school) ? school : "",
+        program: profile?.major || profile?.course || "",
+        year: year && !years.includes(year) ? "Other" : year,
+        indexNumber: profile?.student_index_number || "",
+      };
+      const stored = draftResult.status === "fulfilled" ? draftResult.value?.draft : null;
+      const values = { ...prefill, ...stored };
+      setForm(current => ({ ...current, ...Object.fromEntries(Object.entries(values)
+        .filter(([key]) => !edited.current.has(key))) }));
+      if (stored) setDraftNotice("Saved draft restored. Re-enter your date of birth and attach your CV if needed.");
+      if (draftResult.status === "rejected") setDraftNotice("Your saved draft could not be loaded. You can still apply.");
+    });
+    listProfileDocuments().then(items => { if (active) setDocuments(items.filter(item => /\.(pdf|doc|docx)$/i.test(item.filename))); }).catch(() => {});
+    return () => { active = false; };
+  }, [programId]);
+
+  const set = (key: keyof typeof form, value: string) => {
+    edited.current.add(key);
+    setForm(current => ({ ...current, [key]: value }));
+  };
+
+  async function saveDraft() {
+    if (!programId) return;
+    setDraftBusy(true); setError(""); setDraftNotice("");
+    // The draft contains form text only. Payment references, files and date of birth stay out.
+    const draft: OpportunityDraft = {
+      firstName: form.firstName, lastName: form.lastName, phone: form.phone, gender: form.gender,
+      institution: form.institution, otherInstitution: form.otherInstitution, program: form.program, year: form.year,
+      indexNumber: form.indexNumber, companyName: form.companyName, companyAddress: form.companyAddress, suggestedCompany: form.suggestedCompany,
+    };
+    try {
+      await updateOpportunityState(programId, { draft });
+      setDraftNotice("Draft saved. Find it under Saved and drafts.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Unable to save the draft.");
+    } finally { setDraftBusy(false); }
+  }
+
+  function attachCv(file: File) {
+    if (!/\.(pdf|doc|docx)$/i.test(file.name)) return setError("Please upload a PDF, DOC, or DOCX file.");
+    if (file.size > 10 * 1024 * 1024) return setError("Your CV must be 10 MB or smaller.");
+    if (file.size === 0) return setError("The selected CV is empty.");
+    setResume(file); setError("");
+  }
+
+  async function attachStoredCv(id: string) {
+    const document = documents.find(item => item.id === id);
+    if (!document) return;
+    setCvBusy(true);
+    try {
+      const blob = await downloadProfileDocument(id);
+      attachCv(new File([blob], document.filename, { type: blob.type || document.content_type || "" }));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Unable to load your profile document.");
+    } finally { setCvBusy(false); }
+  }
+
   const validate = () => {
     const required: Array<keyof typeof form> = [
       "firstName",
@@ -151,7 +240,6 @@ export default function ApplyFormModal({
       return "Please enter a valid email address.";
     if (!/^\d{7,8}$/.test(form.indexNumber.trim()))
       return "Enter a valid 7- or 8-digit index number.";
-    if (!resume) return "Please upload your CV or Resume before continuing.";
     return "";
   };
   const complete = async (paymentReference: string) => {
@@ -173,7 +261,14 @@ export default function ApplyFormModal({
     payload.append("year_of_study", form.year);
     payload.append("suggested_company", form.suggestedCompany);
     try {
+      const demo = paymentReference.startsWith("FIN-DEMO");
+      const payment = !demo ? await apiRequest<{ id: string; test_mode: boolean }>("/api/finance/verify", {
+        method: "POST", body: JSON.stringify({ reference: paymentReference }),
+      }) : null;
       const result = await submitApplication(payload);
+      localStorage.removeItem(paymentKey);
+      setReceiptId(payment?.id || "");
+      setTestPayment(Boolean(payment?.test_mode));
       const application = {
         ...fromBackendApplication(result),
         company: form.companyName,
@@ -197,6 +292,7 @@ export default function ApplyFormModal({
   };
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (loading || photoBusy) return;
     const validation = validate();
     if (validation) {
       setError(validation);
@@ -204,15 +300,25 @@ export default function ApplyFormModal({
     }
     setError("");
     setLoading(true);
+    if (retryPayment) { await complete(retryPayment); return; }
     const win = window as PaystackWindow;
     const publicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
     if (publicKey && (await loadPaystack()) && win.PaystackPop) {
+      let checkout: { amount_minor: number; currency: string; mode: "test" | "live" };
+      try {
+        checkout = await apiRequest("/api/finance/checkout");
+        if (!publicKey.startsWith(`pk_${checkout.mode}_`)) throw new Error("Checkout keys are configured for different environments.");
+      } catch (error) {
+        setLoading(false);
+        setError(error instanceof Error ? error.message : "Checkout verification is unavailable.");
+        return;
+      }
       win.PaystackPop.setup({
         key: publicKey,
-        email: form.email,
-        amount: 400,
-        currency: "GHS",
-        ref: `FIN-${Date.now()}`,
+        email: ownerEmail || form.email,
+        amount: checkout.amount_minor,
+        currency: checkout.currency,
+        ref: `FIN-${crypto.randomUUID()}`,
         metadata: {
           custom_fields: [
             {
@@ -228,18 +334,25 @@ export default function ApplyFormModal({
           ],
         },
         callback: (response: { reference: string }) => {
+          localStorage.setItem(paymentKey, response.reference);
+          setRetryPayment(response.reference);
           void complete(response.reference);
         },
         onClose: () => setLoading(false),
       }).openIframe();
       return;
     }
-    void complete(`FIN-DEMO-${Date.now().toString().slice(-6)}`);
+    if (!publicKey && import.meta.env.DEV) {
+      void complete(`FIN-DEMO-${Date.now().toString().slice(-6)}`);
+      return;
+    }
+    setLoading(false);
+    setError("Checkout is unavailable. Please try again later.");
   };
   if (step === "success")
     return (
-      <div className="fixed inset-0 z-50 bg-black/60 p-4 flex items-center justify-center">
-        <div className="bg-[#f8fafc] rounded-2xl shadow-2xl w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto p-5 sm:p-8 text-center">
+      <div role="dialog" aria-modal="true" aria-label="Application submitted" className="fixed inset-0 z-[105] bg-black/60 p-3 flex items-center justify-center">
+        <div className="rounded-xl bg-card text-foreground shadow-2xl w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto p-3 sm:p-5 text-center">
           <div className="w-20 h-16 mx-auto mb-4 rounded-xl bg-white border border-border flex items-center justify-center">
             <img
               src={logo}
@@ -260,7 +373,7 @@ export default function ApplyFormModal({
           </p>
           <p className="text-sm font-semibold text-amber-700 mt-3">
             {submittedApplication?.paymentStatus === "Payment Successful"
-              ? "Paystack returned a successful payment result."
+              ? testPayment ? "Your test payment was verified." : "Your payment was verified."
               : "Payment was not confirmed; the application was submitted in demo mode."}
           </p>
           <div className="bg-secondary rounded-xl p-4 mt-5 text-left space-y-2 text-sm">
@@ -270,6 +383,15 @@ export default function ApplyFormModal({
             <p>Application status: {submittedApplication?.status || "Submitted"}</p>
             <p>Payment status: {submittedApplication?.paymentStatus}</p>
           </div>
+          {receiptId && <div className="mt-3 flex flex-wrap justify-center gap-3 text-sm">
+            <button type="button" className="min-h-11 font-semibold text-primary underline" onClick={() => {
+              void previewPdf(() => apiBlob(`/api/finance/documents/${receiptId}`)).catch(failure => setReceiptError(String(failure.message)));
+            }}>Preview receipt</button>
+            <button type="button" className="min-h-11 font-semibold text-primary underline" onClick={() => {
+              void apiBlob(`/api/finance/documents/${receiptId}`).then(blob => saveFile(blob, `receipt-${receiptId}.pdf`)).catch(failure => setReceiptError(String(failure.message)));
+            }}>Download receipt</button>
+          </div>}
+          {receiptError && <p role="alert" className="mt-2 text-sm">{receiptError}</p>}
           <div className="mt-4 space-y-2 text-left">
             <div className="rounded-xl border border-border bg-secondary/60 p-3 text-xs text-muted-foreground">
               Your Certificate of Completion will be sent to your email after
@@ -296,14 +418,15 @@ export default function ApplyFormModal({
       </div>
     );
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 p-4 flex items-center justify-center">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto">
-        <div className="sticky top-0 z-10 bg-primary text-white px-6 py-5 flex items-center justify-between">
+    <div role="dialog" aria-modal="true" aria-label="Internship application form"
+      onKeyDown={event => { if (event.key === "Escape" && !loading) { event.stopPropagation(); onClose(); } }} className="fixed inset-0 z-[105] bg-black/60 p-3 flex items-center justify-center">
+      <div className="bg-card text-foreground rounded-xl shadow-2xl w-full max-w-3xl max-h-[calc(100dvh-1.5rem)] overflow-y-auto">
+        <div className="sticky top-0 z-10 border-b border-border bg-card px-3 py-2 flex items-center justify-between gap-2 sm:px-4">
           <div>
-            <h2 className="font-bold text-xl">
+            <h2 className="font-bold text-base sm:text-lg">
               Internship / Attachment Application Form
             </h2>
-            <p className="text-white/70 text-xs mt-1">
+            <p className="text-muted-foreground text-xs mt-1">
               Fill in your details then pay to submit. Fields marked * are
               required.
             </p>
@@ -312,12 +435,15 @@ export default function ApplyFormModal({
             type="button"
             onClick={onClose}
             aria-label="Close application form"
-            className="text-xl"
+            autoFocus
+            className="size-10 shrink-0 rounded-lg text-xl hover:bg-secondary"
           >
             ×
           </button>
         </div>
-        <form onSubmit={submit} className="p-6 space-y-7">
+        <form onSubmit={submit} className="space-y-4 p-3 sm:p-4">
+          <ProfilePhotoField photo={photo} initials={(form.firstName[0] || "") + (form.lastName[0] || "")}
+            onSaved={setPhoto} onBusyChange={setPhotoBusy} />
           <Section title="Personal Information">
             <Field
               label="First Name *"
@@ -350,7 +476,7 @@ export default function ApplyFormModal({
               <p className="text-xs text-muted-foreground mt-1">
                 Select your gender.
               </p>
-              <div className="flex gap-5 mt-3">
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
                 {["Male", "Female"].map((gender) => (
                   <label
                     key={gender}
@@ -443,46 +569,43 @@ export default function ApplyFormModal({
               options={partnerCompanies}
             />
             <div>
-              <label className="text-sm font-semibold">
-                Upload Resume / CV *
+              <label htmlFor={resumeInputId} className="text-sm font-semibold">
+                Upload CV (optional)
               </label>
               <p className="text-xs text-muted-foreground mt-1">
-                Upload your CV from your computer or phone. PDF, DOC, and DOCX
-                are supported.
+                PDF, DOC, or DOCX, up to 10 MB.
               </p>
               <input
+                id={resumeInputId}
                 type="file"
                 accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 className="mt-3 block w-full text-sm"
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   if (!file) return;
-                  const types = [
-                    "application/pdf",
-                    "application/msword",
-                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                  ];
-                  if (!types.includes(file.type)) {
-                    setError("Please upload a PDF, DOC, or DOCX file.");
-                    return;
-                  }
-                  if (file.size > 5 * 1024 * 1024) {
-                    setError("Your document must be smaller than 5MB.");
-                    return;
-                  }
-                  setResume(file);
-                  setError("");
+                  event.currentTarget.value = "";
+                  attachCv(file);
                 }}
               />
+              {documents.length > 0 && <label className="mt-2 grid gap-1 text-xs font-medium">Use a document from your profile
+                <select value="" className="min-h-10 w-full min-w-0 rounded-lg border border-border bg-card px-2 text-sm" disabled={cvBusy}
+                  onChange={event => void attachStoredCv(event.target.value)}>
+                  <option value="">Choose a document</option>{documents.map(item => <option key={item.id} value={item.id}>{item.filename}</option>)}
+                </select>
+              </label>}
               {resume ? (
                 <p className="text-xs text-emerald-700 mt-2">
-                  Uploaded: {resume.name}{" "}
+                  Selected: {resume.name}{" "}
+                  {resume.name.toLowerCase().endsWith(".pdf") && (
+                    <button type="button" className="ml-2 underline" onClick={() => void previewPdf(() => Promise.resolve(resume)).catch(failure =>
+                      setError(failure instanceof Error ? failure.message : "Unable to open the PDF."))}>Preview CV</button>
+                  )}
                   <button
                     type="button"
-                    onClick={() => setResume(null)}
+                    onClick={() => { setResume(null); setError(""); }}
                     className="underline ml-2"
                   >
-                    Remove / replace
+                    Remove
                   </button>
                 </p>
               ) : (
@@ -499,6 +622,9 @@ export default function ApplyFormModal({
             <p className="text-xs text-muted-foreground mt-1">
               Paid on submission
             </p>
+            {programId && <button type="button" onClick={() => void saveDraft()} disabled={draftBusy || loading}
+              className="mt-2 min-h-10 rounded-lg border border-border px-3 text-xs font-semibold">{draftBusy ? "Saving…" : "Save draft"}</button>}
+            {draftNotice && <p className="mt-2 text-xs text-muted-foreground" role="status">{draftNotice}</p>}
             {error && (
               <p className="text-sm text-red-600 mt-3" role="alert">
                 {error}
@@ -506,12 +632,12 @@ export default function ApplyFormModal({
             )}
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || photoBusy || draftBusy || cvBusy}
               className="w-full mt-5 py-3.5 rounded-xl bg-primary text-white font-bold disabled:opacity-60"
             >
               {loading
-                ? "Opening secure payment..."
-                : "Pay and Submit · GH₵4 →"}
+                ? "Processing submission…"
+                : retryPayment ? "Resume paid submission" : "Pay and Submit · GH₵4 →"}
             </button>
           </Section>
         </form>
@@ -528,10 +654,10 @@ function Section({
 }) {
   return (
     <section>
-      <h3 className="text-base font-bold text-primary border-b border-border pb-2 mb-4">
+      <h3 className="text-base font-bold text-primary border-b border-border pb-1.5 mb-2">
         {title}
       </h3>
-      <div className="grid sm:grid-cols-2 gap-4">{children}</div>
+      <div className="grid min-w-0 gap-2.5 sm:grid-cols-2">{children}</div>
     </section>
   );
 }

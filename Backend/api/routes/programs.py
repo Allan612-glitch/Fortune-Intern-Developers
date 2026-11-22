@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
 
+from Backend.api.routes.finance import APPLICATION_AMOUNT
 from Backend.database import get_session
 from Database.models import program
 from Database.schemas import ProgramResponse
@@ -14,6 +15,8 @@ router = APIRouter(prefix="/api/programs", tags=["programs"])
 def serialize_program(row: program) -> ProgramResponse:
 	return ProgramResponse(
 		id=str(row.id),
+		opportunity=row.opportunity or {},
+		application_fee_minor=APPLICATION_AMOUNT,
 		name=row.name,
 		description=row.description or "",
 		company=row.company,

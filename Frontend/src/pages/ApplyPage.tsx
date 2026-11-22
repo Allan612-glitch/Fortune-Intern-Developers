@@ -73,7 +73,7 @@ export default function ApplyPage({ user }: { user: AppUser }) {
             {
               step: "02",
               title: "Upload one document",
-              desc: "Upload either your Resume or CV, then review your application details.",
+              desc: "Review your application details and attach a CV if you have one.",
             },
             {
               step: "03",

@@ -1,7 +1,13 @@
-import { useEffect, useState } from "react";
+import CareerPreferencesForm from "../components/CareerPreferencesForm";
+import { StudentPage, studentLink } from "../components/StudentPortalUI";
+import RowActions from "../components/RowActions";
+import ProfilePhotoField from "../components/ProfilePhotoField";
+import { previewPdf } from "../components/AdminReportActions";
+import { useEffect, useRef, useState } from "react";
 import type { AppUser } from "../App";
+import ProfileAvatar from "../components/layout/ProfileAvatar";
 import AsyncState from "../components/AsyncState";
-import AccountDeletionModal from "../components/AccountDeletionModal";
+import AccountDeletionSection from "../components/AccountDeletionSection";
 import {
   deleteProfileDocument,
   downloadProfileDocument,
@@ -29,7 +35,8 @@ export default function ProfilePage({
   onAccountDeleted: () => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const editor = useRef<HTMLDialogElement>(null);
+  useEffect(() => { if (editing) editor.current?.showModal(); }, [editing]);
   const [profile, setProfile] = useState({
     name: user.name,
     username: user.email.split("@")[0],
@@ -63,6 +70,7 @@ export default function ProfilePage({
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [retryCount, setRetryCount] = useState(0);
+  const [preferencesSaving, setPreferencesSaving] = useState(false);
   const [skillsSaving, setSkillsSaving] = useState(false);
   const [experienceSaving, setExperienceSaving] = useState(false);
   useEffect(() => {
@@ -123,8 +131,12 @@ export default function ProfilePage({
     setSaving(true);
     setProfileError("");
     try {
+      const year = Number(draft.yearOfStudy);
+      if (draft.yearOfStudy && (!Number.isInteger(year) || year < 1 || year > 6)) {
+        setProfileError("Year of study must be between 1 and 6.");
+        return;
+      }
       const saved = await updateProfile({
-        ...(serverProfile || {}),
         university: draft.school.trim(),
         major: draft.major.trim(),
         course: draft.major.trim(),
@@ -152,12 +164,15 @@ export default function ProfilePage({
   const changePreference = async (key: keyof NotificationPreferences, value: boolean) => {
     const next = { ...preferences, [key]: value };
     setPreferences(next);
+    setPreferencesSaving(true);
     try {
       setPreferences(await updateNotificationPreferences(next));
       setProfileError("");
     } catch (error) {
       setPreferences(preferences);
       setProfileError(error instanceof Error ? error.message : "Unable to save notification preferences.");
+    } finally {
+      setPreferencesSaving(false);
     }
   };
 
@@ -257,30 +272,14 @@ export default function ProfilePage({
     }
   };
 
-  if (loading) {
-    return (
-      <div className="p-4 lg:p-6 max-w-3xl mx-auto">
-        <AsyncState kind="loading" message="Loading your profile..." />
-      </div>
-    );
-  }
-
-  if (loadError) {
-    return (
-      <div className="p-4 lg:p-6 max-w-3xl mx-auto">
-        <AsyncState
-          kind="error"
-          message={loadError}
-          onRetry={() => setRetryCount((count) => count + 1)}
-        />
-      </div>
-    );
-  }
+  if (loading) return <StudentPage title="Student profile"><AsyncState kind="loading" message="Loading your account…" /></StudentPage>;
+  if (loadError) return <StudentPage title="Student profile"><AsyncState
+    kind="error" message={loadError} onRetry={() => setRetryCount(count => count + 1)} /></StudentPage>;
 
   return (
-    <div className="p-4 lg:p-6 max-w-3xl mx-auto">
+    <StudentPage title="Student profile" action={<button type="button" className={studentLink} onClick={handleEditProfile}>Edit profile</button>}>
       {/* Header */}
-      <div className="gradient-hero rounded-2xl p-6 mb-5 relative overflow-hidden">
+      <div className="gradient-hero relative overflow-hidden rounded-xl p-3 sm:p-4">
         <div
           className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-10"
           style={{
@@ -289,60 +288,21 @@ export default function ProfilePage({
             transform: "translate(30%,-30%)",
           }}
         />
-        <div className="flex items-center gap-4">
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-bold"
-            style={{
-              background: "linear-gradient(135deg, #F5B731, #d9a020)",
-              color: "#1a1f3a",
-            }}
-          >
-            {user.avatar}
-          </div>
-          <div className="flex-1">
-            <h1
-              className="text-xl font-bold text-white"
-              style={{ fontFamily: "Inter, sans-serif" }}
-            >
-              {draft.name}
-            </h1>
-            <p className="text-white/60 text-sm">
-              {draft.school} · {draft.major}
-            </p>
-            <p className="text-white/70 text-xs mt-0.5">
-              @{draft.username} · {user.email}
+        <div className="relative flex flex-wrap items-center gap-3 sm:gap-4">
+          <ProfileAvatar initials={user.avatar} photoUrl={serverProfile?.profile_picture} className="size-12 bg-[#F5B731] text-base text-[#1a1f3a] sm:size-16 sm:text-xl" />
+          <div className="min-w-0 flex-1">
+            <p className="break-words text-lg font-bold text-white">{profile.name}</p>
+            <p className="break-words text-sm text-white/80">{user.email}</p>
+            <p className="mt-0.5 text-xs text-white/80">
+              {[profile.school, profile.major].filter(Boolean).join(" · ")}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => handleEditProfile()}
-            className="relative z-10 cursor-pointer px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs font-semibold hover:bg-white/20 transition-colors"
-          >
-            Edit Profile
-          </button>
         </div>
 
-        <div className="grid grid-cols-4 gap-3 mt-5 pt-5 border-t border-white/10">
-          {[
-            [String(dashboard?.total_applications ?? 0), "Applications"],
-            [String(dashboard?.interviews ?? 0), "Interviews"],
-            [String(dashboard?.accepted_applications ?? 0), "Offers"],
-            [`${dashboard?.profile_completion ?? 0}%`, "Complete"],
-          ].map(([v, l]) => (
-            <div key={l} className="text-center">
-              <div
-                className="text-lg font-bold text-white"
-                style={{ fontFamily: "Inter, sans-serif" }}
-              >
-                {v}
-              </div>
-              <div className="text-[10px] text-white/70">{l}</div>
-            </div>
-          ))}
-        </div>
-        <section className="mt-5 bg-white border border-border rounded-2xl p-5 shadow-sm">
-          <h2 className="font-semibold text-sm">Notification Preferences</h2>
-          <div className="mt-3 grid sm:grid-cols-3 gap-4">
+      </div>
+        <details className="student-panel p-3">
+          <summary className="cursor-pointer text-sm font-semibold">Notification preferences</summary>
+          <div className="mt-2 grid gap-2 sm:grid-cols-3">
             {([
               ["email_notifications", "Email updates"],
               ["sms_notifications", "SMS updates"],
@@ -352,25 +312,22 @@ export default function ProfilePage({
                 <input
                   type="checkbox"
                   checked={preferences[key]}
+                  disabled={preferencesSaving}
                   onChange={(event) => void changePreference(key, event.target.checked)}
                 />
                 {label}
               </label>
             ))}
           </div>
-        </section>
-      </div>
+        </details>
+      <CareerPreferencesForm initial={serverProfile?.career} />
       {profileError && !editing && <p className="mb-4 text-sm text-red-600" role="alert">{profileError}</p>}
 
       {editing && (
-        <div
-          className="fixed inset-0 z-[100] pointer-events-auto overflow-y-auto bg-black/55 backdrop-blur-sm p-4 flex items-start sm:items-center justify-center"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="edit-profile-title"
-        >
-          <div className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-5">
+        <dialog ref={editor} onCancel={event => { event.preventDefault(); if (!saving) closeEditor(); }}
+          className="fixed inset-0 m-auto max-h-[calc(100dvh-1.5rem)] w-[calc(100%-1.5rem)] max-w-md overflow-y-auto rounded-xl border border-border bg-card p-3 text-foreground shadow-2xl backdrop:bg-black/55 sm:p-4"
+          aria-labelledby="edit-profile-title">
+            <div className="mb-3 flex items-center justify-between gap-2">
               <h2 id="edit-profile-title" className="font-semibold text-lg">
                 Edit Profile
               </h2>
@@ -382,6 +339,10 @@ export default function ProfilePage({
               >
                 ×
               </button>
+            </div>
+            <div className="mb-4">
+              <ProfilePhotoField photo={serverProfile?.profile_picture} initials={user.avatar}
+                onSaved={(photo) => setServerProfile(current => current ? { ...current, profile_picture: photo } : current)} />
             </div>
             <div className="space-y-4">
               {(
@@ -426,20 +387,19 @@ export default function ProfilePage({
                 type="button"
                 onClick={saveProfile}
                 disabled={saving}
-                className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:opacity-90"
+                className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90"
               >
                 {saving ? "Saving..." : "Save Profile"}
               </button>
             </div>
-          </div>
-        </div>
+        </dialog>
       )}
 
-      <div className="grid lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2 space-y-5">
+      <div className="grid min-w-0 gap-3 lg:grid-cols-3">
+        <div className="min-w-0 space-y-3 lg:col-span-2">
           {/* Skills */}
-          <div className="bg-white border border-border rounded-2xl p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
+          <div className="student-panel p-3 sm:p-4">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-semibold text-sm">Skills</h2>
               <div className="flex items-center gap-2">
                 <input
@@ -448,7 +408,7 @@ export default function ProfilePage({
                   onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addSkill(); } }}
                   aria-label="Add a skill"
                   placeholder="Add a skill"
-                  className="w-32 px-2 py-1.5 rounded-lg border border-border text-xs"
+                  className="min-h-10 min-w-0 w-32 rounded-lg border border-border bg-card px-2 text-sm"
                 />
                 <button onClick={addSkill} disabled={skillsSaving} className="text-xs font-semibold text-primary disabled:cursor-wait disabled:opacity-60">{skillsSaving ? "Saving..." : "Add"}</button>
               </div>
@@ -458,7 +418,7 @@ export default function ProfilePage({
                 <span
                   key={skill}
                   className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold"
-                  style={{ background: "#EEF0F8", color: "#2D3561" }}
+                  style={{ background: "var(--secondary)", color: "var(--brand-ink)" }}
                 >
                   {skill}
                   <button
@@ -475,23 +435,26 @@ export default function ProfilePage({
           </div>
 
           {/* Experience */}
-          <div className="bg-white border border-border rounded-2xl p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
+          <div className="student-panel p-3 sm:p-4">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-semibold text-sm">Experience</h2>
-              <button onClick={() => setExperienceDraft({ role: "", organization: "", period: "", description: "" })} className="text-xs font-semibold text-primary">Clear form</button>
+
             </div>
-            <div className="grid sm:grid-cols-2 gap-2 mb-4">
+            <details className="mb-3 rounded-lg border border-border p-2">
+              <summary className="cursor-pointer text-sm font-semibold text-primary">Add experience</summary>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
               {([
                 ["role", "Role"],
                 ["organization", "Organization"],
                 ["period", "Period"],
               ] as const).map(([key, label]) => (
-                <input key={key} value={experienceDraft[key]} onChange={(event) => setExperienceDraft((current) => ({ ...current, [key]: event.target.value }))} placeholder={label} aria-label={label} className="px-3 py-2 rounded-lg border border-border text-xs" />
+                <input key={key} value={experienceDraft[key]} onChange={(event) => setExperienceDraft((current) => ({ ...current, [key]: event.target.value }))} placeholder={label} aria-label={label} className="min-h-10 min-w-0 rounded-lg border border-border bg-card px-3 py-2 text-sm" />
               ))}
               <textarea value={experienceDraft.description} onChange={(event) => setExperienceDraft((current) => ({ ...current, description: event.target.value }))} placeholder="Description" aria-label="Experience description" rows={2} className="sm:col-span-2 px-3 py-2 rounded-lg border border-border text-xs resize-y" />
               <button onClick={() => void saveExperience()} disabled={experienceSaving} className="sm:col-span-2 justify-self-start px-3 py-2 rounded-lg bg-primary text-white text-xs font-semibold disabled:cursor-wait disabled:opacity-60">{experienceSaving ? "Saving..." : "Add experience"}</button>
-            </div>
-            <div className="space-y-4">
+              </div>
+            </details>
+            <div className="space-y-3">
               {experiences.map((experience, index) => (
                 <div key={`${experience.role}-${index}`} className="flex gap-3">
                   <div
@@ -529,15 +492,10 @@ export default function ProfilePage({
           </div>
 
           {/* Education */}
-          <div className="bg-white border border-border rounded-2xl p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
+          <div className="student-panel p-3 sm:p-4">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-semibold text-sm">Education</h2>
-              <button
-                className="text-xs font-semibold hover:underline"
-                style={{ color: "#F5B731" }}
-              >
-                + Add
-              </button>
+              <button type="button" className="min-h-9 text-xs font-semibold text-primary hover:underline" onClick={handleEditProfile}>Edit education</button>
             </div>
             <div className="flex gap-3">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-blue-50">
@@ -552,7 +510,7 @@ export default function ProfilePage({
                 </svg>
               </div>
               <div>
-                <p className="font-semibold text-sm">B.Sc {profile.major || "Programme not set"}</p>
+                <p className="font-semibold text-sm">{profile.major || "Programme not set"}</p>
                 <p className="text-xs text-muted-foreground">
                   {profile.school || "University not set"} · {profile.yearOfStudy ? `Year ${profile.yearOfStudy}` : "Study year not set"}
                 </p>
@@ -567,7 +525,7 @@ export default function ProfilePage({
         {/* Right column */}
         <div className="space-y-4">
           {/* Completeness */}
-          <div className="bg-white border border-border rounded-2xl p-5 shadow-sm">
+          <div className="student-panel p-3 sm:p-4">
             <h3 className="font-semibold text-sm mb-3">Profile Completeness</h3>
             <div className="relative w-20 h-20 mx-auto mb-4">
               <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
@@ -610,7 +568,7 @@ export default function ProfilePage({
                   <span style={{ color: done ? "#10B981" : "#9ca3af" }}>
                     {done ? "✓" : "○"}
                   </span>
-                  <span style={{ color: done ? "#1a1f3a" : "#9ca3af" }}>
+                  <span className={done ? "text-foreground" : "text-muted-foreground"}>
                     {l as string}
                   </span>
                 </div>
@@ -619,7 +577,7 @@ export default function ProfilePage({
           </div>
 
           {/* Documents */}
-          <div className="bg-white border border-border rounded-2xl p-5 shadow-sm">
+          <div className="student-panel p-3 sm:p-4">
             <h3 className="font-semibold text-sm mb-3">Documents</h3>
             <div className="space-y-2">
               {documents.map((document) => (
@@ -633,11 +591,17 @@ export default function ProfilePage({
                     </span>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium truncate">{document.filename}</p>
+                    <p className="text-xs font-medium break-words" title={document.filename}>{document.filename}</p>
                     <p className="text-[10px] text-muted-foreground">{(document.file_size / 1024).toFixed(0)} KB</p>
                   </div>
-                  <button onClick={() => void downloadDocument(document)} className="text-xs text-primary font-semibold" aria-label={`Download ${document.filename}`}>Download</button>
-                  <button onClick={() => void removeDocument(document)} disabled={documentBusy} className="text-xs text-red-600 font-semibold disabled:opacity-50" aria-label={`Delete ${document.filename}`}>Delete</button>
+                  <RowActions label={`Actions for ${document.filename}`} actions={[
+                    ...(document.filename.toLowerCase().endsWith(".pdf") ? [{
+                      label: "Preview PDF", run: () => void previewPdf(() => downloadProfileDocument(document.id)).catch(failure =>
+                        setProfileError(failure instanceof Error ? failure.message : "Unable to open PDF.")),
+                    }] : []),
+                    { label: "Download", run: () => void downloadDocument(document) },
+                    { label: "Delete", danger: true, disabled: documentBusy, run: () => void removeDocument(document) },
+                  ]} />
                 </div>
               ))}
               {!documents.length && <p className="text-xs text-muted-foreground">No documents uploaded yet.</p>}
@@ -650,26 +614,7 @@ export default function ProfilePage({
         </div>
       </div>
 
-      <section className="mt-6 rounded-2xl border border-red-200 bg-white p-5 shadow-sm">
-        <h2 className="font-semibold text-sm text-red-800">Delete account</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Disable your account immediately and permanently delete its data after a 30-day retention period.
-        </p>
-        <button
-          type="button"
-          onClick={() => setDeleteAccountOpen(true)}
-          className="mt-4 rounded-xl border border-red-700 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50"
-        >
-          Delete my account
-        </button>
-      </section>
-
-      {deleteAccountOpen && (
-        <AccountDeletionModal
-          onCancel={() => setDeleteAccountOpen(false)}
-          onDeleted={onAccountDeleted}
-        />
-      )}
-    </div>
+      <AccountDeletionSection onAccountDeleted={onAccountDeleted} />
+    </StudentPage>
   );
 }

@@ -18,7 +18,7 @@ const process = [
   {
     step: "02",
     title: "Complete your application",
-    desc: "Upload one Resume or CV and review your details.",
+    desc: "Review your details and attach a CV if you have one.",
   },
   {
     step: "03",
@@ -240,7 +240,7 @@ export default function HomePage({ user, setPage }: HomePageProps) {
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-12 lg:py-20">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 mb-8">
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] font-bold text-[#976a07] mb-2">
+            <p className="text-xs uppercase tracking-[0.18em] font-bold text-[var(--gold-text)] mb-2">
               Built for Ghanaian students
             </p>
             <h2 className="font-display text-3xl sm:text-4xl max-w-xl">
@@ -286,7 +286,7 @@ export default function HomePage({ user, setPage }: HomePageProps) {
       <section className="bg-surface border-y border-border">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 lg:py-20 grid lg:grid-cols-[.8fr_1.2fr] gap-10 lg:gap-16 items-start">
           <div className="lg:sticky lg:top-20">
-            <p className="text-xs uppercase tracking-[0.18em] font-bold text-[#976a07] mb-2">
+            <p className="text-xs uppercase tracking-[0.18em] font-bold text-[var(--gold-text)] mb-2">
               How FIN works
             </p>
             <h2 className="font-display text-3xl sm:text-4xl">
@@ -327,7 +327,7 @@ export default function HomePage({ user, setPage }: HomePageProps) {
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-12 lg:py-20">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] font-bold text-[#976a07] mb-2">
+            <p className="text-xs uppercase tracking-[0.18em] font-bold text-[var(--gold-text)] mb-2">
               Fresh opportunities
             </p>
             <h2 className="font-display text-3xl">Hiring now</h2>
@@ -376,7 +376,7 @@ export default function HomePage({ user, setPage }: HomePageProps) {
                 >
                   {program.company.slice(0, 2).toUpperCase()}
                 </div>
-                <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-accent/20 text-[#976a07]">
+                <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-accent/20 text-[var(--gold-text)]">
                   New
                 </span>
               </div>

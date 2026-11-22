@@ -13,6 +13,8 @@ class user(SQLModel, table=True):
     password_hash: str | None = Field(default=None, sa_column=Column("password_hash", String, nullable=True))
     google_sub: str | None = Field(default=None, sa_column=Column("google_sub", String, nullable=True, unique=True, index=True))
     is_admin: bool = Field(default=False, sa_column=Column("is_admin", Boolean, nullable=False, default=False))
+    staff_role: str | None = Field(default=None, sa_column=Column("staff_role", String(32), nullable=True))
+    staff_status: str | None = Field(default=None, sa_column=Column("staff_status", String(16), nullable=True, index=True))
     is_suspended: bool = Field(default=False, sa_column=Column("is_suspended", Boolean, nullable=False, default=False))
     token_version: int = Field(default=0, sa_column=Column("token_version", Integer, nullable=False, default=0))
     deletion_requested_at: datetime | None = Field(default=None, sa_column=Column("deletion_requested_at", DateTime(timezone=True), nullable=True, index=True))
@@ -21,10 +23,21 @@ class user(SQLModel, table=True):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
 
+class staff_invitation(SQLModel, table=True):
+    __tablename__ = "staff_invitations"
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    email: str = Field(sa_column=Column("email", String(254), nullable=False, unique=True))
+    role: str = Field(sa_column=Column("role", String(32), nullable=False))
+    token_hash: str | None = Field(default=None, sa_column=Column("token_hash", String(64), nullable=True, unique=True))
+    expires_at: datetime = Field(sa_column=Column("expires_at", DateTime(timezone=True), nullable=False))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
+
+
 class user_profile(SQLModel, table=True):
     __tablename__ = "user_profiles"
     id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
     user_id: UUID = Field(sa_column=Column("user_id", Uuid, ForeignKey("users.id"), nullable=False, unique=True, index=True))
+    career: dict | None = Field(default=None, sa_column=Column(JSON, nullable=True))
     bio: str | None = Field(default=None, sa_column=Column("bio", String))
     profile_picture: str | None = Field(default=None, sa_column=Column("profile_picture", String))
     student_index_number: str | None = Field(default=None, sa_column=Column("student_index_number", String))
@@ -68,6 +81,7 @@ class program(SQLModel, table=True):
     duration: str = Field(default="3 months", sa_column=Column("duration", String, nullable=False, default="3 months"))
     skills: str | None = Field(default=None, sa_column=Column("skills", String))
     deadline: datetime | None = Field(default=None, sa_column=Column("deadline", DateTime(timezone=True)))
+    opportunity: dict | None = Field(default=None, sa_column=Column(JSON, nullable=True))
     cycle_closed_at: datetime | None = Field(default=None, sa_column=Column("cycle_closed_at", DateTime(timezone=True), nullable=True))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
@@ -98,6 +112,10 @@ class application(SQLModel, table=True):
     suggested_company: str | None = Field(default=None, sa_column=Column("suggested_company", String))
     date_of_birth: date | None = Field(default=None, sa_column=Column("date_of_birth", Date, nullable=True))
     letter_reference: str | None = Field(default=None, sa_column=Column("letter_reference", String, nullable=True, unique=True, index=True))
+    reviewer_id: UUID | None = Field(default=None, sa_column=Column(Uuid, ForeignKey("users.id", ondelete="SET NULL", name="fk_applications_reviewer"), index=True))
+    review_due_date: date | None = Field(default=None, index=True)
+    student_update: dict | None = Field(default=None, sa_column=Column(JSON, nullable=True))
+    document_request: str | None = Field(default=None, max_length=500)
     documents_sent: bool = Field(default=False, sa_column=Column("documents_sent", Boolean, nullable=False, default=False))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
@@ -167,6 +185,7 @@ class application_status_history(SQLModel, table=True):
     actor_id: UUID | None = Field(default=None, sa_column=Column("actor_id", Uuid, ForeignKey("users.id", ondelete="SET NULL"), nullable=True))
     previous_status: str | None = Field(default=None, sa_column=Column("previous_status", String))
     new_status: str = Field(sa_column=Column("new_status", String, nullable=False))
+    reason: str | None = Field(default=None, max_length=40)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
 
 class audit_event(SQLModel, table=True):
@@ -178,6 +197,17 @@ class audit_event(SQLModel, table=True):
     object_id: str | None = Field(default=None, sa_column=Column("object_id", String))
     source_ip: str | None = Field(default=None, sa_column=Column("source_ip", String))
     result: str = Field(default="success", sa_column=Column("result", String, nullable=False, default="success"))
+    module: str | None = Field(default=None)
+    actor_name: str | None = Field(default=None)
+    actor_type: str | None = Field(default=None)
+    actor_role: str | None = Field(default=None)
+    correlation_id: UUID | None = Field(default=None, index=True)
+    workflow_id: str | None = Field(default=None, index=True)
+    parent_id: UUID | None = Field(default=None, index=True)
+    retry_of_id: UUID | None = Field(default=None)
+    reversal_of_id: UUID | None = Field(default=None)
+    details: dict | None = Field(default=None, sa_column=Column(JSON))
+    __table_args__ = (Index("ix_audit_entity", "object_type", "object_id", "created_at"),)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False, index=True))
 
 class consent_log(SQLModel, table=True):
@@ -202,6 +232,9 @@ class announcement(SQLModel, table=True):
     title: str = Field(sa_column=Column("title", String, nullable=False))
     content: str = Field(sa_column=Column("content", String, nullable=False))
     target_university: str | None = Field(default=None, sa_column=Column("target_university", String, nullable=True))
+    category: str = Field(default="general", sa_column=Column(String(16), nullable=False, server_default="general"))
+    audience: str = Field(default="all", sa_column=Column(String(24), nullable=False, server_default="all"))
+    audience_label: str | None = Field(default=None)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("updated_at", DateTime(timezone=True), nullable=False))
 

@@ -31,7 +31,7 @@ export default function FoundersTab(props: {
       <p className="text-xs font-semibold text-muted-foreground">
         Docs <b className={goldText}>/</b> Platform <b className={goldText}>/</b> Founding Team
       </p>
-      <h2 className="mt-3 font-display text-3xl font-extrabold text-primary sm:text-4xl">The Founding Team</h2>
+      <h2 className="mt-3 font-display text-xl font-extrabold text-primary sm:text-2xl">The Founding Team</h2>
       <p className="mt-2.5 max-w-2xl text-base text-muted-foreground">
         The officers who incorporated Fortune Intern Network and ratified the Campus Chapter Constitution. This
         registry is independent of chapter boards.
@@ -57,9 +57,9 @@ export default function FoundersTab(props: {
         </button>
       </div>
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-5 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
         {founders.map((f) => (
-          <article key={f.id} className={`${cardClass} p-6 text-center`}>
+          <article key={f.id} className={`${cardClass} p-3 text-center sm:p-4`}>
             <div className="relative mx-auto mb-3.5 h-28 w-28">
               <PhotoBox
                 photo={f.photo}

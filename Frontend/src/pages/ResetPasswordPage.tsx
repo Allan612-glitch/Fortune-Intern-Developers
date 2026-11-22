@@ -1,3 +1,4 @@
+import ThemeToggle from "../components/ThemeToggle";
 import { useState } from "react";
 import logo from "../assets/attach1.png";
 import { resetPassword } from "../services/authNotifications";
@@ -48,7 +49,8 @@ export default function ResetPasswordPage({
     }
   };
   return (
-    <div className="min-h-screen bg-surface flex items-center justify-center p-4">
+    <div className="min-h-screen bg-surface flex items-center justify-center px-4 py-20">
+      <ThemeToggle showLabel className="absolute right-4 top-4 z-40 px-3" />
       <div className="w-full max-w-md bg-white border border-border rounded-2xl shadow-sm p-8">
         <img
           src={logo}
