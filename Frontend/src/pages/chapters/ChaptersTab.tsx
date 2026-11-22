@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react"
 import { Search, Upload } from "lucide-react"
 import type { Chapter, Executive, Founder } from "../../services/chapters"
-import { downloadBlob } from "./exports"
 import {
   btnSmallGold,
   btnSmallPrimary,
@@ -42,7 +41,7 @@ export default function ChaptersTab(props: {
   onReviewApplications: () => void
   toast: ToastFn
 }) {
-  const { chapters, executives, founders, loadState, isAdmin, toast } = props
+  const { chapters, executives, founders, loadState, isAdmin } = props
   const [query, setQuery] = useState("")
   const [type, setType] = useState("All")
   const [sort, setSort] = useState("az")
@@ -81,27 +80,6 @@ export default function ChaptersTab(props: {
     }
     return list
   }, [chapters, query, type, sort, stats])
-
-  const exportJson = () => {
-    downloadBlob(
-      new Blob([JSON.stringify({ chapters, executives, founders }, null, 2)], { type: "application/json" }),
-      "FIN_Chapters_Directory.json",
-    )
-    toast("JSON exported")
-  }
-
-  const exportCsv = () => {
-    const rows: string[][] = [["Chapter", "Institution", "Name", "Role", "Status", "Email", "Phone"]]
-    executives.forEach((e) => {
-      const c = chapters.find((x) => x.id === e.chapter)
-      rows.push([c?.name ?? e.chapter, c?.inst ?? "", e.name, e.role, e.status, e.email, e.phone])
-    })
-    const csv = rows
-      .map((row) => row.map((value) => `"${String(value || "").replace(/"/g, '""')}"`).join(","))
-      .join("\n")
-    downloadBlob(new Blob([csv], { type: "text/csv" }), "FIN_Chapters.csv")
-    toast("CSV exported")
-  }
 
   const emptyMessage = chapters.length
     ? "No chapters match your search or filters."
@@ -168,12 +146,6 @@ export default function ChaptersTab(props: {
             </button>
           </>
         ) : null}
-        <button type="button" className={btnSoft} onClick={exportJson}>
-          JSON
-        </button>
-        <button type="button" className={btnSoft} onClick={exportCsv}>
-          CSV
-        </button>
       </div>
 
       <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
