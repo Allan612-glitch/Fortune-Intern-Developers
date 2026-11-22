@@ -21,7 +21,7 @@ import {
 } from "./chapters/DirectoryModals"
 import { downloadBlob } from "./chapters/exports"
 import FoundersTab from "./chapters/FoundersTab"
-import { btnGold, btnOutline, btnPrimary, btnSoft, goldText } from "./chapters/styles"
+import { btnGold, btnOutline, btnPrimary, btnSoft } from "./chapters/styles"
 import { Toast } from "./chapters/ui"
 import { useChaptersData, type ToastFn } from "./chapters/useChaptersData"
 
@@ -180,15 +180,6 @@ export default function ChaptersPage({ user }: { user: AppUser }) {
     toast("Chapter exported")
   }
 
-  const apiPill =
-    loadState === "ready"
-      ? "Shared directory · Live"
-      : loadState === "empty"
-        ? "Awaiting admin setup"
-        : loadState === "error"
-          ? "Directory unavailable"
-          : "Loading shared directory…"
-
   const tabs: [Tab, string, number][] = [
     ["chapters", "Chapters", chapters.length],
     ["founders", "Founding Team", founders.length],
@@ -287,9 +278,6 @@ export default function ChaptersPage({ user }: { user: AppUser }) {
 
       <section className="chapters-intro border-b border-border bg-white print:hidden">
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
-          <p className="text-xs font-semibold text-muted-foreground">
-            Docs <b className={goldText}>/</b> Platform <b className={goldText}>/</b> Chapters
-          </p>
           <h1 className="mt-3.5 font-display text-4xl font-extrabold leading-[1.1] text-primary sm:text-5xl">
             Campus Chapters
           </h1>
@@ -299,17 +287,6 @@ export default function ChaptersPage({ user }: { user: AppUser }) {
             full operational blueprint. Signed-in members can apply for open chapter positions and track their
             applications.
           </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span className="rounded-full border border-border bg-secondary px-3 py-1 text-xs font-bold text-primary">
-              {apiPill}
-            </span>
-            <span className={`rounded-full border border-accent/50 bg-accent/15 px-3 py-1 text-xs font-bold ${goldText}`}>
-              Bridging Dreams and Careers
-            </span>
-            <span className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-bold text-muted-foreground">
-              v1.1 · chapters + blueprint
-            </span>
-          </div>
           <div className="mt-5 flex flex-wrap gap-2.5">
             <button type="button" className={btnPrimary} onClick={() => showTab("chapters")}>
               Browse Chapters
