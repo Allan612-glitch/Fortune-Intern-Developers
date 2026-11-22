@@ -947,7 +947,7 @@ class TestAcceptedApplicationDocuments(unittest.TestCase):
         request = SimpleNamespace()
         session = Mock()
 
-        def get_record(model, record_id):
+        def get_record(model, record_id, **_options):
             self.assertIsNotNone(record_id)
             return {
                 application: row,
@@ -986,7 +986,7 @@ class TestAcceptedApplicationDocuments(unittest.TestCase):
         self.assertEqual(raised.exception.status_code, 503)
         self.assertEqual(row.status, "accepted")
         self.assertFalse(row.documents_sent)
-        self.assertEqual(session.commit.call_count, 1)
+        self.assertEqual(session.commit.call_count, 2)
         self.assertEqual(
             build_letter_pdf.call_args.kwargs["reference_no"],
             f"FIN/2026/{application_id.hex.upper()}",
@@ -1009,7 +1009,7 @@ class TestAcceptedApplicationDocuments(unittest.TestCase):
 
         self.assertEqual(response.status, "accepted")
         self.assertTrue(row.documents_sent)
-        self.assertEqual(session.commit.call_count, 2)
+        self.assertEqual(session.commit.call_count, 3)
         send_documents.assert_called_once()
 
 

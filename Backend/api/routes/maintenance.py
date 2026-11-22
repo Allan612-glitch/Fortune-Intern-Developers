@@ -2,11 +2,12 @@ import hmac
 import logging
 
 from botocore.exceptions import BotoCoreError, ClientError
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from sqlmodel import Session
 
 from Backend.core.account_deletion import purge_expired_accounts
 from Backend.core.config import settings
+from Backend.core.audit import record_audit_event
 from Backend.core.data_retention import (
     close_expired_program_cycles,
     purge_expired_rate_limit_buckets,
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 def purge_deleted_accounts(
     authorization: str | None = Header(default=None),
     session: Session = Depends(get_session),
+    request: Request = None,
 ):
     secret = settings.cron_secret
     if not secret:
@@ -44,11 +46,22 @@ def purge_deleted_accounts(
         purged_applications, purged_consent_logs = purge_expired_retained_data(session)
         purged_rate_limit_buckets = purge_expired_rate_limit_buckets(session)
     except (BotoCoreError, ClientError, RuntimeError) as error:
+        session.rollback()
+        if request is not None:
+            record_audit_event(session, request, actor_id=None, actor_type="system", action="system.retention",
+                               object_type="system", object_id=None, result="failure",
+                               context={"error_category": type(error).__name__})
+            session.commit()
         logger.exception("scheduled account deletion purge failed")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Account cleanup could not complete",
         ) from error
+    if request is not None and (closed_programs or purged or purged_applications or purged_consent_logs):
+        record_audit_event(session, request, actor_id=None, actor_type="system", action="system.retention",
+                           object_type="system", object_id=None,
+                           context={"processed": closed_programs + purged + purged_applications + purged_consent_logs})
+        session.commit()
     return {
         "purged": purged,
         "programs_closed": closed_programs,

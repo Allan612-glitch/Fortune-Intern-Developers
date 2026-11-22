@@ -1,7 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import PlacementDocuments from "../components/PlacementDocuments";
+import { Link, useSearchParams } from "react-router-dom";
+import { StudentDisclosure, StudentPage, studentField, studentLink } from "../components/StudentPortalUI";
+import FilterMenu from "../components/FilterMenu";
+import { previewPdf } from "../components/AdminReportActions";
+import { useCallback, useEffect, useRef, useState, useId } from "react";
+import ApplicationHistory from "../components/ApplicationHistory";
 import AsyncState from "../components/AsyncState";
 import Spinner from "../components/ui/Spinner";
 import {
+  applicationNextSteps,
   fromBackendApplication,
   type ApplicationRecord,
   type ApplicationStatus,
@@ -10,6 +17,7 @@ import {
   listApplications,
   printCompletionCertificate,
   saveResumeDownload,
+  getResumeFile,
   uploadSupervisorAssessment,
 } from "../services/platform";
 
@@ -22,14 +30,6 @@ const statuses: Array<ApplicationStatus | "All"> = [
   "Rejected",
   "Withdrawn",
 ];
-const timeline = [
-  "Application Submitted",
-  "Payment Confirmed",
-  "Application Under Review",
-  "Shortlisted",
-  "Accepted / Rejected",
-];
-
 const statusStyles: Record<ApplicationStatus, string> = {
   Submitted: "bg-sky-50 text-sky-700",
   "Under Review": "bg-amber-50 text-amber-700",
@@ -39,242 +39,82 @@ const statusStyles: Record<ApplicationStatus, string> = {
   Withdrawn: "bg-muted text-muted-foreground",
 };
 
-function stageIndex(application: ApplicationRecord) {
-  if (application.status === "Submitted") return 0;
-  if (application.status === "Under Review") return 2;
-  if (application.status === "Shortlisted") return 3;
-  return 4;
-}
-
 export default function ApplicationsPage() {
-  const [applications, setApplications] = useState<ApplicationRecord[]>([]);
+  const [params, setParams] = useSearchParams();
+  const reference = params.get("ref");
+  const activeFilter = params.get("status") || "All";
+  const [expanded, setExpanded] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<ApplicationStatus | "All">("All");
   const [sort, setSort] = useState<"recent" | "oldest">("recent");
-  const [selected, setSelected] = useState<ApplicationRecord | null>(null);
+  const [applications, setApplications] = useState<ApplicationRecord[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const selected = reference ? applications.find(item => item.reference === reference) : undefined;
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const latest = (await listApplications()).map(fromBackendApplication);
-      setApplications(latest);
-      setSelected((current) => current
-        ? latest.find((application) => application.reference === current.reference) || null
-        : null);
-      setError("");
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Unable to load applications.");
+      setApplications((await listApplications()).map(fromBackendApplication));
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : "Unable to load applications.");
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  useEffect(() => { void refresh(); }, [refresh]);
 
-  const visibleApplications = useMemo(
-    () =>
-      applications
-        .filter(
-          (application) => filter === "All" || application.status === filter,
-        )
-        .filter((application) => {
-          const value = query.trim().toLowerCase();
-          return (
-            !value ||
-            [
-              application.opportunity,
-              application.company,
-              application.reference,
-              application.studentIndexNumber,
-            ].some((field) => field.toLowerCase().includes(value))
-          );
-        })
-        .sort((a, b) =>
-          sort === "recent"
-            ? new Date(b.applicationDate).getTime() -
-              new Date(a.applicationDate).getTime()
-            : new Date(a.applicationDate).getTime() -
-              new Date(b.applicationDate).getTime(),
-        ),
-    [applications, filter, query, sort],
-  );
+  const term = query.trim().toLowerCase();
+  const rows = applications.filter(item => {
+    const matchesStatus = activeFilter === "All" || item.status === activeFilter ||
+      (activeFilter === "active" && ["Submitted", "Under Review", "Shortlisted"].includes(item.status));
+    return matchesStatus && (!term || [item.opportunity, item.company, item.reference, item.studentIndexNumber].some(value => value.toLowerCase().includes(term)));
+  }).sort((a, b) => (sort === "recent" ? -1 : 1) * (Date.parse(a.applicationDate) - Date.parse(b.applicationDate)));
 
-  const count = (status: ApplicationStatus) =>
-    applications.filter((application) => application.status === status).length;
+  function update(key: string, value: string) {
+    const next = new URLSearchParams(params);
+    if (value) next.set(key, value); else next.delete(key);
+    setParams(next, { replace: true });
+  }
 
-  return (
-    <div className="p-4 lg:p-6 max-w-6xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
-        <div>
-          <p className="text-xs uppercase tracking-widest font-bold text-emerald-700">
-            Student dashboard
-          </p>
-          <h1 className="text-2xl font-bold mt-1">My Applications</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Track submitted applications, payment, and status.
-          </p>
+  return <StudentPage title="My applications" description="Track decisions, next steps and placement documents."
+    action={<Link className={studentLink} to="/app/programs">Browse programs</Link>}>
+    {loading ? <AsyncState kind="loading" message="Loading your applications…" /> : error ? <AsyncState kind="error" message={error} onRetry={() => void refresh()} /> : <>
+      {reference && !selected && <p className="student-panel p-3 text-sm" role="status">This application is unavailable.</p>}
+      {applications.length === 0 ? <AsyncState kind="empty" message="You have no applications yet." /> : <>
+        <div className="student-panel grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 p-2">
+          <input className={studentField} type="search" value={query} aria-label="Search my applications" placeholder="Search by program or reference"
+            onChange={event => setQuery(event.target.value)} />
+          <FilterMenu label="My application filters" active={activeFilter !== "All" || sort !== "recent"}>
+            <label className="grid gap-1 text-sm">Status<select className={studentField} aria-label="Filter by status" value={activeFilter}
+              onChange={event => update("status", event.target.value === "All" ? "" : event.target.value)}>
+              <option value="All">All statuses</option><option value="active">In progress</option>
+              {statuses.slice(1).map(status => <option key={status}>{status}</option>)}
+            </select></label>
+            <label className="grid gap-1 text-sm">Sort<select className={studentField} aria-label="Sort applications" value={sort} onChange={event => setSort(event.target.value as "recent" | "oldest")}>
+              <option value="recent">Most recent</option><option value="oldest">Oldest</option>
+            </select></label>
+          </FilterMenu>
         </div>
-      </div>
-      {loading ? (
-        <AsyncState kind="loading" message="Loading your applications..." />
-      ) : error ? (
-        <AsyncState
-          kind="error"
-          message={error}
-          onRetry={() => void refresh()}
-        />
-      ) : (
-        <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-            {[
-              ["Total Applications", applications.length],
-              ["Under Review", count("Under Review")],
-              ["Shortlisted", count("Shortlisted")],
-              ["Accepted", count("Accepted")],
-              ["Rejected", count("Rejected")],
-              ["Submitted", count("Submitted")],
-            ].map(([label, value]) => (
-              <div
-                key={String(label)}
-                className="bg-white border border-border rounded-xl p-4 shadow-sm"
-              >
-                <p className="text-2xl font-bold text-primary">{value}</p>
-                <p className="text-xs text-muted-foreground mt-1">{label}</p>
-              </div>
-            ))}
-          </div>
-
-          {applications.length === 0 ? (
-            <AsyncState kind="empty" message="You have no applications yet." />
-          ) : (
-            <>
-              <div className="bg-white border border-border rounded-2xl p-4 mb-4 grid md:grid-cols-[1fr_auto_auto] gap-3">
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search title, organization, reference, or index number"
-                  className="w-full px-4 py-2.5 rounded-xl border border-border bg-muted/30 text-sm outline-none focus:ring-2"
-                />
-                <select
-                  value={filter}
-                  onChange={(event) =>
-                    setFilter(event.target.value as ApplicationStatus | "All")
-                  }
-                  className="px-3 py-2.5 rounded-xl border border-border bg-white text-sm"
-                >
-                  <option value="All">All statuses</option>
-                  {statuses.slice(1).map((status) => (
-                    <option key={status}>{status}</option>
-                  ))}
-                </select>
-                <select
-                  value={sort}
-                  onChange={(event) =>
-                    setSort(event.target.value as "recent" | "oldest")
-                  }
-                  className="px-3 py-2.5 rounded-xl border border-border bg-white text-sm"
-                >
-                  <option value="recent">Most recent</option>
-                  <option value="oldest">Oldest</option>
-                </select>
-              </div>
-              {visibleApplications.length === 0 ? (
-                <AsyncState
-                  kind="empty"
-                  message="No applications match your search."
-                />
-              ) : (
-                <div className="space-y-3">
-                  {visibleApplications.map((application) => (
-                    <ApplicationCard
-                      key={application.reference}
-                      application={application}
-                      onTrack={() => setSelected(application)}
-                    />
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </>
-      )}
-
-      {selected && (
-        <TrackingModal
-          application={selected}
-          onClose={() => setSelected(null)}
-          onAssessmentUploaded={refresh}
-        />
-      )}
-    </div>
-  );
+        {rows.length ? <ul className="student-panel" aria-label="My application results">{rows.map(application => <StudentDisclosure
+          key={application.reference} title={application.opportunity}
+          subtitle={application.company || new Date(application.applicationDate).toLocaleDateString("en-GH", { dateStyle: "medium" })}
+          badge={<span className={`inline-block rounded-md px-2 py-1 font-semibold ${statusStyles[application.status]}`}>{application.status}</span>}
+          open={expanded === application.reference}
+          onToggle={() => setExpanded(current => current === application.reference ? null : application.reference)}>
+          <p className="text-sm">{applicationNextSteps[application.status]}</p>
+          <dl className="student-facts"><div><dt>Reference</dt><dd>{application.reference}</dd></div>
+            <div><dt>Submitted</dt><dd>{new Date(application.applicationDate).toLocaleDateString("en-GH", { dateStyle: "medium" })}</dd></div>
+            <div><dt>Student index</dt><dd>{application.studentIndexNumber || "Not recorded"}</dd></div></dl>
+          <button type="button" className={studentLink} onClick={() => update("ref", application.reference)}>Track application</button>
+        </StudentDisclosure>)}</ul> : <AsyncState kind="empty" message="No applications match your filters." />}
+      </>}
+    </>}
+    {selected && <TrackingModal key={selected.reference} application={selected} onClose={() => update("ref", "")} onAssessmentUploaded={refresh} />}
+  </StudentPage>;
 }
 
-function ApplicationCard({
-  application,
-  onTrack,
-}: {
-  application: ApplicationRecord;
-  onTrack: () => void;
-}) {
-  return (
-    <article className="bg-white border border-border rounded-2xl p-5 shadow-sm">
-      <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-        <div className="flex-1 min-w-0">
-          <h2 className="font-semibold text-base truncate">
-            {application.opportunity}
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            {application.company}
-          </p>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mt-3">
-            <span>
-              Reference:{" "}
-              <strong className="text-foreground">
-                {application.reference}
-              </strong>
-            </span>
-            <span>
-              Index:{" "}
-              <strong className="text-foreground">
-                {application.studentIndexNumber || "Not recorded"}
-              </strong>
-            </span>
-            <span>
-              Applied:{" "}
-              {new Date(application.applicationDate).toLocaleDateString()}
-            </span>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span
-            className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusStyles[application.status]}`}
-          >
-            {application.status}
-          </span>
-          <span
-            className={`px-2.5 py-1 rounded-full text-xs font-semibold ${application.paymentStatus === "Payment Successful" || (application.paymentStatus as string) === "Paid" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
-          >
-            {(application.paymentStatus as string) === "Paid"
-              ? "Payment Successful"
-              : application.paymentStatus}
-          </span>
-          <button
-            onClick={onTrack}
-            className="px-3 py-2 rounded-lg bg-primary text-white text-xs font-semibold hover:opacity-90"
-          >
-            Track Application
-          </button>
-        </div>
-      </div>
-    </article>
-  );
-}
 
 function TrackingModal({
   application,
@@ -291,10 +131,6 @@ function TrackingModal({
   const [assessmentError, setAssessmentError] = useState("");
   const [certificateBusy, setCertificateBusy] = useState(false);
   const assessmentInput = useRef<HTMLInputElement>(null);
-  const current = stageIndex(application);
-  const paymentSuccessful =
-    application.paymentStatus === "Payment Successful" ||
-    (application.paymentStatus as string) === "Paid";
   const submitAssessment = async () => {
     if (!assessmentFile) return;
     setAssessmentBusy(true);
@@ -325,70 +161,28 @@ function TrackingModal({
       setCertificateBusy(false);
     }
   };
+  const modal = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  useEffect(() => { modal.current?.showModal(); }, []);
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm p-4 flex items-center justify-center"
-      role="dialog"
-      aria-modal="true"
-    >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-border p-5 flex items-center justify-between z-10">
-          <div>
-            <p className="text-xs uppercase tracking-widest text-muted-foreground font-bold">
-              Application tracking
-            </p>
-            <h2 className="font-bold text-lg mt-1">
-              {application.opportunity}
-            </h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="w-9 h-9 rounded-xl hover:bg-secondary"
-            aria-label="Close application details"
-          >
-            ×
-          </button>
+    <dialog ref={modal} onClose={onClose} aria-labelledby={titleId}
+      className="fixed inset-0 m-auto max-h-[calc(100dvh-1.5rem)] w-[calc(100%-1.5rem)] max-w-3xl overflow-y-auto rounded-xl border border-border bg-card p-0 text-foreground shadow-2xl backdrop:bg-black/55">
+      <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-border bg-card p-3">
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground">Application tracking</p>
+          <h2 id={titleId} className="break-words text-base font-bold">{application.opportunity}</h2>
         </div>
-        <div className="p-5 sm:p-7 grid lg:grid-cols-2 gap-8">
-          <div>
-            <h3 className="font-semibold text-sm mb-4">Progress timeline</h3>
-            <div className="space-y-0">
-              {timeline.map((stage, index) => {
-                const completed =
-                  index < current || (index === 1 && paymentSuccessful);
-                const active = index === current;
-                return (
-                  <div key={stage} className="flex gap-3">
-                    <div className="flex flex-col items-center">
-                      <span
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${completed ? "bg-emerald-100 text-emerald-700" : active ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}
-                      >
-                        {completed ? "✓" : index + 1}
-                      </span>
-                      {index < timeline.length - 1 && (
-                        <span
-                          className={`w-px h-10 ${completed ? "bg-emerald-300" : "bg-border"}`}
-                        />
-                      )}
-                    </div>
-                    <div className="pb-6">
-                      <p
-                        className={`text-sm font-semibold ${active ? "text-primary" : ""}`}
-                      >
-                        {stage}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {completed
-                          ? "Completed"
-                          : active
-                            ? "Current stage"
-                            : "Pending"}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
+        <button type="button" onClick={() => modal.current?.close()} className="size-10 shrink-0 rounded-lg hover:bg-secondary" aria-label="Close application details">×</button>
+      </div>
+      <div className="grid min-w-0 gap-4 p-3 sm:p-4 lg:grid-cols-2">
+          <ApplicationNextActions application={application} />
+          {application.placementFilesAvailable && <section className="lg:col-span-2"><PlacementDocuments applicationId={application.reference} /></section>}
+          <div className="space-y-5">
+            <div className="rounded-xl border border-border bg-secondary p-4">
+              <p className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyles[application.status]}`}>{application.status}</p>
+              <p className="mt-2 text-sm">{applicationNextSteps[application.status]}</p>
             </div>
+            <ApplicationHistory id={application.reference} status={application.status} />
           </div>
           <div className="space-y-5">
             <div>
@@ -414,23 +208,6 @@ function TrackingModal({
                   application.applicationDate,
                 ).toLocaleDateString()}
               />
-              <Info
-                label="Last updated"
-                value={new Date(
-                  application.lastUpdated || application.applicationDate,
-                ).toLocaleDateString()}
-              />
-              <Info label="Current status" value={application.status} />
-            </div>
-            <div>
-              <h3 className="font-semibold text-sm mb-3">Payment</h3>
-              <p
-                className={`text-sm font-semibold ${paymentSuccessful ? "text-emerald-700" : "text-amber-700"}`}
-              >
-                {paymentSuccessful
-                  ? "Payment Successful — GH₵4"
-                  : application.paymentStatus}
-              </p>
             </div>
             <div>
               <h3 className="font-semibold text-sm mb-3">
@@ -441,9 +218,14 @@ function TrackingModal({
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 {application.resumeType || "Resume / CV"}
-                {application.resumeUploadedAt &&
+                {application.resumeName && application.resumeUploadedAt &&
                   ` · Uploaded ${new Date(application.resumeUploadedAt).toLocaleDateString()}`}
               </p>
+              {application.resumeName?.toLowerCase().endsWith(".pdf") && (
+                <button type="button" onClick={() => void previewPdf(() => getResumeFile(application.reference)).catch(failure =>
+                  setDownloadError(failure instanceof Error ? failure.message : "Unable to open PDF."))}
+                  className="mr-4 mt-3 text-xs font-semibold text-primary underline">Preview resume</button>
+              )}
               {application.resumeName && (
                 <button
                   onClick={() => void saveResumeDownload(application.reference).catch((error) => setDownloadError(error instanceof Error ? error.message : "Unable to download resume."))}
@@ -512,9 +294,35 @@ function TrackingModal({
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </dialog>
   );
+}
+
+function ApplicationNextActions({ application }: { application: ApplicationRecord }) {
+  const active = ["Submitted", "Under Review", "Shortlisted"].includes(application.status);
+  const date = application.responseBy;
+  const now = new Date().toISOString().slice(0, 10);
+  const update = application.studentUpdate;
+  const support = "/app/support?" + new URLSearchParams({ application: application.reference });
+  if (!active || !(update || application.documentRequest || date)) return null;
+  return <section className="space-y-2 rounded-lg border border-border bg-secondary/40 p-3 lg:col-span-2">
+    <h3 className="text-sm font-semibold">Next steps</h3>
+    {update && <div className="text-sm">
+      <strong>{update.kind === "interview" ? "Interview" : update.kind === "action" ? "Action requested" : "Progress update"}</strong>
+      {update.due && <span className="ml-2 text-xs text-muted-foreground">{update.due}</span>}
+      <p className="mt-1 whitespace-pre-wrap break-words">{update.message}</p>
+    </div>}
+    {application.documentRequest && <div className="text-sm"><strong>Documents requested</strong><p className="whitespace-pre-wrap break-words">{application.documentRequest}</p></div>}
+    {update?.kind === "interview" && <details className="text-sm"><summary className="cursor-pointer font-semibold text-primary">Prepare for the interview</summary>
+      <ul className="mt-1 list-disc space-y-1 pl-5 text-muted-foreground">
+        <li>Confirm the time, location or meeting link with the contact listed.</li>
+        <li>Review the role and prepare an example of work that shows a relevant skill.</li>
+        <li>Prepare one question about the work or supervision.</li>
+      </ul>
+    </details>}
+    {date && <p className="text-xs text-muted-foreground">Expected response date · {date}</p>}
+    {(application.documentRequest || (date && date < now)) && <Link className="inline-flex min-h-9 items-center text-sm font-semibold text-primary underline" to={support}>Follow up with support</Link>}
+  </section>;
 }
 
 function Info({

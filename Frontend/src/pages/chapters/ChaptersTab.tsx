@@ -98,9 +98,9 @@ export default function ChaptersTab(props: {
 
   return (
     <div className="mx-auto max-w-7xl px-4 pb-16 pt-7 sm:px-6">
-      <div className="grid grid-cols-2 gap-3.5 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         {metrics.map(([label, value, note]) => (
-          <div key={label} className={`${cardClass} p-5`}>
+          <div key={label} className={`${cardClass} p-3 sm:p-4`}>
             <b className="block font-mono text-2xl font-bold leading-tight text-primary">{value}</b>
             <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {label}
@@ -179,7 +179,7 @@ export default function ChaptersTab(props: {
         {shown.length} chapters shown · {executives.length} seats tracked
       </p>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
         {shown.length === 0 ? (
           <p className="col-span-full rounded-2xl border border-dashed border-border bg-white p-8 text-center text-muted-foreground">
             {emptyMessage}
@@ -194,7 +194,7 @@ export default function ChaptersTab(props: {
                 key={c.id}
                 type="button"
                 onClick={() => props.onOpenBoard(c.id)}
-                className="relative block overflow-hidden rounded-2xl border border-border bg-white p-5 pt-6 text-left transition-colors hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="relative block overflow-hidden rounded-xl border border-border bg-white p-3 pt-4 text-left sm:p-4 transition-colors hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <span className={`absolute inset-x-0 top-0 h-1 ${style.strip}`} />
                 <span className={`block text-[10.5px] font-extrabold uppercase tracking-[0.12em] ${style.label}`}>

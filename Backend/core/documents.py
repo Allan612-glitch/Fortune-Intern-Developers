@@ -322,6 +322,22 @@ def _draw_letter_page(canvas, doc, logo_path: Path | None) -> None:
     canvas.restoreState()
 
 
+def build_application_recommendation(application, applicant, listing, reference: str) -> bytes:
+    return build_recommendation_letter_pdf(
+        student_name=application.applicant_name or applicant.name,
+        institution=application.applicant_institution or "Not specified",
+        program_course=application.applicant_course,
+        contact=application.applicant_contact,
+        email=applicant.email,
+        host_company=application.host_company_name or (listing.company if listing else "Fortune Intern Network"),
+        host_location=application.host_company_address or (listing.location if listing else None),
+        reference_no=reference,
+        index_number=application.student_index_number,
+        opportunity=listing.name if listing else "Program",
+        letter_date=application.created_at,
+    )
+
+
 def build_recommendation_letter_pdf(
     *,
     student_name: str,

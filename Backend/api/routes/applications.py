@@ -2,6 +2,7 @@ from dataclasses import dataclass, replace
 from datetime import date, datetime, timezone
 from hashlib import blake2b
 from pathlib import Path
+from typing import Literal
 from uuid import UUID, uuid4
 
 from botocore.exceptions import BotoCoreError, ClientError
@@ -13,7 +14,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, or_, select
 
 from Backend.api.deps import get_current_user
-from Backend.core import age, storage
+from Backend.core import age, documents, storage
 from Backend.core.audit import record_audit_event
 from Backend.core.certificates import (
     build_completion_certificate_html,
@@ -31,6 +32,7 @@ from Database.models import (
     user,
     user_profile,
 )
+from Database.student_opportunity import StudentOpportunity
 from Database.schemas import (
     ApplicationResponse,
     ApplicationStatusHistoryResponse,
@@ -80,15 +82,20 @@ class _ApplicationReceipt:
     submitted_at: str
 
 
-def serialize_application(row: application, program_name: str) -> ApplicationResponse:
+def serialize_application(row: application, program_name: str, opportunity: dict | None = None) -> ApplicationResponse:
     return ApplicationResponse(
         id=str(row.id),
         user_id=str(row.user_id),
         program_id=str(row.program_id),
         program_name=program_name,
         status=row.status,
+        student_update=row.student_update if row.status in {"submitted", "applied", "review", "under_review", "shortlisted", "interview"} else None,
+        document_request=row.document_request,
+        response_by=(opportunity or {}).get("response_by"),
+        updated_at=row.updated_at.isoformat(),
         resume_filename=row.resume_filename,
         documents_sent=row.documents_sent,
+        placement_files_available=row.status == "accepted" and bool(row.letter_reference),
         supervisor_assessment_filename=getattr(row, "supervisor_assessment_filename", None),
         certificate_approved=getattr(row, "certificate_approved", False),
         internship_start_date=getattr(row, "internship_start_date", None),
@@ -329,6 +336,15 @@ def _save_application(
         suggested_company=fields.suggested_company or None,
         date_of_birth=prepared.date_of_birth,
     )
+    session.exec(select(user.id).where(user.id == account.id).with_for_update()).one()
+    saved = session.get(StudentOpportunity, (account.id, new_application.program_id))
+    if saved is not None:
+        if saved.saved:
+            saved.draft = None
+            saved.remind = False
+            session.add(saved)
+        else:
+            session.delete(saved)
     session.add(new_application)
     session.add(
         notification(
@@ -358,6 +374,9 @@ def _save_application(
         action="application.create",
         object_type="application",
         object_id=str(new_application.id),
+        workflow_id=str(new_application.id),
+        changes={"status": (None, new_application.status)},
+        context={"program_id": str(new_application.program_id)},
     )
     try:
         session.commit()
@@ -405,7 +424,7 @@ def list_applications(
     offset: int = Query(default=0, ge=0),
 ):
     rows = session.exec(
-        select(application, program.name)
+        select(application, program.name, program.opportunity)
         .outerjoin(program, application.program_id == program.id)
         .where(application.user_id == account.id)
         .order_by(application.created_at.desc())
@@ -414,8 +433,8 @@ def list_applications(
     ).all()
 
     return [
-        serialize_application(row, program_name or "Program")
-        for row, program_name in rows
+        serialize_application(row, program_name or "Program", opportunity)
+        for row, program_name, opportunity in rows
     ]
 
 
@@ -479,7 +498,7 @@ def get_application(
     if not row or row.user_id != account.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
     program_record = session.get(program, row.program_id)
-    return serialize_application(row, program_record.name if program_record else "Program")
+    return serialize_application(row, program_record.name if program_record else "Program", program_record.opportunity if program_record else None)
 
 
 @router.get(
@@ -568,7 +587,25 @@ async def upload_supervisor_assessment(
     session.commit()
     session.refresh(row)
     program_record = session.get(program, row.program_id)
-    return serialize_application(row, program_record.name if program_record else "Program")
+    return serialize_application(row, program_record.name if program_record else "Program", program_record.opportunity if program_record else None)
+
+
+@router.get("/{application_id}/placement-document/{kind}")
+def download_placement_document(application_id: UUID, kind: Literal["recommendation", "assessment"],
+                                request: Request, account: user = Depends(get_current_user),
+                                session: Session = Depends(get_session)):
+    row = session.get(application, application_id)
+    if row is None or row.user_id != account.id:
+        raise HTTPException(404, "Application not found")
+    if row.status != "accepted" or not row.letter_reference:
+        raise HTTPException(409, "Placement documents have not been issued")
+    content = (documents.build_assessment_form_pdf() if kind == "assessment" else
+               documents.build_application_recommendation(row, account, session.get(program, row.program_id), row.letter_reference))
+    record_audit_event(session, request, actor_id=account.id, action="application.placement_document.download",
+                       object_type="application", object_id=str(row.id), context={"format": kind})
+    session.commit()
+    return Response(content=content, media_type="application/pdf",
+                    headers={"Cache-Control": "no-store", "Content-Disposition": f'attachment; filename="{kind}.pdf"'})
 
 
 @router.get("/{application_id}/certificate")

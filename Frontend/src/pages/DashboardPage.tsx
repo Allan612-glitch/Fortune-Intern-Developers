@@ -1,133 +1,65 @@
-import { useEffect, useState } from "react";
+import type { StudentAction } from "../services/opportunities";
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { ArrowRight, Briefcase, CheckCircle2, ClipboardList, Clock3, FileText, LifeBuoy, UserRound } from "lucide-react";
 import AsyncState from "../components/AsyncState";
-import { getDashboard, type DashboardSummary } from "../services/platform";
+import { StudentPage, studentLink } from "../components/StudentPortalUI";
+import { applicationStatusLabel } from "../services/applications";
+import type { DashboardSummary } from "../services/platform";
+import { dateTime, useRequest } from "./AdminWorkflowUI";
 
-export default function DashboardPage({
-  email,
-  onApplications,
-}: {
-  email: string;
-  onApplications: () => void;
-}) {
-  const [dashboard, setDashboard] = useState<DashboardSummary | null>(null);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [retryCount, setRetryCount] = useState(0);
-
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError("");
-    getDashboard()
-      .then((result) => {
-        if (active) setDashboard(result);
-      })
-      .catch((requestError) => {
-        if (active) setError(requestError instanceof Error ? requestError.message : "Unable to load dashboard.");
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [email, retryCount]);
-
-  const applications = dashboard?.recent_applications || [];
-  const retry = () => {
-    setLoading(true);
-    setError("");
-    setRetryCount((count) => count + 1);
-  };
-
-  return (
-    <div className="p-4 lg:p-6 max-w-5xl">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Your current internship application activity
-          </p>
-        </div>
-        <button
-          onClick={onApplications}
-          className="px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:opacity-90"
-        >
-          Open My Applications
-        </button>
+export default function DashboardPage() {
+  const [revision, setRevision] = useState(0);
+  const result = useRequest<DashboardSummary>("/api/dashboard", revision);
+  const data = result?.data;
+  const actions = useRequest<StudentAction[]>("/api/student/actions", revision);
+  return <StudentPage title="Dashboard" action={<Link className={studentLink} to="/app/programs"><Briefcase className="size-4" aria-hidden="true" />Browse programs</Link>}>
+    {!result ? <AsyncState kind="loading" message="Loading your dashboard…" /> : result.error ? <AsyncState kind="error" message={result.error} onRetry={() => setRevision(v => v + 1)} /> : data && <>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {[
+          { label: "Applications", value: data.total_applications, Icon: ClipboardList, path: "/app/applications" },
+          { label: "In progress", value: data.active_applications, Icon: Clock3, path: "/app/applications?status=active" },
+          { label: "Accepted", value: data.accepted_applications, Icon: CheckCircle2, path: "/app/applications?status=Accepted" },
+          { label: "Open programs", value: data.open_programs, Icon: Briefcase, path: "/app/programs" },
+        ].map(({ label, value, Icon, path }) => <Link className="student-panel p-2.5 sm:p-3 hover:border-primary" to={path} key={label}>
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground"><Icon className="size-4 shrink-0 text-primary" aria-hidden="true" />{label}</span>
+          <strong className="mt-1 block text-xl">{value}</strong>
+        </Link>)}
       </div>
-      {loading ? (
-        <AsyncState kind="loading" message="Loading your dashboard..." />
-      ) : error ? (
-        <AsyncState
-          kind="error"
-          message={error}
-          onRetry={retry}
-        />
-      ) : dashboard ? (
-        <>
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
-            {[
-              ["Total Applications", dashboard.total_applications],
-              ["Active Applications", dashboard.active_applications],
-              ["Interviews", dashboard.interviews],
-              ["Accepted", dashboard.accepted_applications],
-              ["Open Programs", dashboard.open_programs],
-            ].map(([label, value]) => (
-              <div
-                key={String(label)}
-                className="bg-white border border-border rounded-xl p-4 shadow-sm"
-              >
-                <p className="text-2xl font-bold text-primary">{value}</p>
-                <p className="text-xs text-muted-foreground mt-1">{label}</p>
-              </div>
-            ))}
-          </div>
-          {applications.length === 0 ? (
-            <AsyncState kind="empty" message="No applications yet.">
-              <p className="mt-2 text-sm text-muted-foreground">
-                Your submitted applications and status updates will appear here.
-              </p>
-              <button
-                onClick={onApplications}
-                className="mt-5 rounded-xl bg-secondary px-5 py-3 text-sm font-semibold text-primary"
-              >
-                View My Applications
-              </button>
-            </AsyncState>
-          ) : (
-            <div className="bg-white border border-border rounded-2xl p-5 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-semibold text-sm">Recent Applications</h2>
-                <button
-                  onClick={onApplications}
-                  className="text-xs font-semibold text-primary hover:underline"
-                >
-                  View all
-                </button>
-              </div>
-              <div className="space-y-3">
-                {applications.slice(0, 5).map((application) => (
-                  <div
-                    key={application.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-border rounded-xl p-4"
-                  >
-                    <div>
-                      <p className="font-semibold text-sm">{application.program_name}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {new Date(application.created_at).toLocaleDateString()} · {application.id}
-                      </p>
-                    </div>
-                    <span className="self-start sm:self-auto px-2.5 py-1 rounded-full bg-secondary text-primary text-xs font-semibold">
-                      {application.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
-      ) : null}
-    </div>
-  );
+      {actions?.data?.length ? <section className="student-panel">
+        <h2 className="px-3 py-2.5 text-sm font-semibold">Needs your attention</h2>
+        <ul className="divide-y divide-border border-t border-border">{actions.data.map(item => <li key={item.id}>
+          <Link to={item.path} className="flex min-h-11 flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm hover:bg-secondary">
+            <span className="font-semibold">{item.title}</span>{item.due && <time className="text-xs text-muted-foreground" dateTime={item.due}>{item.due}</time>}
+          </Link>
+        </li>)}</ul>
+      </section> : null}
+      <div className="grid min-w-0 items-start gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <section className="student-panel">
+          <header className="flex items-center justify-between gap-2 px-3 py-2">
+            <h2 className="text-sm font-semibold">Recent applications</h2>
+            <Link to="/app/applications" className="inline-flex min-h-8 items-center gap-1 text-xs font-semibold text-primary hover:underline">View all <ArrowRight className="size-3.5" aria-hidden="true" /></Link>
+          </header>
+          {data.recent_applications.length ? <ul className="divide-y divide-border border-t border-border">
+            {data.recent_applications.slice(0, 5).map(item => <li key={item.id}>
+              <Link to={"/app/applications?" + new URLSearchParams({ ref: item.id })} className="flex min-h-12 items-center justify-between gap-3 px-3 py-2 hover:bg-secondary">
+                <span className="min-w-0 break-words text-sm font-semibold">{item.program_name}</span>
+                <span className="max-w-[7rem] rounded bg-secondary px-2 py-1 text-xs text-primary">{applicationStatusLabel(item.status)}</span>
+              </Link>
+            </li>)}
+          </ul> : <p className="border-t border-border p-3 text-sm text-muted-foreground">Your submitted applications will appear here.</p>}
+        </section>
+        <section className="student-panel">
+          <h2 className="px-3 py-3 text-sm font-semibold">Quick links</h2>
+          <ul className="divide-y divide-border border-t border-border">{[
+            { label: "Student profile", path: "/app/account", Icon: UserRound },
+            { label: "My placements", path: "/app/placements", Icon: Briefcase },
+            { label: "Finance documents", path: "/app/documents", Icon: FileText },
+            { label: "Support tickets", path: "/app/support", Icon: LifeBuoy },
+          ].map(({ label, path, Icon }) => <li key={path}><Link to={path} className="flex min-h-11 items-center gap-2 px-3 text-sm hover:bg-secondary"><Icon className="size-4 text-primary" aria-hidden="true" />{label}</Link></li>)}</ul>
+          {data.next_deadline && <p className="border-t border-border px-3 py-2 text-xs text-muted-foreground">Next program deadline · {dateTime(data.next_deadline)}</p>}
+        </section>
+      </div>
+    </>}
+  </StudentPage>;
 }

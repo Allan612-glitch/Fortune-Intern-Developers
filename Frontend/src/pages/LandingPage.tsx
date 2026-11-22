@@ -1,3 +1,4 @@
+import ThemeToggle from "../components/ThemeToggle";
 import {
   memo,
   useCallback,
@@ -543,6 +544,7 @@ export default function LandingPage({
           >
             <Icon name={mobileMenu ? "close" : "menu"} className="w-5 h-5" />
           </button>
+          <ThemeToggle className="ml-2 sm:ml-4" />
         </div>
 
         {mobileMenu && (
@@ -1159,7 +1161,7 @@ function OpportunityDetailsDialog({
           <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
             <li>An active FIN student account and profile.</li>
             <li>
-              Current CV and, where required, an introduction letter.
+              A current CV is optional. Include an introduction letter where required.
             </li>
             <li>Payment of the single processing fee at submission.</li>
           </ul>

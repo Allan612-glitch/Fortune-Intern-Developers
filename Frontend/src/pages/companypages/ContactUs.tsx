@@ -38,10 +38,10 @@ export default function ContactUs() {
     }
 
     return (
-        <div className="min-h-screen bg-[#f8f9fa] flex flex-col pt-12 pb-24 px-4 sm:px-8 md:px-16 lg:px-32">
+        <div className="min-h-screen bg-surface flex flex-col pt-12 pb-24 px-4 sm:px-8 md:px-16 lg:px-32">
           <div className="max-w-3xl w-full mx-auto text-slate-700">
             <div className="mb-8">
-                <h1 className="text-4xl font-extrabold text-[#0B172A] mb-4">
+                <h1 className="text-4xl font-extrabold text-foreground mb-4">
                 Contact Us
                 </h1>
                 <hr className="border-t-[3px] border-yellow-500 w-full" />
@@ -73,7 +73,7 @@ export default function ContactUs() {
                           </a>
                         </li>
                         <li className="flex items-center gap-3">
-                          <a href="https://x.com/fortune_intern1" target="_blank" rel="noopener noreferrer" aria-label="Fortune Intern on X" className="flex items-center gap-3 text-[#0B172A] hover:text-slate-600 transition-colors">
+                          <a href="https://x.com/fortune_intern1" target="_blank" rel="noopener noreferrer" aria-label="Fortune Intern on X" className="flex items-center gap-3 text-foreground hover:text-slate-600 transition-colors">
                             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100"><Icon name="x" className="h-5 w-5" /></span>
                             <span className="underline underline-offset-2">@fortune_intern1</span>
                           </a>
@@ -91,28 +91,28 @@ export default function ContactUs() {
                     </ul>
                 </div>
 
-                <h2 className="font-extrabold text-[#0b172a] mt-12 mb-6 text-3xl">Send us a message</h2>
+                <h2 className="font-extrabold text-foreground mt-12 mb-6 text-3xl">Send us a message</h2>
 
                 <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
                     <div className="flex flex-col">
-                        <label htmlFor="contact-name" className="mb-2 font-bold text-sm text-[#0B172A]">Your full name</label>
+                        <label htmlFor="contact-name" className="mb-2 font-bold text-sm text-foreground">Your full name</label>
                         <input id="contact-name" name="name" type="text" required className="bg-white p-3 border border-gray-300 rounded-lg outline-none focus:border-blue-500"/>
                     </div>
 
                     <div className="flex flex-col">
-                        <label htmlFor="contact-email" className="mb-2 font-bold text-sm text-[#0B172A]">Your email address</label>
+                        <label htmlFor="contact-email" className="mb-2 font-bold text-sm text-foreground">Your email address</label>
                         <input id="contact-email" name="email" type="email" required className="bg-white p-3 border border-gray-300 rounded-lg outline-none focus:border-blue-500"/>
                     </div>
 
                     <div className="flex flex-col">
-                        <label htmlFor="contact-message" className="mb-2 font-bold text-sm text-[#0B172A]">How can we help?</label>
+                        <label htmlFor="contact-message" className="mb-2 font-bold text-sm text-foreground">How can we help?</label>
                         <textarea id="contact-message" name="message" rows={6} required className="bg-white p-3 border border-gray-300 rounded-lg outline-none focus:border-blue-500 resize-y"></textarea>
                     </div>
 
                    <div className="flex items-start gap-3 mt-2">
                       <input id="contact-consent" name="consent" type="checkbox" required className="mt-1 w-4 h-4 shrink-0 cursor-pointer" />
                      <p className="text-sm">
-                       I consent to Fortune Intern Network processing the information provided in this form for the purpose of responding to my enquiry, in line with the <Link to="/privacy-policy" className="font-bold text-[#0B172A] underline">Privacy Policy</Link>.
+                       I consent to Fortune Intern Network processing the information provided in this form for the purpose of responding to my enquiry, in line with the <Link to="/privacy-policy" className="font-bold text-foreground underline">Privacy Policy</Link>.
                      </p>
                    </div>
 
