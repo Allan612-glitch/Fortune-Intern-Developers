@@ -7,11 +7,6 @@ interface BottomNavProps {
   onNavigate?: (page: AppPage) => void;
 }
 
-// Keep the label compact on phones and preserve the accessible name.
-const shortLabels: Record<string, string> = {
-  applications: "Applied",
-};
-
 export default function BottomNav({ page, onNavigate }: BottomNavProps) {
   const navigate = useNavigate();
 
@@ -32,9 +27,9 @@ export default function BottomNav({ page, onNavigate }: BottomNavProps) {
     >
       <div className="flex w-full items-center">
         {navItems
-          .filter((item) => ["home", "dashboard", "applications", "apply", "more"].includes(item.id))
+          .filter((item) => ["home", "dashboard", "apply", "announcements", "profile"].includes(item.id))
           .map((item) => {
-            const active = page === item.id || (item.id === "more" && ["announcements", "support", "documents", "placements", "account", "profile"].includes(page ?? ""));
+            const active = page === item.id;
             return (
               <button
                 key={item.id}
@@ -49,7 +44,7 @@ export default function BottomNav({ page, onNavigate }: BottomNavProps) {
                 <span
                   className="w-full text-center text-[11px] font-semibold leading-tight"
                 >
-                  {shortLabels[item.id] ?? item.label}
+                  {item.label}
                 </span>
                 {active && (
                   <div
