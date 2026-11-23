@@ -23,6 +23,10 @@
   color: var(--story-paper);
 }
 
+:root[data-theme="dark"] :is(.story-hero, .journey, .chapter-callout) {
+  --story-paper: #f1f3fa;
+}
+
 .story-hero {
   overflow: clip;
   position: relative;
@@ -94,7 +98,7 @@
   gap: .625rem;
   margin-top: 1.25rem;
   padding-block: .375rem;
-  color: var(--gold-light);
+  color: var(--story-gold);
   font-size: .875rem;
   font-weight: 650;
   text-underline-offset: .3em;
