@@ -4,6 +4,18 @@ import logo from "../../assets/attach1.png";
 
 export const navItems = [
   {
+    id: "home",
+    label: "Home",
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.8}
+        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+      />
+    ),
+  },
+  {
     id: "dashboard",
     label: "Dashboard",
     icon: (
@@ -40,6 +52,18 @@ export const navItems = [
     ),
   },
   {
+    id: "apply",
+    label: "Apply",
+    icon: (
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.8}
+        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+      />
+    ),
+  },
+  {
     id: "announcements",
     label: "Announcements",
     icon: (
@@ -54,7 +78,7 @@ export const navItems = [
   { id: "placements", label: "My placements", icon: <ClipboardList /> },
   { id: "documents", label: "Finance documents", icon: <Wallet /> },
   { id: "support", label: "Support tickets", icon: <LifeBuoy /> },
-  { id: "account", label: "Student profile", icon: <Settings /> },
+  { id: "profile", label: "Student profile", icon: <Settings /> },
   {
     id: "more",
     label: "More",

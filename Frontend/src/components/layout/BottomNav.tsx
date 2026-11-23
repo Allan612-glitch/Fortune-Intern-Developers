@@ -32,9 +32,9 @@ export default function BottomNav({ page, onNavigate }: BottomNavProps) {
     >
       <div className="flex w-full items-center">
         {navItems
-          .filter((item) => ["dashboard", "programs", "applications", "more"].includes(item.id))
+          .filter((item) => ["home", "dashboard", "applications", "apply", "more"].includes(item.id))
           .map((item) => {
-            const active = page === item.id || (item.id === "more" && ["announcements", "support", "documents", "placements", "account"].includes(page ?? ""));
+            const active = page === item.id || (item.id === "more" && ["announcements", "support", "documents", "placements", "account", "profile"].includes(page ?? ""));
             return (
               <button
                 key={item.id}

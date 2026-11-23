@@ -61,7 +61,7 @@ function studentReturnTo(value: string | null) {
   if (value === "/chapters.html" || value === "/chapters") return "/chapters"
   if (!value || value.includes("\\")) return null
   const path = value.split(/[?#]/, 1)[0]
-  return /^\/app(?:\/(?:dashboard|programs|applications|announcements|documents|placements|support|account|profile|more|apply))?\/?$/.test(path) ||
+  return /^\/app(?:\/(?:home|dashboard|programs|applications|announcements|documents|placements|support|account|profile|more|apply))?\/?$/.test(path) ||
     /^\/app\/(?:programs|apply)\/[\w-]+\/?$/.test(path) ? value : null
 }
 

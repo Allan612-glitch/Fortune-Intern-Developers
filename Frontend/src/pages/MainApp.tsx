@@ -1,4 +1,6 @@
 import StudentPlacementsPage from "./StudentPlacementsPage";
+import HomePage from "./HomePage";
+import ApplyPage from "./ApplyPage";
 import { StudentPage } from "../components/StudentPortalUI";
 import PlacementsPage from "./PlacementsPage";
 import StudentDocumentsPage from "./StudentDocumentsPage";
@@ -37,7 +39,9 @@ interface MainAppProps {
 }
 
 const appPages = new Set<AppPage>([
+  "home",
   "dashboard",
+  "apply",
   "applications",
   "announcements",
   "programs",
@@ -46,6 +50,7 @@ const appPages = new Set<AppPage>([
   "documents",
   "placements",
   "account",
+  "profile",
   "admin",
 ]);
 
@@ -94,16 +99,6 @@ export default function MainApp({
   const [showLogout, setShowLogout] = useState(false);
 
   useEffect(() => {
-    if (pageSegment === "profile") {
-      navigate("/app/account", { replace: true });
-      return;
-    }
-    if (pageSegment === "apply") {
-      const query = new URLSearchParams(location.search);
-      const id = adminSegment || query.get("program");
-      navigate(id && /^[\w-]+$/.test(id) ? `/app/programs/${id}?apply=1` : "/app/programs", { replace: true });
-      return;
-    }
     if (pageSegment !== "admin" && adminSegment &&
         (pageSegment !== "programs" || resourceSegment || !/^[\w-]+$/.test(adminSegment))) {
       navigate(`/app/${page}`, { replace: true });
@@ -178,7 +173,7 @@ export default function MainApp({
   const isAudit = adminSection === "audit";
   const isOperations = adminSection === "operations";
   const canInvestigate = user.isAdmin;
-  const portalLabel = ({ account: "Student profile", applications: "My applications", documents: "Finance documents", placements: "My placements", support: "Support tickets" } as Partial<Record<AppPage, string>>)[page] ?? page.charAt(0).toUpperCase() + page.slice(1);
+  const portalLabel = ({ account: "Student profile", profile: "Student profile", applications: "My applications", documents: "Finance documents", placements: "My placements", support: "Support tickets" } as Partial<Record<AppPage, string>>)[page] ?? page.charAt(0).toUpperCase() + page.slice(1);
   const breadcrumbLabel = isAdminWorkspace
     ? isAdminAccount ? "Account" : activeAdminSection?.label || "Overview"
     : portalLabel;
@@ -245,6 +240,8 @@ export default function MainApp({
             </nav>
           )}
           {page === "dashboard" && <DashboardPage />}
+          {page === "home" && <HomePage user={user} setPage={goTo} />}
+          {page === "apply" && <ApplyPage user={user} />}
           {page === "applications" && <ApplicationsPage />}
           {page === "announcements" && <AnnouncementsPage />}
           {page === "programs" && (
@@ -257,6 +254,7 @@ export default function MainApp({
           {page === "documents" && <StudentDocumentsPage />}
           {page === "placements" && <StudentPlacementsPage />}
           {page === "support" && <SupportPage student />}
+          {page === "profile" && <ProfilePage user={user} onAccountDeleted={onLogout} />}
           {page === "more" && (
             <StudentPage title="More">
               <ul className="student-panel">{[
