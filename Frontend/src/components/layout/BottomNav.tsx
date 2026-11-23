@@ -7,6 +7,11 @@ interface BottomNavProps {
   onNavigate?: (page: AppPage) => void;
 }
 
+const compactLabels: Record<string, string> = {
+  announcements: "News",
+  profile: "Profile",
+};
+
 export default function BottomNav({ page, onNavigate }: BottomNavProps) {
   const navigate = useNavigate();
 
@@ -44,7 +49,7 @@ export default function BottomNav({ page, onNavigate }: BottomNavProps) {
                 <span
                   className="w-full text-center text-[11px] font-semibold leading-tight"
                 >
-                  {item.label}
+                  {compactLabels[item.id] ?? item.label}
                 </span>
                 {active && (
                   <div
