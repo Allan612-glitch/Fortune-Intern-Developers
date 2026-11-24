@@ -180,7 +180,7 @@ function MobileSidebar({ page, isOpen, onClose, onNavigate, adminNavigation }: S
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <div className="flex items-center gap-2">
-            <img src={logo} alt="FIN" className="h-10 w-10 object-contain" />
+            <img src={logo} alt="FIN" className="h-10 w-10 rounded-xl object-contain" />
             <div>
               <div className="font-bold text-sm" style={{ color: "var(--brand-ink)", fontFamily: "Inter, sans-serif" }}>
                 FORTUNE

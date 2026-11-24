@@ -89,13 +89,13 @@ export default function TopBar({
       </button>
 
       {/* Logo */}
-      <button onClick={onGoHome} className="flex items-center gap-2">
-        <img src={logo} alt="FIN" className="h-9 w-9 object-contain" />
-        <div className="hidden sm:block">
-          <span className="font-bold text-sm leading-none" style={{ color: "var(--brand-ink)", fontFamily: "Inter, sans-serif" }}>
-            FORTUNE
+      <button onClick={onGoHome} className="flex min-w-0 items-center gap-2">
+        <img src={logo} alt="FIN" className="h-9 w-9 shrink-0 rounded-xl object-contain" />
+        <div className="min-w-0 text-left leading-tight">
+          <span className="font-display text-[13px] leading-none text-primary sm:text-lg">
+            Fortune
           </span>
-          <div className="text-[10px] leading-none mt-0.5">
+          <div className="mt-0.5 text-[8px] leading-none sm:text-[9px]">
             <span style={{ color: "#F5B731" }}>INTERN</span>
             <span style={{ color: "var(--brand-ink)" }}> NETWORK</span>
           </div>
