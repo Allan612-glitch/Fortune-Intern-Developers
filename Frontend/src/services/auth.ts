@@ -1,3 +1,4 @@
+import type { CareerPreferences } from "./opportunities";
 import { apiBlob, apiRequest, setAccessToken } from "./api";
 
 export interface ApiUser {
@@ -5,6 +6,7 @@ export interface ApiUser {
   name: string;
   email: string;
   is_admin: boolean;
+  staff_permissions: string[];
 }
 
 interface TokenResponse {
@@ -21,6 +23,8 @@ function saveDeviceToken(token: string | undefined) {
 }
 
 export interface ProfileData {
+  career?: CareerPreferences;
+  student_index_number?: string | null;
   bio: string | null;
   profile_picture: string | null;
   major: string | null;
@@ -178,4 +182,15 @@ export function downloadProfileDocument(id: string) {
 
 export function deleteProfileDocument(id: string) {
   return apiRequest<void>(`/api/profile/documents/${id}`, { method: "DELETE" });
+}
+
+export const staffInviteStorageKey = "fin:staff-invitation";
+export const profilePhotoUpdatedEvent = "fin:profile-photo-updated";
+
+export async function uploadProfilePhoto(file: File) {
+  const body = new FormData();
+  body.append("file", file);
+  const profile = await apiRequest<ProfileData>("/api/profile/photo", { method: "PUT", body });
+  window.dispatchEvent(new CustomEvent(profilePhotoUpdatedEvent, { detail: profile.profile_picture }));
+  return profile;
 }

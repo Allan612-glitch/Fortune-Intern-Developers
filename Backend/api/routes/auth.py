@@ -13,6 +13,7 @@ from Backend.api.deps import get_current_user
 from Backend.core.captcha import verify_turnstile
 from Backend.core.config import settings
 from Backend.core.audit import record_audit_event
+from Backend.core.staff_access import staff_permissions
 from Backend.core.login_risk import (
     LoginRisk,
     get_login_risk,
@@ -106,7 +107,7 @@ def send_password_reset_email(email: str, token: str) -> None:
 
 
 def serialize_user(account: user) -> UserResponse:
-    return UserResponse(id=str(account.id), name=account.name, email=account.email, is_admin=account.is_admin)
+    return UserResponse(id=str(account.id), name=account.name, email=account.email, is_admin=account.is_admin, staff_permissions=staff_permissions(account))
 
 
 def _set_refresh_cookie(
@@ -242,6 +243,10 @@ def login(
                     "risk_failures": next_risk.failures,
                 },
             )
+        record_audit_event(session, request, actor_id=account.id if account else None, action="auth.login",
+                           object_type="security", object_id=None, result="failure",
+                           context={"error_category": "invalid_credentials"})
+        session.commit()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
@@ -255,6 +260,10 @@ def login(
                 "source_ip": request.client.host if request.client else None,
             },
         )
+        record_audit_event(session, request, actor_id=account.id, action="auth.login",
+                           object_type="security", object_id=str(account.id), result="rejected",
+                           context={"error_category": "account_suspended"})
+        session.commit()
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended")
     if account.deletion_requested_at is not None:
         raise HTTPException(
@@ -262,6 +271,9 @@ def login(
             detail="This account is scheduled for deletion",
         )
 
+    record_audit_event(session, request, actor_id=account.id, action="auth.login",
+                       object_type="security", object_id=str(account.id))
+    session.commit()
     return create_auth_response(
         account,
         fingerprint,
@@ -409,6 +421,9 @@ def google_login(
         )
 
     session.add(account)
+    record_audit_event(session, request, actor_id=account.id, action="auth.google.login",
+                       object_type="security", object_id=str(account.id),
+                       result="rejected" if account.is_suspended else "success")
     session.commit()
     session.refresh(account)
     if account.is_suspended:
@@ -647,6 +662,8 @@ def forgot_password(
         expires_at=datetime.now(timezone.utc) + timedelta(minutes=settings.password_reset_token_expire_minutes),
     )
     session.add(reset_request)
+    record_audit_event(session, request, actor_id=None, action="auth.password_reset.request",
+                       object_type="security", object_id=str(account.id))
     session.commit()
     send_password_reset_email(email, token)
     return generic_response
@@ -699,6 +716,8 @@ def reset_password(
     matching_reset.used = True
     session.add(account)
     session.add(matching_reset)
+    record_audit_event(session, request, actor_id=account.id, action="auth.password_reset.complete",
+                       object_type="security", object_id=str(account.id))
     session.commit()
     return MessageResponse(message="Password has been reset successfully")
 

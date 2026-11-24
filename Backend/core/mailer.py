@@ -44,14 +44,14 @@ def send_announcement_emails(
     to_emails: list[str],
     title: str,
     content: str,
-) -> None:
+) -> tuple[int, int, int]:
     if not to_emails:
-        return
+        return 0, 0, 0
     if not all((settings.resend_api_key, settings.resend_from_email)):
         logger.warning(
             "Skipping announcement email: RESEND_API_KEY/RESEND_FROM_EMAIL not configured"
         )
-        return
+        return 0, 0, len(to_emails)
 
     safe_title = escape(title)
     safe_content = escape(content).replace("\n", "<br>")
@@ -72,18 +72,22 @@ def send_announcement_emails(
         for to_email in to_emails
     ]
 
+    sent = failed = 0
     for offset in range(0, len(emails), ANNOUNCEMENT_EMAIL_BATCH_SIZE):
         if offset:
             time.sleep(ANNOUNCEMENT_EMAIL_BATCH_INTERVAL_SECONDS)
         batch = emails[offset : offset + ANNOUNCEMENT_EMAIL_BATCH_SIZE]
         try:
             _send_announcement_batch(batch)
+            sent += len(batch)
         except Exception:
+            failed += len(batch)
             logger.exception(
                 "Failed to send announcement email batch for recipients %d-%d",
                 offset + 1,
                 offset + len(batch),
             )
+    return sent, failed, 0
 
 
 def send_application_received_email(

@@ -4,6 +4,7 @@ from sqlalchemy import delete, update
 from sqlmodel import SQLModel, Session, select
 
 from Backend.core import storage
+from Backend.core.audit import permit_retention_delete
 from Backend.core.data_retention import CONSENT_RETENTION_YEARS, add_calendar_years
 from Database.models import application, audit_event, consent_log, profile_document, user
 
@@ -26,6 +27,7 @@ def purge_account(session: Session, account: user) -> None:
     for storage_path in storage_paths:
         storage.delete_file(storage_path)
 
+    permit_retention_delete(session, "account", str(account.id))
     session.execute(
         delete(audit_event).where(audit_event.actor_id == account.id)
     )

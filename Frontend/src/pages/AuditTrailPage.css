@@ -1,0 +1,37 @@
+.audit-page .audit-active { background: var(--primary); color: var(--primary-foreground); }
+.audit-outcome { background: var(--secondary); color: var(--secondary-foreground); }
+.audit-outcome[data-outcome="success"] { background: #e9f8f0; color: #166043; }
+.audit-outcome[data-outcome="failure"], .audit-outcome[data-outcome="rejected"] { background: #fce9ea; color: #8c212a; }
+.audit-outcome[data-outcome="pending"], .audit-outcome[data-outcome="partial"] { background: var(--gold-light); color: #68480b; }
+.audit-story { list-style: none; }
+.audit-node { position: relative; margin-left: .5rem; border-left: 2px solid var(--admin-line); border-radius: 0 .65rem .65rem 0; padding: .55rem .65rem .55rem 1.15rem; }
+.audit-node::before { content: ""; position: absolute; left: -.4rem; top: .9rem; width: .7rem; height: .7rem; border: 2px solid var(--card); border-radius: 50%; background: var(--navy); }
+.audit-node::after { content: ""; position: absolute; left: -2px; bottom: -.75rem; height: .75rem; width: 2px; background: var(--admin-line); }
+.audit-node:last-child::after { display: none; }
+.audit-node[data-outcome="failure"]::before, .audit-node[data-outcome="rejected"]::before { background: #a62b33; }
+.audit-node[data-outcome="success"]::before { background: #217d57; }
+.audit-node[data-outcome="pending"]::before, .audit-node[data-outcome="partial"]::before { background: var(--gold-dark); }
+.audit-node[data-connected="true"] { background: var(--secondary); border-left-color: var(--brand-ink); }
+.audit-branch { margin-left: .35rem; border-left: 2px solid var(--admin-line); border-radius: .7rem 0 0 .7rem; }
+@media (prefers-reduced-motion: no-preference) {
+  .audit-node { transition: background-color .2s, border-color .2s; }
+  @supports (animation-timeline: view()) {
+    .audit-node::before { animation: audit-reveal linear both; animation-timeline: view(); animation-range: entry 0% entry 70%; }
+    @keyframes audit-reveal { from { opacity: .4; transform: scale(.65); } to { opacity: 1; transform: scale(1); } }
+  }
+}
+
+
+.audit-outcome { white-space: nowrap; }
+.audit-page .admin-table { background: var(--card); line-height: 1.45; }
+.audit-page .admin-table td { color: var(--foreground); }
+.audit-page .admin-table button:focus-visible { outline-color: var(--ring); }
+.audit-page .audit-record { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+:root[data-theme="dark"] .audit-outcome[data-outcome="success"] { background: #1b3935; color: #a0e7c9; }
+:root[data-theme="dark"] .audit-outcome:is([data-outcome="failure"], [data-outcome="rejected"]) { background: #432634; color: #ffb8bd; }
+:root[data-theme="dark"] .audit-outcome:is([data-outcome="pending"], [data-outcome="partial"]) { background: #403018; color: #ffdc9a; }
+:root[data-theme="dark"] .audit-node::before { background: var(--brand-ink); }
+:root[data-theme="dark"] .audit-node[data-outcome="success"]::before { background: #8bdcbd; }
+:root[data-theme="dark"] .audit-node:is([data-outcome="failure"], [data-outcome="rejected"])::before { background: #ff9ea7; }
+:root[data-theme="dark"] .audit-node:is([data-outcome="pending"], [data-outcome="partial"])::before { background: var(--gold); }

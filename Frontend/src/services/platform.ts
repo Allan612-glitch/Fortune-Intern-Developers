@@ -1,3 +1,4 @@
+import type { OpportunityDetails, StudentUpdate } from "./opportunities";
 import { apiBlob, apiRequest } from "./api";
 
 export interface Program {
@@ -11,6 +12,9 @@ export interface Program {
   duration: string;
   skills: string[];
   deadline: string | null;
+  cycle_closed_at?: string | null;
+  opportunity?: OpportunityDetails;
+  application_fee_minor?: number;
 }
 
 export interface BackendApplication {
@@ -21,6 +25,7 @@ export interface BackendApplication {
   status: string;
   resume_filename: string | null;
   documents_sent: boolean;
+  placement_files_available?: boolean;
   supervisor_assessment_filename: string | null;
   certificate_approved: boolean;
   internship_start_date: string | null;
@@ -37,7 +42,21 @@ export interface BackendApplication {
   host_company_name: string | null;
   host_company_address: string | null;
   created_at: string;
+  student_update?: StudentUpdate | null;
+  document_request?: string | null;
+  response_by?: string | null;
+  updated_at?: string | null;
 }
+
+export interface ApplicationReview {
+  reviewer_id: string | null;
+  reviewer_name: string | null;
+  review_due_date: string | null;
+  document_request: string | null;
+  student_update?: StudentUpdate | null;
+}
+
+export type AdminApplication = BackendApplication & ApplicationReview;
 
 export interface DashboardSummary {
   profile_completion: number;
@@ -62,6 +81,8 @@ export interface Announcement {
   content: string;
   created_at: string;
   target_university: string | null;
+  category?: string;
+  audience_label?: string | null;
 }
 
 export interface AdminUser {
@@ -127,6 +148,13 @@ export function listApplications() {
   return apiRequest<BackendApplication[]>("/api/applications");
 }
 
+export function listApplicationHistory(id: string, admin: boolean) {
+  const base = admin ? "/api/admin/applications" : "/api/applications";
+  return apiRequest<Array<{ previous_status: string | null; new_status: string; reason?: string | null; created_at: string }>>(
+    `${base}/${encodeURIComponent(id)}/history`,
+  );
+}
+
 export function getDashboard() {
   return apiRequest<DashboardSummary>("/api/dashboard");
 }
@@ -135,8 +163,39 @@ export function listAnnouncements() {
   return apiRequest<Announcement[]>("/api/announcements");
 }
 
-export function listAdminUsers() {
-  return apiRequest<AdminUser[]>("/api/admin/users");
+export function listAdminAnnouncements(filters: { q?: string; limit?: number; offset?: number; category?: string } = {}) {
+  return apiRequest<Announcement[]>(adminListPath("announcements", filters));
+}
+
+export interface AdminOverview {
+  awaiting_review: number;
+  open_programs: number;
+  users: number;
+  students: number;
+  announcements: number;
+}
+
+export function getAdminOverview() {
+  return apiRequest<AdminOverview>("/api/admin/overview");
+}
+
+type AdminDirectoryFilters = {
+  q?: string;
+  status?: string;
+  limit?: number;
+  offset?: number;
+};
+
+function adminListPath(section: string, filters: AdminDirectoryFilters & { user?: string; program?: string; role?: "all" | "student" | "admin"; review?: string }) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== undefined && value !== "") params.set(key, String(value));
+  }
+  return `/api/admin/${section}?${params}`;
+}
+
+export function listAdminUsers(filters: AdminDirectoryFilters & { role?: "all" | "student" | "admin" } = {}) {
+  return apiRequest<AdminUser[]>(adminListPath("users", filters));
 }
 
 export function setUserSuspension(id: string, suspended: boolean) {
@@ -146,8 +205,29 @@ export function setUserSuspension(id: string, suspended: boolean) {
   });
 }
 
-export function listAdminApplications() {
-  return apiRequest<BackendApplication[]>("/api/admin/applications");
+export function setUsersSuspension(ids: string[], suspended: boolean) {
+  return apiRequest<AdminUser[]>("/api/admin/users/bulk-suspension", {
+    method: "PUT",
+    body: JSON.stringify({ user_ids: ids, suspended }),
+  });
+}
+
+export function listAdminApplications(filters: AdminDirectoryFilters & { user?: string; program?: string; review?: string } = {}) {
+  return apiRequest<AdminApplication[]>(adminListPath("applications", filters));
+}
+
+export function getApplicationReviewCounts() {
+  return apiRequest<Record<"mine" | "unassigned" | "overdue" | "awaiting_documents" | "failed_followups", number>>("/api/admin/applications/review-counts");
+}
+
+export function listApplicationReviewers() {
+  return apiRequest<{ id: string; name: string }[]>("/api/admin/applications/reviewers");
+}
+
+export function updateApplicationReview(id: string, review: Partial<Omit<ApplicationReview, "reviewer_name">>) {
+  return apiRequest<ApplicationReview>(`/api/admin/applications/${id}/review`, {
+    method: "PATCH", body: JSON.stringify(review),
+  });
 }
 
 export function exportAdminApplications(applicationIds: string[]) {
@@ -157,10 +237,10 @@ export function exportAdminApplications(applicationIds: string[]) {
   });
 }
 
-export function setApplicationStatus(id: string, status: string) {
+export function setApplicationStatus(id: string, status: string, reason?: string) {
   return apiRequest<BackendApplication>(`/api/admin/applications/${id}/status`, {
     method: "PUT",
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, reason }),
   });
 }
 
@@ -327,23 +407,116 @@ export function updateNotificationPreferences(preferences: NotificationPreferenc
   });
 }
 
-export function publishAnnouncement(
-  title: string,
-  content: string,
-  targetUniversity: string | null = null,
-) {
+export type AnnouncementInput = {
+  title: string;
+  content: string;
+  category: string;
+  audience: string;
+  target_university?: string;
+  target?: string;
+  student_ids?: string[];
+};
+
+export function publishAnnouncement(payload: AnnouncementInput) {
   return apiRequest<Announcement>("/api/admin/announcements", {
-    method: "POST",
-    body: JSON.stringify({
-      title,
-      content,
-      target_university: targetUniversity,
-    }),
+    method: "POST", body: JSON.stringify(payload),
   });
+}
+
+export function searchAnnouncementRecipients(q: string) {
+  return apiRequest<{ id: string; name: string; email: string }[]>(
+    `/api/admin/announcements/recipients?${new URLSearchParams({ q })}`,
+  );
 }
 
 export function deleteAdminAnnouncement(id: string) {
   return apiRequest<void>(`/api/admin/announcements/${id}`, {
     method: "DELETE",
   });
+}
+
+export type ReportTable = "applications" | "users" | "staff" | "invitations" | "roles" | "programs" | "announcements";
+
+export function exportTable(table: ReportTable, ids: string[], format: "pdf" | "xlsx") {
+  if (table === "applications" && format === "xlsx") return exportAdminApplications(ids);
+  return apiBlob(`/api/admin/reports/${table}`, { method: "POST", body: JSON.stringify({ ids, format }) });
+}
+
+export function bulkUnpublishPrograms(ids: string[]) {
+  return apiRequest<Program[]>("/api/admin/programs/bulk-unpublish", {
+    method: "POST", body: JSON.stringify({ ids }),
+  });
+}
+
+export function getAdminPhoto(table: "users" | "applications", id: string) {
+  return apiRequest<{ photo: string | null }>(`/api/admin/${table}/${id}/photo`);
+}
+
+export interface StaffAccount {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  protected: boolean;
+}
+
+export interface StaffInvitation {
+  id: string;
+  email: string;
+  role: string;
+  status: string;
+  expires_at: string;
+}
+
+export interface StaffDirectory {
+  accounts: StaffAccount[];
+  invitations: StaffInvitation[];
+  roles: { id: string; name: string; permissions: string[] }[];
+}
+
+export function getStaffDirectory() {
+  return apiRequest<StaffDirectory>("/api/admin/staff");
+}
+
+export function inviteStaff(email: string, role: string) {
+  return apiRequest<{ token: string; expires_at: string }>("/api/admin/staff/invitations", {
+    method: "POST", body: JSON.stringify({ email, role }),
+  });
+}
+
+export function acceptStaffInvite(token: string) {
+  return apiRequest<{ role: string }>("/api/staff/invitations/accept", {
+    method: "POST", body: JSON.stringify({ token }),
+  });
+}
+
+export function changeStaffAccess(ids: string[], action: "suspend" | "restore" | "revoke", kind: "accounts" | "invitations" = "accounts") {
+  return apiRequest<{ updated: number }>("/api/admin/staff/bulk", {
+    method: "POST", body: JSON.stringify({ ids, action, kind }),
+  });
+}
+
+export function updateStaffRole(id: string, role: string) {
+  return apiRequest<StaffAccount>(`/api/admin/staff/${id}/role`, {
+    method: "PUT", body: JSON.stringify({ role }),
+  });
+}
+
+export function getResumeFile(id: string, admin = false) {
+  return apiBlob(`/api/${admin ? "admin/" : ""}applications/${id}/resume`);
+}
+
+export function listAdminPrograms(filters: { q?: string; limit?: number; offset?: number }) {
+  return apiRequest<Program[]>(adminListPath("programs", filters));
+}
+
+export function getProgramDetail(id: string) {
+  return apiRequest<Program>(`/api/programs/${encodeURIComponent(id)}`);
+}
+
+export function getProgramApplicationSummary(id: string) {
+  return apiRequest<{ total: number; applicant_accounts: number; statuses: Record<string, number> }>(
+    `/api/admin/programs/${encodeURIComponent(id)}/application-summary`,
+  );
 }

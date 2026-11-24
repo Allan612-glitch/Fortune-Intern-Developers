@@ -4,6 +4,7 @@ from sqlalchemy import delete
 from sqlmodel import Session, select
 
 from Backend.core import storage
+from Backend.core.audit import permit_retention_delete
 from Database.models import (
     application,
     application_status_history,
@@ -119,6 +120,7 @@ def purge_expired_retained_data(
                 notification.target_id == application_id,
             )
         )
+        permit_retention_delete(session, "application", application_id)
         session.execute(
             delete(audit_event).where(
                 audit_event.object_type == "application",
