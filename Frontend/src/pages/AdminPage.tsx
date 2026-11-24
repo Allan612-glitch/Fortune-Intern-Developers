@@ -22,6 +22,7 @@ import {
   type Program,
 } from "../services/platform";
 import { ghanaUniversities } from "../constants/universities";
+import SiteImagesPanel from "../components/SiteImagesPanel";
 
 const statusBadge: Record<string, string> = {
   applied: "status-applied",
@@ -54,7 +55,7 @@ export default function AdminPage() {
   const [applications, setApplications] = useState<BackendApplication[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
-  const [tab, setTab] = useState<"users" | "announcements" | "applications" | "programs">("users");
+  const [tab, setTab] = useState<"users" | "announcements" | "applications" | "programs" | "images">("users");
   const [programForm, setProgramForm] = useState(emptyProgramForm);
   const [editingProgramId, setEditingProgramId] = useState<string | null>(null);
   const [programSubmitting, setProgramSubmitting] = useState(false);
@@ -464,8 +465,8 @@ export default function AdminPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-muted rounded-xl p-1 mb-5 overflow-x-auto sm:grid sm:grid-cols-4 sm:overflow-visible">
-        {(["users", "applications", "programs", "announcements"] as const).map((t) => (
+      <div className="flex gap-1 bg-muted rounded-xl p-1 mb-5 overflow-x-auto sm:grid sm:grid-cols-5 sm:overflow-visible">
+        {(["users", "applications", "programs", "announcements", "images"] as const).map((t) => (
           <button
             key={t}
             onClick={(event) => {
@@ -768,6 +769,9 @@ export default function AdminPage() {
           </section>
         </div>
       )}
+
+      {/* Site images */}
+      {tab === "images" && <SiteImagesPanel />}
 
       {/* Announcements */}
       {tab === "announcements" && (
