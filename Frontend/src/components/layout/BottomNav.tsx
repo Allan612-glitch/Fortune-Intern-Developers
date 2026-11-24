@@ -7,10 +7,9 @@ interface BottomNavProps {
   onNavigate?: (page: AppPage) => void;
 }
 
-// Shorter names so seven items fit on a 375px phone. The full name is kept in aria-label.
-const shortLabels: Record<string, string> = {
+const compactLabels: Record<string, string> = {
   announcements: "News",
-  applications: "Applied",
+  profile: "Profile",
 };
 
 export default function BottomNav({ page, onNavigate }: BottomNavProps) {
@@ -27,35 +26,34 @@ export default function BottomNav({ page, onNavigate }: BottomNavProps) {
 
   return (
     <nav
+      aria-label="Student shortcuts"
       className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-border"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
       <div className="flex w-full items-center">
         {navItems
-          .filter((item) => item.id !== "announcements" && item.id !== "applications")
+          .filter((item) => ["home", "dashboard", "apply", "announcements", "profile"].includes(item.id))
           .map((item) => {
             const active = page === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => handleNavigate(item.id as AppPage)}
+                aria-current={active ? "page" : undefined}
                 aria-label={item.label}
-                className="relative flex min-w-0 flex-1 flex-col items-center gap-1 px-0.5 py-2.5 transition-colors"
-                style={{ color: active ? "#2D3561" : "#9ca3af" }}
+                className={`relative flex min-h-12 min-w-0 flex-1 flex-col items-center gap-0.5 px-0.5 py-1.5 transition-colors ${active ? "text-primary" : "text-muted-foreground"}`}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {item.icon}
                 </svg>
                 <span
-                  className="nav-label w-full break-words text-center leading-tight"
-                  style={{ color: active ? "#F5B731" : "#9ca3af" }}
+                  className="w-full text-center text-[11px] font-semibold leading-tight"
                 >
-                  {shortLabels[item.id] ?? item.label}
+                  {compactLabels[item.id] ?? item.label}
                 </span>
                 {active && (
                   <div
-                    className="absolute bottom-0 w-6 h-0.5 rounded-full"
-                    style={{ background: "#F5B731" }}
+                    className="absolute bottom-0 h-0.5 w-6 rounded-full bg-accent"
                   />
                 )}
               </button>

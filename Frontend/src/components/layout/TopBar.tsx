@@ -1,4 +1,7 @@
-import { useState } from "react";
+import ThemeToggle from "../ThemeToggle";
+import { ChevronDown, ChevronRight, LogOut, Settings } from "lucide-react";
+import { useId, useRef, useState } from "react";
+import ProfileAvatar from "./ProfileAvatar";
 import type { NotificationItem } from "../../services/platform";
 import logo from "../../assets/attach1.png";
 import {
@@ -7,14 +10,19 @@ import {
 } from "../../services/platform";
 
 interface TopBarProps {
-  user: { avatar: string };
+  user: { name: string; avatar: string; profilePhotoUrl?: string | null; isAdmin: boolean };
+  workspace: "student" | "admin";
+  adminSectionLabel?: string;
+  canUseAdmin?: boolean;
+  onWorkspaceChange: (workspace: "student" | "admin") => void;
   notifCount: number;
   notificationsOpen: boolean;
   notifications: NotificationItem[];
   notificationError: string;
   onToggleSidebar: () => void;
   onGoHome: () => void;
-  onGoProfile: () => void;
+  onGoAccount: () => void;
+  onLogout: () => void;
   onToggleNotifications: () => void;
   onOpenNotification: (n: NotificationItem) => void;
   onMarkAllRead: () => void;
@@ -25,13 +33,18 @@ interface TopBarProps {
 
 export default function TopBar({
   user,
+  workspace,
+  adminSectionLabel,
+  canUseAdmin = user.isAdmin,
+  onWorkspaceChange,
   notifCount,
   notificationsOpen,
   notifications,
   notificationError,
   onToggleSidebar,
   onGoHome,
-  onGoProfile,
+  onGoAccount,
+  onLogout,
   onToggleNotifications,
   onOpenNotification,
   onMarkAllRead,
@@ -40,6 +53,8 @@ export default function TopBar({
   setNotificationError,
 }: TopBarProps) {
   const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const profileMenuId = useId();
+  const profileMenuRef = useRef<HTMLDivElement>(null);
   const handleToggleNotifications = () => {
     const shouldOpen = !notificationsOpen;
     onToggleNotifications();
@@ -61,7 +76,7 @@ export default function TopBar({
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 h-14 bg-white border-b border-border flex items-center px-4 shadow-sm">
+    <header className={`fixed top-0 left-0 right-0 z-40 h-14 bg-white border-b border-border flex items-center px-4 shadow-sm ${workspace === "admin" ? "admin-topbar lg:px-6" : ""}`}>
       {/* Hamburger (mobile) */}
       <button
         onClick={onToggleSidebar}
@@ -77,18 +92,28 @@ export default function TopBar({
       <button onClick={onGoHome} className="flex items-center gap-2">
         <img src={logo} alt="FIN" className="h-9 w-9 object-contain" />
         <div className="hidden sm:block">
-          <span className="font-bold text-sm leading-none" style={{ color: "#2D3561", fontFamily: "Inter, sans-serif" }}>
+          <span className="font-bold text-sm leading-none" style={{ color: "var(--brand-ink)", fontFamily: "Inter, sans-serif" }}>
             FORTUNE
           </span>
           <div className="text-[10px] leading-none mt-0.5">
             <span style={{ color: "#F5B731" }}>INTERN</span>
-            <span style={{ color: "#2D3561" }}> NETWORK</span>
+            <span style={{ color: "var(--brand-ink)" }}> NETWORK</span>
           </div>
         </div>
       </button>
 
+      {adminSectionLabel && (
+        <div className="ml-2 flex min-w-0 items-center gap-2 text-sm sm:ml-5 lg:ml-10">
+          <span className="size-2 shrink-0 rounded-full bg-accent" aria-hidden="true" />
+          <span className="hidden shrink-0 text-muted-foreground md:inline">Admin</span>
+          <ChevronRight aria-hidden="true" className="hidden size-3.5 shrink-0 text-muted-foreground md:block" />
+          <span className="truncate font-semibold text-foreground">{adminSectionLabel}</span>
+        </div>
+      )}
+
       {/* Right side */}
-      <div className="ml-auto flex items-center gap-3">
+      <div className="ml-auto flex items-center gap-1.5 sm:gap-3">
+        <ThemeToggle />
         {/* Notifications */}
         <div className="relative">
           <button
@@ -162,14 +187,72 @@ export default function TopBar({
           )}
         </div>
 
-        {/* Avatar */}
         <button
-          onClick={onGoProfile}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold hover:opacity-80 transition-opacity"
-          style={{ background: "linear-gradient(135deg, #2D3561, #3d4a8a)" }}
+          type="button"
+          popoverTarget={profileMenuId}
+          aria-label="My profile"
+          className="flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-lg px-1.5 hover:bg-muted"
         >
-          {user.avatar}
+          <ProfileAvatar initials={user.avatar} photoUrl={user.profilePhotoUrl} className={`size-8 text-xs ${workspace === "admin" ? "bg-accent text-accent-foreground" : "bg-primary text-white"}`} />
+          <ChevronDown className="hidden size-4 text-muted-foreground sm:block" aria-hidden="true" />
         </button>
+        <div
+          id={profileMenuId}
+          ref={profileMenuRef}
+          popover="auto"
+          aria-label="My profile"
+          className="fixed inset-auto top-16 right-3 m-0 w-[min(22rem,calc(100%-1.5rem))] max-h-[calc(100dvh-5rem)] overflow-y-auto rounded-2xl border border-border bg-white text-foreground shadow-xl sm:right-4"
+        >
+          <div className="flex items-center gap-3 p-4">
+            <ProfileAvatar initials={user.avatar} photoUrl={user.profilePhotoUrl} className="size-12 bg-primary text-base text-white" />
+            <div className="min-w-0">
+              <p className="break-words font-semibold">{user.name}</p>
+              <p className="text-sm text-muted-foreground">{user.isAdmin ? "Administrator" : canUseAdmin ? "Staff" : "Student"}</p>
+            </div>
+          </div>
+          {canUseAdmin && (
+            <div className="border-t border-border px-4 py-3">
+              <label className="block text-sm font-medium">
+                Workspace
+                <select
+                  value={workspace}
+                  onChange={(event) => {
+                    profileMenuRef.current?.hidePopover();
+                    onWorkspaceChange(event.target.value === "admin" ? "admin" : "student");
+                  }}
+                  className="mt-1.5 block min-h-11 w-full rounded-lg border border-border bg-secondary px-3 text-sm text-primary"
+                >
+                  <option value="student">Student Portal</option>
+                  <option value="admin">Fortune Intern Admin</option>
+                </select>
+              </label>
+            </div>
+          )}
+          <div className="border-t border-border p-2">
+            <button
+              type="button"
+              onClick={() => {
+                profileMenuRef.current?.hidePopover();
+                onGoAccount();
+              }}
+              className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-medium hover:bg-muted"
+            >
+              <Settings className="size-4" aria-hidden="true" />
+              {workspace === "admin" ? "Staff account" : "Student profile"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                profileMenuRef.current?.hidePopover();
+                onLogout();
+              }}
+              className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-medium text-red-700 hover:bg-red-50"
+            >
+              <LogOut className="size-4" aria-hidden="true" />
+              Log Out
+            </button>
+          </div>
+        </div>
       </div>
     </header>
   );

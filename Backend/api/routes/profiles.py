@@ -30,6 +30,7 @@ router = APIRouter(prefix="/api/profile", tags=["profile"])
 
 def serialize_profile(profile: user_profile) -> ProfileResponse:
     return ProfileResponse(
+        career=profile.career or {},
         id=str(profile.id),
         user_id=str(profile.user_id),
         bio=profile.bio,
@@ -130,6 +131,12 @@ def update_profile(
     account: user = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
+    if payload.profile_picture is not None:
+        raise HTTPException(status_code=422, detail="Upload photos through the profile photo field")
+    return save_profile(payload, account, session)
+
+
+def save_profile(payload: ProfileUpdateRequest, account: user, session: Session):
     profile = session.exec(
         select(user_profile).where(user_profile.user_id == account.id)
     ).first()
@@ -139,6 +146,8 @@ def update_profile(
         session.add(profile)
 
     updates = payload.model_dump(exclude_unset=True)
+    if payload.career is not None:
+        updates["career"] = payload.career.model_dump(mode="json")
     if "experience" in updates and payload.experience is not None:
         updates["experience"] = [item.model_dump() for item in payload.experience]
     for field, value in updates.items():
@@ -356,3 +365,37 @@ def delete_profile_document(
     session.delete(row)
     session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.put("/photo", response_model=ProfileResponse)
+async def upload_profile_photo(
+    file: UploadFile = File(...),
+    account: user = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    from base64 import b64encode
+    from io import BytesIO
+    from PIL import Image, ImageOps, UnidentifiedImageError
+
+    max_bytes = 5 * 1024 * 1024
+    raw = await file.read(max_bytes + 1)
+    await file.close()
+    if len(raw) > max_bytes:
+        raise HTTPException(status_code=413, detail="Choose a photo under 5 MB")
+
+    def normalize() -> str:
+        with Image.open(BytesIO(raw), formats=["JPEG", "PNG", "WEBP"]) as source:
+            if source.width * source.height > 20_000_000:
+                raise ValueError("Photo dimensions are too large")
+            photo = ImageOps.exif_transpose(source)
+            photo.thumbnail((512, 512))
+            output = BytesIO()
+            photo.convert("RGB").save(output, format="JPEG", quality=82, optimize=True)
+        return "data:image/jpeg;base64," + b64encode(output.getvalue()).decode("ascii")
+
+    try:
+        photo = await run_in_threadpool(normalize)
+    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as error:
+        raise HTTPException(status_code=422, detail="Choose a valid JPG, PNG or WebP photo") from error
+
+    return save_profile(ProfileUpdateRequest(profile_picture=photo), account, session)

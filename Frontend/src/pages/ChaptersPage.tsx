@@ -210,8 +210,8 @@ export default function ChaptersPage({ user }: { user: AppUser }) {
           </Link>
 
           <nav className="ml-auto hidden items-center gap-7 md:flex" aria-label="Primary navigation">
-            <Link to="/" className={navItem(false)}>
-              Home
+            <Link to="/app/dashboard" className={navItem(false)}>
+              Student portal
             </Link>
             {tabs.map(([id, label]) => (
               <button
@@ -227,7 +227,7 @@ export default function ChaptersPage({ user }: { user: AppUser }) {
           </nav>
 
           <Link
-            to="/app/profile"
+            to="/app/account"
             aria-label={`Open profile for ${accountName}`}
             title={`Open profile for ${accountName}`}
             className="ml-auto flex max-w-48 items-center gap-2 rounded-full border border-border bg-surface p-1 pr-3 text-sm font-bold text-primary md:ml-7"
@@ -256,8 +256,8 @@ export default function ChaptersPage({ user }: { user: AppUser }) {
         {menuOpen ? (
           <div className="border-t border-border bg-white px-4 py-4 md:hidden">
             <nav className="space-y-1">
-              <Link to="/" className="block w-full rounded-xl px-3 py-3 text-left text-sm font-medium hover:bg-secondary">
-                Home
+              <Link to="/app/dashboard" className="block w-full rounded-xl px-3 py-3 text-left text-sm font-medium hover:bg-secondary">
+                Student portal
               </Link>
               {tabs.map(([id, label]) => (
                 <button

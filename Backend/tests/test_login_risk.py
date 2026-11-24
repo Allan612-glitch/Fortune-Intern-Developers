@@ -343,6 +343,8 @@ class TestLoginRiskGates(unittest.TestCase):
             email="person@example.test",
             name="Test Person",
             is_admin=False,
+            staff_status=None,
+            staff_role=None,
             is_suspended=False,
             deletion_requested_at=None,
             password_hash="stored-hash",

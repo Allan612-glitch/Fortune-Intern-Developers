@@ -1,3 +1,4 @@
+import ThemeToggle from "../components/ThemeToggle";
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
@@ -166,7 +167,9 @@ export default function AuthPage({
             .join("")
             .toUpperCase()
             .slice(0, 2),
+          profilePhotoUrl: profile.profile_picture,
           isAdmin: account.is_admin,
+          staffPermissions: account.staff_permissions,
           verified: true,
           role: "student",
         },
@@ -234,7 +237,9 @@ export default function AuthPage({
           .join("")
           .toUpperCase()
           .slice(0, 2),
+        profilePhotoUrl: profile.profile_picture,
         isAdmin: account.is_admin,
+          staffPermissions: account.staff_permissions,
         verified: true,
         role: "student",
       });
@@ -338,6 +343,7 @@ export default function AuthPage({
 
   return (
     <div className="auth-scene min-h-screen bg-surface flex items-center justify-center">
+      <ThemeToggle showLabel className="absolute right-4 top-4 z-40 px-3" />
       {onBack && (
         <button
           onClick={onBack}
@@ -349,7 +355,7 @@ export default function AuthPage({
       <div className="w-full flex items-center justify-center px-4 py-20 sm:px-6">
         <div className="w-full max-w-md">
           <div className="text-center mb-6">
-            <p className="text-xs uppercase tracking-[0.18em] font-bold text-[#976a07]">
+            <p className="text-xs uppercase tracking-[0.18em] font-bold text-[var(--gold-text)]">
               Student Portal
             </p>
             <p className="text-sm text-muted-foreground mt-2">
@@ -382,7 +388,7 @@ export default function AuthPage({
               className="text-2xl font-bold mb-1"
               style={{
                 fontFamily: "Inter, sans-serif",
-                color: "#1a1f3a",
+                color: "var(--foreground)",
               }}
             >
               {mode === "login"
@@ -545,7 +551,7 @@ export default function AuthPage({
                   <div>
                     <label
                       className="block text-xs font-semibold mb-1.5"
-                      style={{ color: "#1a1f3a" }}
+                      style={{ color: "var(--foreground)" }}
                     >
                       University
                     </label>
@@ -793,7 +799,7 @@ function PasswordRecoveryModal({
       <div className="w-full max-w-sm bg-white rounded-3xl border border-border shadow-2xl p-6 slide-in">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[10px] uppercase tracking-widest font-bold text-[#976a07]">
+            <p className="text-[10px] uppercase tracking-widest font-bold text-[var(--gold-text)]">
               Student account
             </p>
             <h2
@@ -825,7 +831,7 @@ function PasswordRecoveryModal({
         </div>
         {sent ? (
           <div className="mt-5">
-            <div className="w-11 h-11 rounded-xl bg-accent/20 text-[#976a07] flex items-center justify-center">
+            <div className="w-11 h-11 rounded-xl bg-accent/20 text-[var(--gold-text)] flex items-center justify-center">
               <svg
                 className="w-5 h-5"
                 fill="none"
@@ -1040,7 +1046,7 @@ function OTPModal({
               maxLength={i === 0 ? 6 : 1}
               autoComplete={i === 0 ? "one-time-code" : "off"}
               inputMode="numeric"
-              style={{ borderColor: v ? "#2D3561" : undefined }}
+              style={{ borderColor: v ? "var(--ring)" : undefined }}
             />
           ))}
         </div>

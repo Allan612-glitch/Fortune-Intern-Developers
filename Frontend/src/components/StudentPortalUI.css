@@ -1,0 +1,64 @@
+.student-page {
+  width: 100%;
+  max-width: 76rem;
+  margin-inline: auto;
+  padding: .5rem .75rem 1rem;
+}
+.student-page > * + * { margin-top: .75rem; }
+.student-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .625rem;
+  padding: .75rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: .75rem;
+}
+.student-heading h1 { font-size: 1.25rem; font-weight: 700; line-height: 1.2; }
+.student-heading p { margin-top: .25rem; color: var(--muted-foreground); font-size: .8125rem; }
+.student-panel {
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: .75rem;
+}
+.student-panel > li + li { border-top: 1px solid var(--border); }
+.student-disclosure-trigger {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto 1rem;
+  align-items: center;
+  gap: .5rem;
+  min-height: 3rem;
+  padding: .625rem .75rem;
+  text-align: start;
+  font-size: .875rem;
+  border-radius: .5rem;
+}
+.student-disclosure-trigger:hover,
+.student-disclosure[data-open="true"] .student-disclosure-trigger { background: var(--secondary); }
+.student-disclosure-trigger > svg { grid-column: 3; color: var(--muted-foreground); }
+.student-disclosure[data-open="true"] .student-disclosure-trigger > svg { rotate: 180deg; }
+.student-disclosure-title { overflow-wrap: anywhere; }
+.student-disclosure-badge { max-width: 8rem; font-size: .75rem; line-height: 1.3; }
+.student-disclosure-body { padding: .75rem; border-top: 1px solid var(--border); overflow-wrap: anywhere; }
+.student-facts { display: grid; gap: .5rem; margin-block: .75rem; font-size: .875rem; }
+.student-facts dt { color: var(--muted-foreground); font-size: .75rem; }
+.student-facts dd { overflow-wrap: anywhere; font-weight: 500; }
+.student-portal .student-breadcrumb { max-width: 76rem; padding-inline: .75rem; }
+.student-portal main { min-width: 0; padding-bottom: calc(4.5rem + env(safe-area-inset-bottom)); }
+@media (min-width: 640px) {
+  .student-page { padding: .75rem 1.25rem 1.5rem; }
+  .student-heading, .student-disclosure-body, .student-disclosure-trigger { padding-inline: 1rem; }
+  .student-heading h1 { font-size: 1.5rem; }
+  .student-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .student-portal .student-breadcrumb { padding-inline: 1.25rem; }
+}
+@media (min-width: 1024px) {
+  .student-portal main { padding-bottom: 1rem; }
+}
+@media (max-width: 375px) {
+  .student-disclosure-badge { max-width: 5.75rem; }
+}

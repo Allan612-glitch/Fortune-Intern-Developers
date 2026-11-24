@@ -12,11 +12,12 @@ import CookieConsent from "./components/CookieConsent"
 import InstallBanner from "./components/InstallBanner"
 import LandingPage from "./pages/LandingPage"
 import Footer from "./components/layout/Footer"
-import { getCurrentUser, getProfile, logout } from "./services/auth"
+import { getCurrentUser, getProfile, logout, profilePhotoUpdatedEvent, staffInviteStorageKey } from "./services/auth"
 import { ApiError, getAccessToken, setAccessToken } from "./services/api"
 
 // Performance: these pages load only when a visitor opens them, so the
 // landing page no longer downloads the logged-in app, admin code, etc.
+const StaffInvitePage = lazy(() => import("./pages/StaffInvitePage"))
 const AuthPage = lazy(() => import("./pages/AuthPage"))
 const MainApp = lazy(() => import("./pages/MainApp"))
 const AIChatWidget = lazy(() => import("./components/AIChatWidget"))
@@ -35,20 +36,34 @@ export type AppUser = {
   school: string
   major: string
   avatar: string
+  profilePhotoUrl?: string | null
   isAdmin: boolean
+  staffPermissions?: string[]
   verified: boolean
   role: "student"
 }
 
 export type AppPage =
+  | "support"
+  | "documents"
+  | "placements"
   | "home"
   | "dashboard"
   | "applications"
   | "announcements"
   | "programs"
   | "apply"
-  | "profile"
+  | "more"
+  | "account"
   | "admin"
+
+function studentReturnTo(value: string | null) {
+  if (value === "/chapters.html" || value === "/chapters") return "/chapters"
+  if (!value || value.includes("\\")) return null
+  const path = value.split(/[?#]/, 1)[0]
+  return /^\/app(?:\/(?:home|dashboard|programs|applications|announcements|documents|placements|support|account|profile|more|apply))?\/?$/.test(path) ||
+    /^\/app\/(?:programs|apply)\/[\w-]+\/?$/.test(path) ? value : null
+}
 
 export default function App() {
   const navigate = useNavigate()
@@ -62,13 +77,15 @@ export default function App() {
 
   useEffect(() => {
     if (location.hash) {
-      const targetId = decodeURIComponent(location.hash.slice(1))
-      document.getElementById(targetId)?.scrollIntoView()
+      try {
+        document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView()
+      } catch { /* A malformed hash does not have a destination. */ }
       return
     }
+    if (location.state?.keepScroll) return
 
     window.scrollTo({ top: 0, left: 0, behavior: "instant" })
-  }, [location.pathname, location.hash])
+  }, [location.pathname, location.hash, location.state])
 
   useEffect(() => {
     const handleSessionExpired = () => {
@@ -84,12 +101,9 @@ export default function App() {
     pendingProgramIdRef.current ||
     pendingProgramId ||
     new URLSearchParams(location.search).get("program")
-  const authenticatedPath = selectedProgramId ? "/app/programs" : "/app/home"
   const requestedReturnTo = new URLSearchParams(location.search).get("returnTo")
-  const chaptersReturnTo =
-    requestedReturnTo === "/chapters" || requestedReturnTo === "/chapters.html"
-      ? "/chapters"
-      : null
+  const returnTo = studentReturnTo(requestedReturnTo)
+  const authenticatedPath = returnTo || (selectedProgramId ? "/app/programs" : "/app/dashboard")
   const programIdFromUrl = new URLSearchParams(location.search).get("program")
 
   useEffect(() => {
@@ -103,7 +117,7 @@ export default function App() {
   ) => {
     const search = new URLSearchParams()
     if (selectedProgramId) search.set("program", selectedProgramId)
-    if (chaptersReturnTo) search.set("returnTo", chaptersReturnTo)
+    if (returnTo) search.set("returnTo", returnTo)
     const searchString = search.toString()
     navigate({
       pathname: path,
@@ -141,7 +155,9 @@ export default function App() {
 
               .slice(0, 2),
 
+            profilePhotoUrl: profile.profile_picture,
             isAdmin: account.is_admin,
+            staffPermissions: account.staff_permissions,
 
             verified: true,
 
@@ -164,6 +180,15 @@ export default function App() {
     setAuthLoading(false)
   }, [])
 
+  useEffect(() => {
+    const updatePhoto = (event: Event) => {
+      const photo = (event as CustomEvent<string | null>).detail
+      setUser(current => current ? { ...current, profilePhotoUrl: photo } : current)
+    }
+    window.addEventListener(profilePhotoUpdatedEvent, updatePhoto)
+    return () => window.removeEventListener(profilePhotoUpdatedEvent, updatePhoto)
+  }, [])
+
   const handleRegister = (userData: AppUser) => {
     setPendingUser(userData)
     setShowOTP(true)
@@ -178,11 +203,7 @@ export default function App() {
       setUser({ ...pendingUser, verified: true })
       setPendingUser(null)
       setShowOTP(false)
-      if (chaptersReturnTo) {
-        window.location.assign(chaptersReturnTo)
-        return
-      }
-      navigate(selectedProgram ? "/app/programs" : "/app/home")
+      navigate(sessionStorage.getItem(staffInviteStorageKey) ? "/staff-invite" : returnTo || (selectedProgram ? "/app/programs" : "/app/dashboard"))
     }
   }
   const handleLogin = (userData: AppUser, programId?: string | null) => {
@@ -191,12 +212,8 @@ export default function App() {
       pendingProgramIdRef.current = selectedProgram
       setPendingProgramId(selectedProgram)
     }
-    if (chaptersReturnTo) {
-      window.location.assign(chaptersReturnTo)
-      return
-    }
     setUser(userData)
-    navigate(selectedProgram ? "/app/programs" : "/app/home")
+    navigate(sessionStorage.getItem(staffInviteStorageKey) ? "/staff-invite" : returnTo || (selectedProgram ? "/app/programs" : "/app/dashboard"))
   }
 
   const handleLogout = () => {
@@ -215,7 +232,7 @@ export default function App() {
   const authPage = (mode: "login" | "register") =>
     user ? (
       <Navigate
-        to={chaptersReturnTo ? "/chapters" : authenticatedPath}
+        to={sessionStorage.getItem(staffInviteStorageKey) ? "/staff-invite" : authenticatedPath}
         replace
       />
     ) : (
@@ -295,6 +312,7 @@ export default function App() {
             )
           }
         />
+        <Route path="/chapters.html" element={<Navigate to={`/chapters${location.search}${location.hash}`} replace />} />
         {/* TEMPORARY: sign-in-free preview of the chapters page. Dev server only
             (import.meta.env.DEV is false in a production build). Delete before launch. */}
         {import.meta.env.DEV && (
@@ -396,6 +414,7 @@ export default function App() {
             </>
           }
         />
+        <Route path="/staff-invite" element={<StaffInvitePage email={user?.email} onLogout={handleLogout} />} />
         <Route
           path="/app/*"
           element={
@@ -415,7 +434,7 @@ export default function App() {
                 </Suspense>
               </>
             ) : (
-              <Navigate to="/login" replace />
+              <Navigate to={`/login?returnTo=${encodeURIComponent(location.pathname + location.search + location.hash)}`} replace />
             )
           }
         />

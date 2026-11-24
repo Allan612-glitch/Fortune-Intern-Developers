@@ -1,6 +1,8 @@
+from Database.opportunity_schemas import CareerPreferences, OpportunityDetails, StudentUpdate
 
 from datetime import date
 from typing import Literal
+from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -62,6 +64,7 @@ class UserResponse(BaseModel):
     name: str
     email: str
     is_admin: bool = False
+    staff_permissions: list[str] = Field(default_factory=list)
 
 
 class FoundingMemberResponse(BaseModel):
@@ -168,6 +171,7 @@ class ProfileExperience(BaseModel):
 
 
 class ProfileResponse(BaseModel):
+    career: CareerPreferences = Field(default_factory=CareerPreferences)
     id: str
     user_id: str
     bio: str | None = None
@@ -191,6 +195,7 @@ class ProfileResponse(BaseModel):
 
 
 class ProfileUpdateRequest(BaseModel):
+    career: CareerPreferences | None = None
     bio: str | None = None
     profile_picture: str | None = None
     student_index_number: str | None = Field(default=None, max_length=100)
@@ -274,6 +279,8 @@ class ProgramResponse(BaseModel):
     skills: list[str]
     deadline: str | None = None
     cycle_closed_at: str | None = None
+    opportunity: OpportunityDetails = Field(default_factory=OpportunityDetails)
+    application_fee_minor: int = 400
 
 
 class AdminProgramCreateRequest(BaseModel):
@@ -288,6 +295,9 @@ class AdminProgramCreateRequest(BaseModel):
     deadline: str | None = None
 
 
+    opportunity: OpportunityDetails | None = None
+
+
 class AdminProgramUpdateRequest(AdminProgramCreateRequest):
     pass
 
@@ -300,6 +310,7 @@ class ApplicationResponse(BaseModel):
     status: str
     resume_filename: str | None = None
     documents_sent: bool = False
+    placement_files_available: bool = False
     supervisor_assessment_filename: str | None = None
     certificate_approved: bool = False
     internship_start_date: date | None = None
@@ -318,10 +329,36 @@ class ApplicationResponse(BaseModel):
     created_at: str
 
 
+    student_update: StudentUpdate | None = None
+    document_request: str | None = None
+    response_by: date | None = None
+    updated_at: str | None = None
+
+
+class AdminApplicationResponse(ApplicationResponse):
+    reviewer_id: UUID | None = None
+    reviewer_name: str | None = None
+    review_due_date: date | None = None
+    document_request: str | None = None
+
+
+class AdminReviewUpdate(BaseModel):
+    reviewer_id: UUID | None = None
+    review_due_date: date | None = None
+    document_request: str | None = Field(default=None, max_length=500)
+
+
+    student_update: StudentUpdate | None = None
+
+
 class ApplicationStatusHistoryResponse(BaseModel):
     previous_status: str | None = None
     new_status: str
     created_at: str
+
+
+class AdminApplicationStatusHistoryResponse(ApplicationStatusHistoryResponse):
+    reason: str | None = None
 
 
 class LetterVerificationResponse(BaseModel):
@@ -333,6 +370,7 @@ class LetterVerificationResponse(BaseModel):
 
 class AdminApplicationStatusRequest(BaseModel):
     status: str
+    reason: Literal["eligibility_confirmed", "placement_confirmed", "incomplete_information", "eligibility_requirements", "capacity", "other"] | None = None
 
 
 class AdminCertificateApprovalRequest(BaseModel):
@@ -341,9 +379,13 @@ class AdminCertificateApprovalRequest(BaseModel):
 
 
 class AnnouncementCreateRequest(BaseModel):
-    title: str
-    content: str
-    target_university: str | None = None
+    title: str = Field(min_length=1, max_length=180)
+    content: str = Field(min_length=1, max_length=8000)
+    target_university: str | None = Field(default=None, max_length=180)
+    category: Literal["payments", "refund", "system", "general"] = "general"
+    audience: Literal["all", "university", "students", "program", "application_status"] = "all"
+    target: str | None = Field(default=None, max_length=180)
+    student_ids: list[UUID] = Field(default_factory=list, max_length=50)
 
 
 class AnnouncementResponse(BaseModel):
@@ -352,6 +394,8 @@ class AnnouncementResponse(BaseModel):
     content: str
     created_at: str
     target_university: str | None = None
+    category: str = "general"
+    audience_label: str | None = None
 
 
 class DashboardApplication(BaseModel):

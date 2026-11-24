@@ -10,11 +10,21 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from Backend.api.routes.applications import router as application_router
 from Backend.api.routes.auth import router as auth_router
+from Backend.api.routes.student_opportunities import router as student_opportunity_router
 from Backend.api.routes.dashboard import router as dashboard_router
 from Backend.api.routes.profiles import router as profile_router
 from Backend.api.routes.programs import router as program_router
 from Backend.api.routes.notifications import router as notification_router
 from Backend.api.routes.admin import router as admin_router
+from Backend.api.routes.audit import router as audit_router
+from Backend.api.routes.admin_workflows import router as workflow_router
+from Backend.api.routes.placements import router as placement_router
+from Backend.api.routes.reconciliation import router as reconciliation_router
+from Backend.api.routes.followups import router as followup_router
+from Backend.api.routes.finance import router as finance_router
+from Backend.api.routes.support import router as support_router
+from Backend.api.routes.staff import router as staff_router
+from Backend.api.routes.admin_reports import router as admin_reports_router
 from Backend.api.routes.announcements import router as announcements_router
 from Backend.api.routes.contact import router as contact_router
 from Backend.api.routes.chapters import router as chapters_router
@@ -87,8 +97,18 @@ def create_app() -> FastAPI:
     application.include_router(application_router)
     application.include_router(program_router)
     application.include_router(dashboard_router)
+    application.include_router(student_opportunity_router)
     application.include_router(notification_router)
     application.include_router(admin_router)
+    application.include_router(audit_router)
+    application.include_router(staff_router)
+    application.include_router(workflow_router)
+    application.include_router(placement_router)
+    application.include_router(finance_router)
+    application.include_router(reconciliation_router)
+    application.include_router(followup_router)
+    application.include_router(support_router)
+    application.include_router(admin_reports_router)
     application.include_router(announcements_router)
     application.include_router(contact_router)
     application.include_router(chapters_router)
