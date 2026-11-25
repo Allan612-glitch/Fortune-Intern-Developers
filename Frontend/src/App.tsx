@@ -55,6 +55,7 @@ export type AppPage =
   | "apply"
   | "more"
   | "account"
+  | "profile"
   | "admin"
 
 function studentReturnTo(value: string | null) {
