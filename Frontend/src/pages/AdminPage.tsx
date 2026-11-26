@@ -469,7 +469,7 @@ export default function AdminPage({ tab, onNavigate, allowedSections, programDet
         description: programForm.description.trim(),
         company: programForm.company.trim(),
         category: programForm.category.trim(),
-        status: "open",
+        status: editingProgramId ? (programs.find((program) => program.id === editingProgramId)?.status ?? "open") : "open",
         location: programForm.location.trim(),
         duration: programForm.duration.trim(),
         skills: programForm.skills.split(",").map((skill) => skill.trim()).filter(Boolean),
@@ -1296,71 +1296,6 @@ export default function AdminPage({ tab, onNavigate, allowedSections, programDet
               </button>
             </div>
           </section>
-        </div>
-      )}
-      {certificateApplication && (
-        <div
-          className="fixed inset-0 z-[110] bg-black/55 backdrop-blur-sm p-4 flex items-center justify-center"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="certificate-approval-title"
-        >
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              void approveCertificate(certificateApplication, internshipStartDate, internshipEndDate);
-            }}
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 sm:p-7"
-          >
-            <h2 id="certificate-approval-title" className="font-bold text-lg">
-              Confirm internship dates
-            </h2>
-            <p className="text-sm text-muted-foreground mt-2">
-              Enter the start and end dates shown on the supervisor assessment you reviewed. These dates will appear on the certificate.
-            </p>
-            <div className="grid sm:grid-cols-2 gap-3 mt-5">
-              <label className="text-xs font-semibold">
-                Start date
-                <input
-                  type="date"
-                  required
-                  value={internshipStartDate}
-                  onChange={(event) => setInternshipStartDate(event.target.value)}
-                  max={internshipEndDate || undefined}
-                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm font-normal"
-                />
-              </label>
-              <label className="text-xs font-semibold">
-                End date
-                <input
-                  type="date"
-                  required
-                  value={internshipEndDate}
-                  onChange={(event) => setInternshipEndDate(event.target.value)}
-                  min={internshipStartDate || undefined}
-                  className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm font-normal"
-                />
-              </label>
-            </div>
-            {error && <p className="mt-4 text-sm text-red-600" role="alert">{error}</p>}
-            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-6">
-              <button
-                type="button"
-                onClick={() => setCertificateApplication(null)}
-                disabled={busyKey === `certificate-${certificateApplication.id}`}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-lg border border-border text-sm font-semibold disabled:opacity-60"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={busyKey === `certificate-${certificateApplication.id}`}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-emerald-700 text-white text-sm font-semibold hover:bg-emerald-800 disabled:opacity-60"
-              >
-                {busyKey === `certificate-${certificateApplication.id}` ? "Approving..." : "Approve and notify applicant"}
-              </button>
-            </div>
-          </form>
         </div>
       )}
       {certificateApplication && (

@@ -16,6 +16,8 @@ import heroImage from "../assets/Hero-campus.webp"
 import aboutImage from "../assets/About.webp"
 
 import Footer from "../components/layout/Footer"
+import FinConnectSection from "../components/landing/FinConnectSection"
+import FaqSection from "../components/landing/FaqSection"
 
 import { listPrograms, type Program } from "../services/platform"
 
@@ -29,6 +31,8 @@ const navLinks = [
   ["Opportunities", "internships"],
 
   ["About", "about-us"],
+
+  ["FAQs", "faqs"],
 
   ["Contact", "contact"],
 ]
@@ -269,64 +273,6 @@ const aboutUsSection = (
       </div>
       <div className="story-about-media" aria-hidden="true">
         <img src={aboutImage} alt="" width="843" height="1054" loading="lazy" decoding="async" />
-      </div>
-    </div>
-  </section>
-)
-
-const contactSection = (
-  <section id="contact" className="section-space bg-surface scroll-mt-[4.5rem]">
-    <div className="landing-container">
-      <SectionHeading
-        eyebrow="Customer service"
-        title="Talk to Us Today"
-        text="Our team in Accra responds within one to two working days."
-      />
-      <div className="grid md:grid-cols-3 gap-4 mt-10 max-w-4xl mx-auto">
-        {[
-          {
-            label: "Call us",
-            value: "020 031 3672",
-            href: "tel:+233200313672",
-            icon: "phone",
-            external: false,
-          },
-          {
-            label: "WhatsApp",
-            value: "025 703 8948",
-            href: "https://wa.me/233257038948",
-            icon: "whatsapp",
-            external: true,
-          },
-          {
-            label: "Email",
-            value: "fortuneintern.gh@gmail.com",
-            href: "mailto:fortuneintern.gh@gmail.com",
-            icon: "mail",
-            external: false,
-          },
-        ].map((item) => (
-          <a
-            key={item.label}
-            href={item.href}
-            {...(item.external
-              ? { target: "_blank", rel: "noopener noreferrer" }
-              : {})}
-            className="group flex items-center gap-4 rounded-2xl border border-border p-5 bg-white transition-colors hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-          >
-            <span className="w-11 h-11 flex-shrink-0 rounded-xl bg-secondary text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
-              <Icon name={item.icon} className="w-5 h-5" />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-sm font-semibold text-primary">
-                {item.label}
-              </span>
-              <span className="block text-sm text-muted-foreground break-words">
-                {item.value}
-              </span>
-            </span>
-          </a>
-        ))}
       </div>
     </div>
   </section>
@@ -688,20 +634,6 @@ export default function LandingPage({
 
         <section id="opportunities" className="section-space bg-white scroll-mt-[4.5rem]">
           <div className="landing-container">
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-              <SectionHeading
-                align="left"
-                eyebrow="Browse as a guest"
-                title="Explore Internship Opportunities"
-                text="Review current opportunities and their available details before deciding to apply."
-              />
-              <button
-                onClick={() => goTo("internships")}
-                className="text-sm hover:cursor-pointer transition-colors font-bold text-primary hover:underline underline-offset-4 flex items-center gap-2 whitespace-nowrap"
-              >
-                Search opportunities <Icon name="arrow" className="w-4 h-4" />
-              </button>
-            </div>
             <div className="mt-5 flex items-center justify-between gap-4">
               <p
                 className="text-sm text-muted-foreground"
@@ -804,6 +736,8 @@ export default function LandingPage({
 
         {aboutUsSection}
 
+        <FinConnectSection />
+
         <section className="px-4 sm:px-6 pb-16 bg-white">
           <div className="chapter-callout max-w-7xl mx-auto rounded-3xl px-6 py-12 sm:p-14 text-center">
             <p className="section-eyebrow">Find your FIN community</p>
@@ -824,7 +758,7 @@ export default function LandingPage({
           </div>
         </section>
 
-        {contactSection}
+        <FaqSection />
       </main>
 
       <Footer />
@@ -845,36 +779,6 @@ export default function LandingPage({
           }}
         />
       )}
-    </div>
-  )
-}
-
-function SectionHeading({
-  eyebrow,
-
-  title,
-
-  text,
-
-  align = "center",
-}: {
-  eyebrow: string
-
-  title: string
-
-  text: string
-
-  align?: "left" | "center"
-}) {
-  return (
-    <div
-      className={
-        align === "center" ? "text-center max-w-2xl mx-auto" : "max-w-2xl"
-      }
-    >
-      <p className="section-eyebrow">{eyebrow}</p>
-      <h2 className="section-title">{title}</h2>
-      <p className="section-copy">{text}</p>
     </div>
   )
 }
