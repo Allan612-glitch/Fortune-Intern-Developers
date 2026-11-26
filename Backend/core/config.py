@@ -24,6 +24,7 @@ class Settings:
     refresh_token_expire_days: int = 30
     password_reset_token_expire_minutes: int = 30
     frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:5500")
+    site_images_base_url: str = os.getenv("SITE_IMAGES_BASE_URL", "")
     cors_origins: list[str] = [
         origin.strip()
         for origin in os.getenv("CORS_ORIGINS", "http://localhost:5500,http://127.0.0.1:5500").split(",")

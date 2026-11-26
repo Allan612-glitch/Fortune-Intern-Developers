@@ -31,6 +31,7 @@ from Backend.api.routes.chapters import router as chapters_router
 from Backend.api.routes.founders import router as founders_router
 from Backend.api.routes.chapter_applications import router as chapter_applications_router
 from Backend.api.routes.maintenance import router as maintenance_router
+from Backend.api.routes.site_images import router as site_images_router
 from Backend.core.config import settings
 from Backend.database import engine
 
@@ -115,6 +116,7 @@ def create_app() -> FastAPI:
     application.include_router(founders_router)
     application.include_router(chapter_applications_router)
     application.include_router(maintenance_router)
+    application.include_router(site_images_router)
 
     @application.exception_handler(Exception)
     async def handle_unexpected_error(request: Request, _: Exception):

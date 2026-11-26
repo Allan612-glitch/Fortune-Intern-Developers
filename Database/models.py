@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, Date, DateTime, Float, ForeignKey, Index, Integer, JSON, String, Text, Uuid, text
+from sqlalchemy import Boolean, Column, Date, DateTime, Float, ForeignKey, Index, Integer, JSON, LargeBinary, String, Text, Uuid, text
 from sqlmodel import Field, SQLModel
 from uuid import UUID, uuid4
 from datetime import date, datetime,timezone
@@ -279,6 +279,15 @@ class password_reset(SQLModel, table=True):
     expires_at: datetime = Field(sa_column=Column("expires_at", DateTime(timezone=True), nullable=False))
     used: bool = Field(default=False, sa_column=Column("used", Boolean, nullable=False, default=False))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column("created_at", DateTime(timezone=True), nullable=False))
+
+class site_image(SQLModel, table=True):
+    __tablename__ = "site_images"
+    slot: str = Field(primary_key=True)
+    version: UUID = Field(default_factory=uuid4, nullable=False)
+    content_type: str = Field(nullable=False)
+    content: bytes = Field(sa_column=Column(LargeBinary, nullable=False))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column(DateTime(timezone=True), nullable=False))
+
 
 class founding_member(SQLModel, table=True):
     __tablename__ = "founding_members"
