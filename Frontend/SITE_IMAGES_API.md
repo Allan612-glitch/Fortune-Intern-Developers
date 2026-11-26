@@ -1,9 +1,16 @@
-# Site images API (what the frontend expects)
+# Site images API
+
+The backend implements these endpoints and serves image bytes from
+`SITE_IMAGES_BASE_URL` (the public HTTPS backend origin). Set this environment
+variable on the backend and apply the database migrations before using uploads.
+Images are stored in the database, up to 2 MiB each. Each replacement gets a
+new URL; old URLs stop working after replacement or deletion. The production
+backend host is already included in `Frontend/vercel.json`'s `img-src`. If
+using a different backend host, add that host to the frontend CSP.
 
 The admin dashboard now has an **Images** tab. Admins upload photos for the
-FIN CONNECT cards on the public landing page. The frontend is finished and
-waiting for these three endpoints. If you want different paths or field names,
-tell the frontend owner; only `src/services/siteImages.ts` needs to change.
+FIN CONNECT cards on the public landing page. If paths or field names change,
+the frontend service `src/services/siteImages.ts` must also be updated.
 
 Frontend files: `src/services/siteImages.ts`, `src/components/SiteImagesPanel.tsx`,
 `src/components/landing/FinConnectSection.tsx`.
@@ -58,8 +65,5 @@ signed/presigned URL on the frontend; the frontend uses `url` exactly as given.
 
 ## IMPORTANT: Content Security Policy
 
-`Frontend/vercel.json` currently allows images only from `'self' data: blob:
-https://images.unsplash.com`. The browser will BLOCK the uploaded photos until the
-host that serves them is added to `img-src`. Tell the frontend owner the final
-image host (for example the storage public domain, or the backend domain if the
-backend streams the file) so it can be added.
+The browser will block uploaded photos unless the backend host configured in
+`SITE_IMAGES_BASE_URL` is allowed by `img-src`.

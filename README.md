@@ -139,7 +139,12 @@ CORS_ORIGINS=http://localhost:5500,http://127.0.0.1:5500
 RESEND_API_KEY=re_your_resend_api_key
 RESEND_FROM_EMAIL=noreply@your-verified-domain.com
 TURNSTILE_SECRET_KEY=your_cloudflare_turnstile_secret_key
+SITE_IMAGES_BASE_URL=https://your-public-backend-domain
 ```
+
+Set `SITE_IMAGES_BASE_URL` to the public HTTPS backend origin for landing-page
+image uploads. Apply the latest migration and allow that origin in the
+frontend's `img-src` CSP; the production backend domain is already allowed.
 
 `JWT_SECRET` must be at least 32 characters. The backend will refuse to start with the example placeholder or an insecure short value.
 Account deletion disables access immediately and retains account data for 30 days before scheduled permanent deletion. Configure `CRON_SECRET` in the production deployment; the daily Vercel Cron job uses it to authenticate the cleanup endpoint. Run the database migration after deployment so the deletion schedule can be stored.
