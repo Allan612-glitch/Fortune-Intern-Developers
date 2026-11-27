@@ -738,7 +738,7 @@ export default function LandingPage({
 
         <FinConnectSection />
 
-        <section className="px-4 sm:px-6 pb-16 bg-white">
+        <section className="px-4 sm:px-6 pt-16 pb-16 bg-white">
           <div className="chapter-callout max-w-7xl mx-auto rounded-3xl px-6 py-12 sm:p-14 text-center">
             <p className="section-eyebrow">Find your FIN community</p>
             <h2 className="font-display text-3xl sm:text-5xl text-primary mt-3">
