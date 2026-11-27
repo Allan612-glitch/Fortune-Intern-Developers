@@ -20,6 +20,7 @@ import FinConnectSection from "../components/landing/FinConnectSection"
 import FaqSection from "../components/landing/FaqSection"
 
 import { listPrograms, type Program } from "../services/platform"
+import { applicationCheckoutEnabled } from "../services/applicationCheckout"
 
 interface LandingPageProps {
   onStudentPortal: (mode?: "login" | "register") => void
@@ -1067,7 +1068,7 @@ function OpportunityDetailsDialog({
             <li>
               A current CV is optional. Include an introduction letter where required.
             </li>
-            <li>Payment of the single processing fee at submission.</li>
+            <li>{applicationCheckoutEnabled ? "Payment of the single processing fee at submission." : "No application fee is currently collected at submission."}</li>
           </ul>
         </section>
         <div className="flex flex-col gap-3 sm:flex-row">

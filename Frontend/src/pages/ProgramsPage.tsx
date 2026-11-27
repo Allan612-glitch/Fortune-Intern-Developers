@@ -10,6 +10,7 @@ import AsyncState from "../components/AsyncState";
 import FilterMenu from "../components/FilterMenu";
 import { StudentDisclosure, StudentPage, studentField, studentLink } from "../components/StudentPortalUI";
 import { listPrograms, type Program } from "../services/platform";
+import { applicationCheckoutEnabled } from "../services/applicationCheckout";
 
 const programPath = (id: string) => "/app/programs/" + encodeURIComponent(id);
 const isOpen = (p: Program) => p.status === "open" && !p.cycle_closed_at && (!p.deadline || new Date(p.deadline).getTime() > Date.now());
@@ -141,7 +142,7 @@ export default function ProgramsPage({ user, initialSelectedProgramId, onInitial
           <div><dt>Opportunity</dt><dd>{opportunityKinds[details.kind]}</dd></div>
           <div><dt>Work mode</dt><dd>{details.work_mode ? workModes[details.work_mode] : "Not specified"}</dd></div>
           <div><dt>Compensation</dt><dd>{details.compensation === "unspecified" ? "Not specified" : details.compensation === "paid" ? "Paid" : "Unpaid"}{details.compensation_details ? " · " + details.compensation_details : ""}</dd></div>
-          <div><dt>Application fee</dt><dd>{program.application_fee_minor == null ? "Shown before submission" : money(program.application_fee_minor)}</dd></div>
+          <div><dt>Application fee</dt><dd>{applicationCheckoutEnabled ? program.application_fee_minor == null ? "Shown before submission" : money(program.application_fee_minor) : "Not currently collected"}</dd></div>
           <div><dt>Expected response</dt><dd>{details.response_by || "Not specified"}</dd></div>
           <div><dt>Institution letter</dt><dd>{details.requires_institution_letter === null ? "Not specified" : details.requires_institution_letter ? "Required" : "Not required"}</dd></div>
           {isRemote(program) && <div><dt>Remote applicants based in Ghana</dt><dd>{details.accepts_ghana_remote === null ? "Not specified" : details.accepts_ghana_remote ? "Accepted" : "Not accepted"}</dd></div>}

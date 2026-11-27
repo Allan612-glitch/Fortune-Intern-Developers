@@ -193,6 +193,8 @@ npm run dev
 
 Set `VITE_TURNSTILE_SITE_KEY` in `Frontend/.env.local` for signup and elevated-risk login challenges. Vite proxies `/api` requests to `http://127.0.0.1:8000` by default. Set `API_PROXY_TARGET` to change the development backend address. When the frontend and backend are hosted separately, set the frontend build variable `VITE_API_URL` to the backend origin and include the frontend origin in backend `CORS_ORIGINS`.
 
+Internship application payment is temporarily bypassed by default, including in production builds; applications are submitted to the backend without collecting a fee. To re-enable the existing Paystack checkout, set the frontend build variable `VITE_APPLICATION_CHECKOUT_ENABLED=true`, configure `VITE_PAYSTACK_PUBLIC_KEY` and the matching backend `PAYSTACK_SECRET_KEY`, then rebuild and deploy the frontend. The application API does not enforce or link payment verification, so this frontend setting is not a payment-enforcement mechanism.
+
 ## Admin Access
 
 Admin access is controlled by the `users.is_admin` database field.
@@ -260,7 +262,7 @@ node -e "const fs=require('fs'); const html=fs.readFileSync('Frontend/index.html
 
 ## Current Development Notes
 
-- Internship checkout uses Paystack, with server-side verification recorded in the finance ledger. Application creation is separate and does not enforce or link a verified payment; refund automation is not implemented.
+- Internship checkout is temporarily bypassed by default. When re-enabled, Paystack verification is recorded in the finance ledger; application creation remains separate and does not enforce or link a verified payment. Refund automation is not implemented.
 - Registration requires an email OTP sent through Resend before the account is created.
 - Mentor approval is required before a mentor appears in the public mentor directory.
 - Application status changes are controlled by admins.

@@ -42,7 +42,7 @@ export default function About() {
         <div className="mb-10">
           <h2 className="text-2xl font-extrabold text-foreground mb-4">Our commitments</h2>
           <ul className="list-disc pl-6 space-y-4 text-lg leading-relaxed">
-            <li>Transparent pricing with a single processing fee collected by a licensed payment provider.</li>
+            <li>Transparent pricing, with any processing fees clearly shown.</li>
             <li>Privacy by design under the Data Protection Act, 2012 (Act 843). We collect only what each service needs.</li>
           </ul>
         </div>

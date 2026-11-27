@@ -1,3 +1,5 @@
+import { applicationCheckoutEnabled } from "../../services/applicationCheckout"
+
 // Content for the FAQs section on the landing page.
 // Ported from the standalone FAQs.html. Only this file holds the text, so the
 // owner can edit wording without touching the layout code.
@@ -56,14 +58,18 @@ export const faqs: FaqItem[] = [
     cat: "start",
     q: "Does it cost anything to sign up or browse?",
     a: [
-      "No. Creating your profile, browsing opportunities and reading the Career Guide are completely free. You only pay when you submit an internship application, which is a one time fee of GH₵4, or when you register for a paid event like the Data Analytics Bootcamp.",
+      applicationCheckoutEnabled
+        ? "No. Creating your profile, browsing opportunities and reading the Career Guide are completely free. You only pay when you submit an internship application, which is a one time fee of GH₵4, or when you register for a paid event like the Data Analytics Bootcamp."
+        : "Creating your profile, browsing opportunities and submitting an internship application are currently free. Some events may have a separate fee.",
     ],
   },
   {
     cat: "start",
     q: "How do I apply, step by step?",
     a: [
-      "Sign in or create an account, open the internship you want and apply. Fill in your personal and academic details, give the host company's name and address (you can also suggest a partner company), upload your CV, then complete the GH₵4 payment through Paystack. Your file enters the recruitment pipeline immediately and you can track it on your dashboard through Applied, Review, Interview and Offer.",
+      applicationCheckoutEnabled
+        ? "Sign in or create an account, open the internship you want and apply. Fill in your personal and academic details, give the host company's name and address (you can also suggest a partner company), optionally upload your CV, then complete payment through Paystack. You can track your application on your dashboard."
+        : "Sign in or create an account, open the internship you want and apply. Fill in your personal and academic details, give the host company's name and address (you can also suggest a partner company), optionally upload your CV, then submit. No application fee is currently collected, and you can track your application on your dashboard.",
     ],
   },
 
@@ -72,7 +78,9 @@ export const faqs: FaqItem[] = [
     cat: "pay",
     q: "How much is the application fee and how do I pay it?",
     a: [
-      "The fee is a one time charge of GH₵4, paid securely through Paystack with card or mobile money. Your card details never touch our servers, and the fee covers verification, document generation and administration for your file.",
+      applicationCheckoutEnabled
+        ? "The fee is a one time charge of GH₵4, paid securely through Paystack with card or mobile money. Your card details never touch our servers, and the fee covers verification, document generation and administration for your file."
+        : "Application payment is temporarily bypassed. No fee is collected when you submit an internship application.",
     ],
   },
   {
@@ -99,7 +107,9 @@ export const faqs: FaqItem[] = [
     cat: "pay",
     q: "Why does FIN charge a fee at all?",
     a: [
-      "Because humans read every application and every document is verified before it carries our seal. The small fee keeps that quality honest, funds the desk that answers you, and lets us keep trainings, the Academy and most events free.",
+      applicationCheckoutEnabled
+        ? "Because humans read every application and every document is verified before it carries our seal. The small fee keeps that quality honest, funds the desk that answers you, and lets us keep trainings, the Academy and most events free."
+        : "Application payment is temporarily bypassed, so no fee is currently collected on submission.",
     ],
   },
   {
