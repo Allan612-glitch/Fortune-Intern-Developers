@@ -12,20 +12,22 @@ ALLOWED_UPLOAD_TYPES = {
 }
 
 
-async def read_validated_document(file: UploadFile, label: str) -> tuple[bytes, str, str]:
+async def read_validated_document(
+    file: UploadFile, label: str, *, pdf_only: bool = False, max_size: int = MAX_UPLOAD_SIZE
+) -> tuple[bytes, str, str]:
     filename = Path(file.filename or "").name
     extension = Path(filename).suffix.lower()
-    if not filename or extension not in ALLOWED_UPLOAD_TYPES:
+    if not filename or extension not in ALLOWED_UPLOAD_TYPES or (pdf_only and extension != ".pdf"):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail=f"{label} must be a PDF, DOC, or DOCX file",
+            detail=f"{label} must be a PDF file" if pdf_only else f"{label} must be a PDF, DOC, or DOCX file",
         )
 
-    content = await file.read(MAX_UPLOAD_SIZE + 1)
-    if len(content) > MAX_UPLOAD_SIZE:
+    content = await file.read(max_size + 1)
+    if len(content) > max_size:
         raise HTTPException(
             status_code=status.HTTP_413_CONTENT_TOO_LARGE,
-            detail=f"{label}s must be 10 MB or smaller",
+            detail=f"{label}s must be {max_size // (1024 * 1024)} MB or smaller",
         )
     if not content:
         raise HTTPException(

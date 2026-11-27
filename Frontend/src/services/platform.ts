@@ -108,11 +108,15 @@ export interface NotificationPreferences {
   opportunity_alerts: boolean;
 }
 
-export function listPrograms(search = "", category = "All", status = "open") {
+export function listPrograms(search = "", category = "All", status = "open", page?: { limit: number; offset: number }) {
   const params = new URLSearchParams();
   if (search.trim()) params.set("search", search.trim());
   if (category !== "All") params.set("category", category);
   if (status !== "open") params.set("status", status);
+  if (page) {
+    params.set("limit", String(page.limit));
+    params.set("offset", String(page.offset));
+  }
   const query = params.size ? `?${params}` : "";
   return apiRequest<Program[]>(`/api/programs${query}`);
 }

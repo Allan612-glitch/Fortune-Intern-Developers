@@ -3,6 +3,7 @@ import { emptyOpportunity } from "../services/opportunities";
 import { PanelDialog } from "./AdminWorkflowUI";
 import FilterMenu from "../components/FilterMenu";
 import ApplicationFollowUps from "../components/ApplicationFollowUps";
+import WorkStudyAdminPanel from "../components/WorkStudyAdminPanel";
 import { ApplicationReviewWork, ReviewQueueFilter, ReviewQueueSummary } from "../components/ApplicationReviewWork";
 import type { AdminApplication, ApplicationReview } from "../services/platform";
 import AccountManagementDialog from "./AccountManagementDialog";
@@ -943,6 +944,7 @@ export default function AdminPage({ tab, onNavigate, allowedSections, programDet
           )}
         </div>
       )}
+      {showsApplications && !programDetailId && <WorkStudyAdminPanel />}
 
       {/* Programs */}
       {tab === "programs" && !programDetailId && (

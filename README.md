@@ -11,6 +11,7 @@ The project includes a FastAPI backend, PostgreSQL database, Alembic migrations,
 - Ghana-focused university and company selections
 - Internship program catalog with search and filtering
 - Application submission with resume upload
+- Work-and-study registration for signed-in students, with account-owned submission history
 - Application history and status tracking
 - Frontend-only GHS 4 application fee display
 - Personalized user dashboard
@@ -164,6 +165,8 @@ Create the PostgreSQL database and user referenced by `DATABASE_URL`, then run m
 
 The migrations create the users, profiles, programs, applications, notifications, mentors, mentorships, announcements, founding-member registry, shared chapter directory, chapter applications, admin role, moderation flags, and registration-verification support tables. The latest migrations add lookup indexes, preserve existing application rows even if they contain active duplicates, and add login-failure counts to the rate-limit buckets. The privacy-retention migration adds consent records, date of birth on applications, program-cycle closure timestamps, and persistent letter references. The founding-member migration seeds the public founding team registry; only administrators can create, edit, or delete its records. The chapters page reads chapters and executive boards from the shared database directory rather than browser storage; when the directory is empty, the first administrator visit initializes it from the starter directory. Only administrators can save directory changes. Chapter position applications are tied to the signed-in account; only administrators can review submissions and update their status. The daily scheduled maintenance job closes programs when their application deadline has passed. Application records and uploaded resumes are purged three years after that recorded closure; consent logs are retained until three years after account deletion. Application submissions are checked in the API and serialized with a PostgreSQL transaction-scoped advisory lock so concurrent API requests cannot create a duplicate for the same user and program. The profile index remains unique and the migration stops if duplicate profiles need manual review.
 
+Work-and-study registrations are stored by `POST /api/work-study` and can be retrieved by the signed-in student at `GET /api/work-study/mine`; `GET /api/work-study` and the read-only registration list in the staff Applications workspace are limited to staff with applications access. Registration records and their consent timestamps are deleted with the account. No payment is collected for work-and-study registration. Internship application CVs are optional; when supplied, the application API accepts only PDF files of at most 5 MiB. Profile documents and supervisor assessments retain their existing upload rules.
+
 ## Run the Backend
 
 Always run Uvicorn from the project root so the `Backend` package can be imported correctly:
@@ -257,11 +260,10 @@ node -e "const fs=require('fs'); const html=fs.readFileSync('Frontend/index.html
 
 ## Current Development Notes
 
-- Payment is currently a frontend-only GHS 4 display. No payment provider or backend payment processing is connected.
+- Internship checkout uses Paystack, with server-side verification recorded in the finance ledger. Application creation is separate and does not enforce or link a verified payment; refund automation is not implemented.
 - Registration requires an email OTP sent through Resend before the account is created.
 - Mentor approval is required before a mentor appears in the public mentor directory.
 - Application status changes are controlled by admins.
-- Payment is reported by the frontend's Paystack callback; the backend does not verify or persist payment status.
-- Profile experience, skills, CGPA, documents, and the application applicant/academic details are persisted by the backend. Profile name/username editing and payment verification are not supported.
+- Profile experience, skills, CGPA, documents, and the application applicant/academic details are persisted by the backend. Profile name/username editing is not supported.
 - Profile and resume documents use the configured Cloudflare R2 bucket. Document uploads require the R2 settings in `.env`.
 - Email verification codes can be resent for pending registrations, with a 60-second cooldown.

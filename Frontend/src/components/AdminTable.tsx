@@ -5,6 +5,7 @@ import "./AdminTable.css";
 const mobileSummary: Record<string, [heading: string, meta?: string]> = {
   Users: ["User", "Status"],
   Applications: ["Applicant", "Status"],
+  "Work and study registrations": ["Applicant", "Role"],
   Programs: ["Program", "Status"],
   "Published announcements": ["Announcement", "Category"],
   "Staff accounts": ["Name", "Status"],
