@@ -9,6 +9,7 @@ import { StudentPage, studentField, studentLink } from "../components/StudentPor
 import { listPrograms, type Program } from "../services/platform";
 import { applicationCheckoutEnabled } from "../services/applicationCheckout";
 import { money } from "./AdminWorkflowUI";
+import "./ApplyPage.css";
 
 const programPageSize = 25;
 
@@ -56,19 +57,27 @@ export default function ApplyPage({ user }: { user: AppUser }) {
 
   return <StudentPage title="Application portals" description="Choose a portal to explore your next step with FIN."
     action={<Link className={studentLink} to="/app/applications">My applications</Link>}>
-    <div className="grid items-start gap-3 lg:grid-cols-2">
+    <div className="apply-portal-grid">
       <section className="student-panel overflow-hidden" aria-labelledby="internship-title">
-        <div className="border-b border-border bg-secondary/60 p-4 sm:p-5">
-          <p className="text-xs font-bold uppercase tracking-wider text-primary">Portal A</p>
-          <h2 id="internship-title" className="mt-1 text-lg font-bold">Internship application</h2>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Apply for an internship or attachment with an open program.</p>
-          <ol className="mt-4 list-decimal space-y-1.5 pl-5 text-sm">
+        <div className="apply-portal-intro apply-portal-internship">
+          <p className="apply-portal-label">Portal A</p>
+          <h2 id="internship-title">Internship Application Portal</h2>
+          <p className="apply-portal-description">Explore internships and attachments with organisations across a range of industries.</p>
+          <details className="apply-portal-details">
+          <summary>How it works and features</summary>
+          <ol className="apply-portal-steps">
             <li>Choose an open program and provide your personal, academic and placement details.</li>
             <li>{applicationCheckoutEnabled ? "Optionally attach a PDF CV, then pay securely through Paystack and submit." : "Optionally attach a PDF CV and submit. No application fee is currently collected."}</li>
             <li>Keep your application reference and track progress in My applications.</li>
+            <li>Access your placement documents and submit your supervisor assessment when available.</li>
           </ol>
+          <ul className="apply-portal-tags" aria-label="Internship features">
+            <li>Internships and attachments</li><li>Application tracking</li><li>Assessment form</li>
+            <li>Certificate on completion</li>
+          </ul>
+          </details>
         </div>
-        <div className="p-4 sm:p-5">
+        <div className="p-3">
           <button type="button" aria-expanded={internshipOpen} aria-controls="internship-portal"
             onClick={() => { setSelectedId(""); setInternshipOpen(open => !open); }}
             className="flex min-h-12 w-full items-center justify-between gap-3 rounded-lg border border-border px-3 text-left text-sm font-semibold text-primary hover:bg-secondary">
@@ -129,13 +138,25 @@ export default function ApplyPage({ user }: { user: AppUser }) {
       </section>
 
       <section id="work-study-portal-section" className="student-panel overflow-hidden" aria-labelledby="work-study-title">
-        <div className="border-b border-border bg-secondary/60 p-4 sm:p-5">
-          <p className="text-xs font-bold uppercase tracking-wider text-primary">Portal B</p>
-          <h2 id="work-study-title" className="mt-1 text-lg font-bold">Work and study registration</h2>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Explore flexible roles that can fit around your studies.</p>
-          <p className="mt-4 text-sm">Possible roles include tutoring, event logistics, departmental support, insurance, retail and administration.</p>
+        <div className="apply-portal-intro apply-portal-work-study">
+          <p className="apply-portal-label">Portal B</p>
+          <h2 id="work-study-title">Work and Study Registration Portal</h2>
+          <p className="apply-portal-description">Explore flexible earning roles on and near campus that can fit around your studies.</p>
+          <details className="apply-portal-details">
+          <summary>How it works and roles</summary>
+          <ol className="apply-portal-steps">
+            <li>Open the form and register your availability and preferred role type.</li>
+            <li>No payment is collected with this registration. Contact the FIN desk for current fee information.</li>
+            <li>Share your institution and chapter details to help the team understand where you are based.</li>
+            <li>Keep your registration reference for follow-up with the FIN desk.</li>
+          </ol>
+          <ul className="apply-portal-tags" aria-label="Possible work and study roles">
+            <li>Tutoring</li><li>Event logistics</li><li>Departmental support</li>
+            <li>Insurance sales</li><li>Retail and admin</li>
+          </ul>
+          </details>
         </div>
-        <div className="p-4 sm:p-5">
+        <div className="p-3">
           <button type="button" aria-expanded={workStudyOpen} aria-controls="work-study-portal"
             onClick={() => { setWorkStudyOpen(open => !open); setWorkStudyStarted(true); }}
             className="flex min-h-12 w-full items-center justify-between gap-3 rounded-lg border border-border px-3 text-left text-sm font-semibold text-primary hover:bg-secondary">
