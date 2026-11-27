@@ -10,6 +10,7 @@ interface BottomNavProps {
 const compactLabels: Record<string, string> = {
   profile: "Profile",
 };
+const compactOrder = ["home", "dashboard", "apply", "programs", "profile"];
 
 export default function BottomNav({ page, onNavigate }: BottomNavProps) {
   const navigate = useNavigate();
@@ -31,7 +32,8 @@ export default function BottomNav({ page, onNavigate }: BottomNavProps) {
     >
       <div className="flex w-full items-center">
         {navItems
-          .filter((item) => ["home", "dashboard", "apply", "programs", "profile"].includes(item.id))
+          .filter((item) => compactOrder.includes(item.id))
+          .sort((a, b) => compactOrder.indexOf(a.id) - compactOrder.indexOf(b.id))
           .map((item) => {
             const active = page === item.id;
             return (

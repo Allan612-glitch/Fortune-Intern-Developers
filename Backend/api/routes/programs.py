@@ -39,7 +39,7 @@ def list_programs(
 	offset: int = Query(default=0, ge=0),
 	session: Session = Depends(get_session),
 ):
-	statement = select(program).order_by(program.created_at.desc())
+	statement = select(program).order_by(program.created_at.desc(), program.id.desc())
 	if status != "all":
 		statement = statement.where(program.status == status)
 		if status == "open":

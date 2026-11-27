@@ -162,6 +162,23 @@ class application(SQLModel, table=True):
         ),
     )
 
+class work_study_registration(SQLModel, table=True):
+    __tablename__ = "work_study_registrations"
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    user_id: UUID = Field(sa_column=Column(Uuid, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True))
+    applicant_name: str = Field(sa_column=Column(String(200), nullable=False))
+    email: str = Field(sa_column=Column(String(254), nullable=False))
+    date_of_birth: date = Field(sa_column=Column(Date, nullable=False))
+    phone: str = Field(sa_column=Column(String(40), nullable=False))
+    institution: str = Field(sa_column=Column(String(200), nullable=False))
+    chapter: str = Field(sa_column=Column(String(200), nullable=False))
+    preferred_role: str = Field(sa_column=Column(String(32), nullable=False))
+    availability: str = Field(sa_column=Column(String(32), nullable=False))
+    weekly_hours: str = Field(sa_column=Column(String(16), nullable=False))
+    consented_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column=Column(DateTime(timezone=True), nullable=False))
+
+
 class education_record(SQLModel, table=True):
     __tablename__ = "education_records"
     id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)

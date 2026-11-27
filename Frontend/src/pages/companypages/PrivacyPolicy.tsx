@@ -19,7 +19,8 @@ export default function PrivacyPolicy() {
           <ul className="list-disc pl-6 space-y-3 text-lg leading-relaxed">
             <li><span className="font-bold text-foreground">Account data:</span> name, email address, username and password.</li>
             <li><span className="font-bold text-foreground">Application data:</span> institution, index number, date of birth, course or programme, year of study, phone number, host company, company address and uploaded documents such as resumes, introduction letters and certificates.</li>
-            <li><span className="font-bold text-foreground">Payment data:</span> application fees are paid through Paystack. Card and mobile money credentials are entered on the Paystack checkout and never reach our servers. Our servers do not store your payment details or Paystack transaction reference. Paystack receives your email address, name and index number with the payment and keeps its own payment records.</li>
+            <li><span className="font-bold text-foreground">Work and study registration data:</span> name, account email, date of birth, phone number, institution, chapter, preferred role, availability, weekly hours and consent timestamp.</li>
+            <li><span className="font-bold text-foreground">Payment data:</span> application fees are paid through Paystack. Card and mobile money credentials are entered on the Paystack checkout and never reach our servers. Our finance ledger stores the verified transaction reference, amount, payment date and account details. Paystack receives your email address, name and index number with the payment and keeps its own payment records.</li>
             <li><span className="font-bold text-foreground">Support data:</span> messages you send us and your recorded cookie consent choice.</li>
           </ul>
         </div>
@@ -95,6 +96,7 @@ export default function PrivacyPolicy() {
           <p className="text-lg leading-relaxed">
             Application records, including any resume attached to an application, are deleted three years after the internship cycle they belong to closes, or earlier if your account is deleted. Documents you upload to your profile are deleted when your account is deleted. Records showing that you accepted the Terms and Conditions and this Privacy Policy are kept while your account is open and for three years after it is closed. When you ask us to delete your account, your account and files are permanently deleted after a 30-day waiting period. We do not store card or mobile money details. Payment records are held by Paystack under its own retention rules.
           </p>
+          <p className="text-lg leading-relaxed mt-4">Work and study registrations are retained until your account is deleted.</p>
         </div>
 
         <div className="mb-10">

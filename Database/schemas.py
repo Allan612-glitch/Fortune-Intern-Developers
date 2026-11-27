@@ -1,6 +1,6 @@
 from Database.opportunity_schemas import CareerPreferences, OpportunityDetails, StudentUpdate
 
-from datetime import date
+from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
@@ -116,6 +116,41 @@ class ChapterApplicationResponse(BaseModel):
     updated_at: str
     applicant_name: str | None = None
     applicant_email: str | None = None
+
+
+class WorkStudyCreateRequest(BaseModel):
+    applicant_name: str = Field(min_length=1, max_length=200)
+    date_of_birth: str = Field(min_length=1, max_length=10)
+    phone: str = Field(min_length=1, max_length=40)
+    institution: str = Field(min_length=1, max_length=200)
+    chapter: str = Field(min_length=1, max_length=200)
+    preferred_role: Literal["tutoring", "event_logistics", "departmental_support", "insurance", "retail", "administration"]
+    availability: Literal["evenings", "weekends", "evenings_weekends", "weekdays"]
+    weekly_hours: Literal["4-6", "7-10", "11-15"]
+    consent: Literal[True]
+
+    @field_validator("applicant_name", "phone", "institution", "chapter")
+    @classmethod
+    def require_non_whitespace(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("This field cannot be blank")
+        return value
+
+
+class WorkStudyResponse(BaseModel):
+    id: UUID
+    applicant_name: str
+    email: str
+    phone: str
+    institution: str
+    chapter: str
+    preferred_role: str
+    availability: str
+    weekly_hours: str
+    consented_at: datetime
+    created_at: datetime
+    requires_minor_review: bool
 
 
 class ChapterRecord(BaseModel):

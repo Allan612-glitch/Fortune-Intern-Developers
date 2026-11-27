@@ -2,7 +2,7 @@ import io
 import json
 import unittest
 from datetime import date, datetime, timedelta, timezone
-from uuid import uuid4
+from uuid import UUID, uuid4
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -52,6 +52,18 @@ class AdminWorkflowTests(unittest.TestCase):
         })
         self.assertEqual(response.status_code, 201, response.text)
         return response.json()
+
+    def test_public_program_pages_keep_matching_timestamps_in_stable_order(self):
+        timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        with Session(self.engine) as session:
+            session.add_all([program(id=UUID(int=value), name=f"Test program {value}", created_at=timestamp)
+                             for value in (1, 2, 3)])
+            session.commit()
+        first = self.client.get("/api/programs", params={"limit": 2, "offset": 0})
+        second = self.client.get("/api/programs", params={"limit": 2, "offset": 2})
+        self.assertEqual(first.status_code, 200, first.text)
+        self.assertEqual(second.status_code, 200, second.text)
+        self.assertEqual([row["id"] for row in first.json() + second.json()], [str(UUID(int=n)) for n in (3, 2, 1)])
 
     def test_student_opportunity_profile_and_drafts(self):
         deadline = datetime.now(timezone.utc) + timedelta(days=2)

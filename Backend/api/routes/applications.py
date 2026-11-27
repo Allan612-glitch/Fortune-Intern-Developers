@@ -795,7 +795,9 @@ async def create_application(
 
     resume_document = None
     if resume is not None and getattr(resume, "filename", None):
-        resume_document = await read_validated_document(resume, "Resume")
+        resume_document = await read_validated_document(
+            resume, "Resume", pdf_only=True, max_size=5 * 1024 * 1024
+        )
 
     response, receipt = await run_in_threadpool(
         _save_application,
