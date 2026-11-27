@@ -90,7 +90,7 @@ class application(SQLModel, table=True):
     __tablename__ = "applications"
     id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
     user_id: UUID = Field(sa_column=Column("user_id", Uuid, ForeignKey("users.id"), nullable=False, index=True))
-    program_id: UUID = Field(sa_column=Column("program_id", Uuid, ForeignKey("programs.id"), nullable=False))
+    program_id: UUID | None = Field(default=None, sa_column=Column("program_id", Uuid, ForeignKey("programs.id"), nullable=True))
     status: str = Field(sa_column=Column("status", String, nullable=False))
     resume_filename: str | None = Field(default=None, sa_column=Column("resume_filename", String))
     resume_path: str | None = Field(default=None, sa_column=Column("resume_path", String))
@@ -159,6 +159,27 @@ class application(SQLModel, table=True):
                 "status NOT IN ('accepted', 'rejected', 'withdrawn') "
                 "AND applicant_name IS NULL AND student_index_number IS NULL"
             ),
+        ),
+        Index(
+            "uq_applications_active_personal_applicant",
+            "user_id", text("lower(trim(host_company_name))"), "applicant_name",
+            unique=True,
+            postgresql_where=text("program_id IS NULL AND status NOT IN ('accepted', 'rejected', 'withdrawn') AND applicant_name IS NOT NULL"),
+            sqlite_where=text("program_id IS NULL AND status NOT IN ('accepted', 'rejected', 'withdrawn') AND applicant_name IS NOT NULL"),
+        ),
+        Index(
+            "uq_applications_active_personal_index",
+            "user_id", text("lower(trim(host_company_name))"), "student_index_number",
+            unique=True,
+            postgresql_where=text("program_id IS NULL AND status NOT IN ('accepted', 'rejected', 'withdrawn') AND student_index_number IS NOT NULL"),
+            sqlite_where=text("program_id IS NULL AND status NOT IN ('accepted', 'rejected', 'withdrawn') AND student_index_number IS NOT NULL"),
+        ),
+        Index(
+            "uq_applications_active_personal_without_identity",
+            "user_id", text("lower(trim(host_company_name))"),
+            unique=True,
+            postgresql_where=text("program_id IS NULL AND status NOT IN ('accepted', 'rejected', 'withdrawn') AND applicant_name IS NULL AND student_index_number IS NULL"),
+            sqlite_where=text("program_id IS NULL AND status NOT IN ('accepted', 'rejected', 'withdrawn') AND applicant_name IS NULL AND student_index_number IS NULL"),
         ),
     )
 

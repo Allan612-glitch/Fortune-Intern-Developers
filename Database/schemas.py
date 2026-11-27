@@ -340,7 +340,7 @@ class AdminProgramUpdateRequest(AdminProgramCreateRequest):
 class ApplicationResponse(BaseModel):
     id: str
     user_id: str
-    program_id: str
+    program_id: str | None
     program_name: str
     status: str
     resume_filename: str | None = None

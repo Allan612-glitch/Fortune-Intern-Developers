@@ -20,7 +20,7 @@ export interface Program {
 export interface BackendApplication {
   id: string;
   user_id: string;
-  program_id: string;
+  program_id: string | null;
   program_name: string;
   status: string;
   resume_filename: string | null;
