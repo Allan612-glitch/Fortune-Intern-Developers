@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { AppUser, AppPage } from "../App";
 import AsyncState from "../components/AsyncState";
 import { getDashboard, listPrograms, type DashboardSummary, type Program } from "../services/platform";
+import { applicationCheckoutEnabled } from "../services/applicationCheckout";
 
 const stats = [
   { value: "20+", label: "Current openings" },
@@ -147,7 +148,7 @@ export default function HomePage({ user, setPage }: HomePageProps) {
             </div>
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-7 text-xs text-white/70">
               <span className="flex items-center gap-2">
-                <CheckIcon /> Secure Paystack checkout
+                <CheckIcon /> {applicationCheckoutEnabled ? "Secure Paystack checkout" : "No application fee currently collected"}
               </span>
             </div>
           </div>
@@ -248,8 +249,8 @@ export default function HomePage({ user, setPage }: HomePageProps) {
             </h2>
           </div>
           <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-            One connected workflow brings discovery, payment, application
-            support, outreach, and tracking together.
+            One connected workflow brings discovery, application support,
+            outreach, and tracking together.
           </p>
         </div>
 
@@ -293,8 +294,9 @@ export default function HomePage({ user, setPage }: HomePageProps) {
               Four clear steps. One stronger application.
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed mt-4">
-              You stay in control. Payment is only requested after your form is
-              complete, and submission happens only after Paystack confirms it.
+              {applicationCheckoutEnabled
+                ? "You stay in control. Payment is requested after your form is complete, and submission follows Paystack verification."
+                : "You stay in control. Complete your form and submit without paying an application fee for now."}
             </p>
             <button
               onClick={() => setPage("programs")}

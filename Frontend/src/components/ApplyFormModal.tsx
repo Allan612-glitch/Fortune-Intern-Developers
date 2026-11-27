@@ -10,6 +10,7 @@ import {
   type ApplicationRecord,
 } from "../services/applications";
 import { submitApplication } from "../services/platform";
+import { applicationCheckoutEnabled } from "../services/applicationCheckout";
 import { Link } from "react-router-dom";
 import logo from "../assets/attach1.png";
 
@@ -292,7 +293,7 @@ export default function ApplyFormModal({
       return "Please confirm your consent before submitting.";
     return "";
   };
-  const complete = async (paymentReference: string) => {
+  const complete = async (paymentReference = "") => {
     setLoading(true);
     const now = new Date().toISOString();
     const payload = new FormData();
@@ -311,8 +312,7 @@ export default function ApplyFormModal({
     payload.append("year_of_study", form.year);
     payload.append("suggested_company", form.suggestedCompany);
     try {
-      const demo = paymentReference.startsWith("FIN-DEMO");
-      const payment = !demo ? await apiRequest<{ id: string; test_mode: boolean }>("/api/finance/verify", {
+      const payment = paymentReference ? await apiRequest<{ id: string; test_mode: boolean }>("/api/finance/verify", {
         method: "POST", body: JSON.stringify({ reference: paymentReference }),
       }) : null;
       const result = await submitApplication(payload);
@@ -324,9 +324,7 @@ export default function ApplyFormModal({
         company: form.companyName,
         applicantName: `${form.firstName} ${form.lastName}`.trim(),
         studentIndexNumber: form.indexNumber.trim(),
-        paymentStatus: paymentReference.startsWith("FIN-DEMO")
-          ? "Payment Pending" as const
-          : "Payment Successful" as const,
+        paymentStatus: payment ? "Payment Successful" as const : "Payment Pending" as const,
         paymentReference,
         applicationDate: now,
         lastUpdated: now,
@@ -351,6 +349,7 @@ export default function ApplyFormModal({
     setError("");
     setLoading(true);
     if (retryPayment) { await complete(retryPayment); return; }
+    if (!applicationCheckoutEnabled) { await complete(); return; }
     const win = window as PaystackWindow;
     const publicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
     if (publicKey && (await loadPaystack()) && win.PaystackPop) {
@@ -392,10 +391,6 @@ export default function ApplyFormModal({
       }).openIframe();
       return;
     }
-    if (!inline && !publicKey && import.meta.env.DEV) {
-      void complete(`FIN-DEMO-${Date.now().toString().slice(-6)}`);
-      return;
-    }
     setLoading(false);
     setError("Checkout is unavailable. Please try again later.");
   };
@@ -424,14 +419,14 @@ export default function ApplyFormModal({
           <p className="text-sm font-semibold text-amber-700 mt-3">
             {submittedApplication?.paymentStatus === "Payment Successful"
               ? testPayment ? "Your test payment was verified." : "Your payment was verified."
-              : "Payment was not confirmed; the application was submitted in demo mode."}
+              : "Your application was submitted without payment. No fee was collected."}
           </p>
           <div className="bg-secondary rounded-xl p-4 mt-5 text-left space-y-2 text-sm">
             <p>Opportunity: {prefilledRole || "Internship Application"}</p>
             <p>Reference: {reference}</p>
             <p>Submission date: {new Date().toLocaleDateString()}</p>
             <p>Application status: {submittedApplication?.status || "Submitted"}</p>
-            <p>Payment status: {submittedApplication?.paymentStatus}</p>
+            <p>Payment status: {submittedApplication?.paymentStatus === "Payment Successful" ? submittedApplication.paymentStatus : "Not collected"}</p>
           </div>
           {receiptId && <div className="mt-3 flex flex-wrap justify-center gap-3 text-sm">
             <button type="button" className="min-h-11 font-semibold text-primary underline" onClick={() => {
@@ -477,8 +472,7 @@ export default function ApplyFormModal({
               Internship / Attachment Application Form
             </h2>
             <p className="text-muted-foreground text-xs mt-1">
-              Fill in your details then pay to submit. Fields marked * are
-              required.
+              Fill in your details to submit. Fields marked * are required.
             </p>
           </div>
           {!inline && <button
@@ -674,10 +668,10 @@ export default function ApplyFormModal({
           </Section>
           <Section title="Payment & Submission">
             <p className="text-sm font-semibold">
-              {inline ? "Application fee confirmed at checkout" : "One-time application fee: GH₵4"}
+              {retryPayment ? "Resume your paid submission" : applicationCheckoutEnabled ? "Application fee confirmed at checkout" : "Payment temporarily bypassed"}
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Paid on submission through Paystack.
+              {retryPayment ? "Your existing payment will be verified before submission." : applicationCheckoutEnabled ? "Paid on submission through Paystack." : "No application fee will be collected when you submit."}
             </p>
             {inline && <label className="flex items-start gap-2 text-sm sm:col-span-2">
               <input type="checkbox" className="mt-1" checked={consent} onChange={event => setConsent(event.target.checked)} />
@@ -698,7 +692,7 @@ export default function ApplyFormModal({
             >
               {loading
                 ? "Processing submission…"
-                : retryPayment ? "Resume paid submission" : inline ? "Continue to payment and submit →" : "Pay and Submit · GH₵4 →"}
+                : retryPayment ? "Resume paid submission" : applicationCheckoutEnabled ? "Continue to payment and submit →" : "Submit application →"}
             </button>
           </Section>
         </form>

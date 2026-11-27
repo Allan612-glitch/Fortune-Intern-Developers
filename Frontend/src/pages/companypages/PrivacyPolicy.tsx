@@ -20,7 +20,7 @@ export default function PrivacyPolicy() {
             <li><span className="font-bold text-foreground">Account data:</span> name, email address, username and password.</li>
             <li><span className="font-bold text-foreground">Application data:</span> institution, index number, date of birth, course or programme, year of study, phone number, host company, company address and uploaded documents such as resumes, introduction letters and certificates.</li>
             <li><span className="font-bold text-foreground">Work and study registration data:</span> name, account email, date of birth, phone number, institution, chapter, preferred role, availability, weekly hours and consent timestamp.</li>
-            <li><span className="font-bold text-foreground">Payment data:</span> application fees are paid through Paystack. Card and mobile money credentials are entered on the Paystack checkout and never reach our servers. Our finance ledger stores the verified transaction reference, amount, payment date and account details. Paystack receives your email address, name and index number with the payment and keeps its own payment records.</li>
+            <li><span className="font-bold text-foreground">Payment data:</span> when fees are paid, Paystack processes the payment. Card and mobile money credentials are entered on the Paystack checkout and never reach our servers. Our finance ledger stores the verified transaction reference, amount, payment date and account details. Paystack receives your email address, name and index number with the payment and keeps its own payment records.</li>
             <li><span className="font-bold text-foreground">Support data:</span> messages you send us and your recorded cookie consent choice.</li>
           </ul>
         </div>
@@ -41,7 +41,7 @@ export default function PrivacyPolicy() {
         <div className="mb-10">
           <h2 className="text-2xl font-extrabold text-foreground mb-4">3. Data Sharing</h2>
           <p className="text-lg leading-relaxed">
-            We share your professional profile with the host organisations you apply to, with Paystack for payment processing and with our hosting provider for service delivery. We disclose data to regulators or courts only where legally required. We do not sell personal data.
+            We share your professional profile with the host organisations you apply to, payment details with Paystack when processing a payment, and data with our hosting provider for service delivery. We disclose data to regulators or courts only where legally required. We do not sell personal data.
           </p>
           <p className="text-lg leading-relaxed mt-4">
             <span className="font-bold text-foreground">Letter verification:</span> our verification page is public so that employers and institutions can check a letter. Anyone who enters a valid letter reference there can see that the letter is genuine, the full name of the person it was issued to and the company that person applied for. We show no other details.

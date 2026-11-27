@@ -29,6 +29,7 @@ Read this file fully before doing anything. Update it before you finish.
 
 ## Handoff log (newest first, keep last ~10 entries)
 Format: DATE – agent – what changed (files) – what is unfinished – commands the user must run
+- 2026-11-27 – Copilot – temporarily bypassed internship checkout for all users while retaining paid-submission retries and an opt-in Paystack checkout build flag – payment enforcement is still not implemented in the application API – to re-enable checkout set `VITE_APPLICATION_CHECKOUT_ENABLED=true`, configure matching Paystack keys, and rebuild and deploy the frontend
 - 2026-11-27 – Copilot – made the Apply portal's alternative partner organisation optional (src/components/ApplyFormModal.tsx) – nothing unfinished – no command required
 - 2026-11-27 – Copilot – reordered the mobile bottom navigation to Home, Dashboard, Apply, Programs, Profile (src/components/layout/BottomNav.tsx) – nothing unfinished – no command required
 - 2026-11-27 – Copilot – added searchable, paginated Apply programs, client-side PDF signature checks, and a read-only staff Applications panel for work-and-study registrations – work-and-study payment and review statuses are not implemented; internship payment verification remains separate from application creation – run `.\.venv\Scripts\python.exe -m alembic -c Database\alembic.ini upgrade head` from the repository root before using the registration endpoint

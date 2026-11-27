@@ -1,3 +1,5 @@
+import { applicationCheckoutEnabled } from "../../services/applicationCheckout";
+
 export default function Terms() {
   return (
     <div className="min-h-screen bg-surface flex flex-col pt-6 pb-14 px-4 sm:pt-12 sm:pb-24 sm:px-8 md:px-16 lg:px-32">
@@ -31,7 +33,9 @@ export default function Terms() {
         <div className="mb-6 sm:mb-10">
           <h2 className="text-2xl font-extrabold text-foreground mb-4">3. Applications, Fees and Refunds</h2>
           <p className="text-sm leading-relaxed sm:text-lg">
-            Submission requires the single processing fee shown at checkout, paid through Paystack. Official documents are released only after verified payment. The processing fee covers verification, document generation and placement administration. It is not refundable once processing begins, except as described below.
+            {applicationCheckoutEnabled
+              ? "Submission requires the single processing fee shown at checkout, paid through Paystack. Official documents are released only after verified payment. The processing fee covers verification, document generation and placement administration. It is not refundable once processing begins, except as described below."
+              : "Application payment is temporarily bypassed and no application fee is collected on submission. When a processing fee is charged, it covers verification, document generation and placement administration and is not refundable once processing begins, except as described below."}
           </p>
           <h3 id="refunds" className="text-xl font-bold text-foreground mt-6 mb-3">Refund eligibility</h3>
           <p className="text-sm leading-relaxed sm:text-lg mb-3">We issue refunds for:</p>

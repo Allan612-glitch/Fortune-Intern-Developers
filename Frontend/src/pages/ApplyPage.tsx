@@ -7,6 +7,7 @@ import AsyncState from "../components/AsyncState";
 import WorkStudyRegistration from "../components/WorkStudyRegistration";
 import { StudentPage, studentField, studentLink } from "../components/StudentPortalUI";
 import { listPrograms, type Program } from "../services/platform";
+import { applicationCheckoutEnabled } from "../services/applicationCheckout";
 import { money } from "./AdminWorkflowUI";
 
 const programPageSize = 25;
@@ -51,7 +52,7 @@ export default function ApplyPage({ user }: { user: AppUser }) {
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Apply for an internship or attachment with an open program.</p>
           <ol className="mt-4 list-decimal space-y-1.5 pl-5 text-sm">
             <li>Choose an open program and provide your personal, academic and placement details.</li>
-            <li>Optionally attach a PDF CV, then pay securely through Paystack and submit.</li>
+            <li>{applicationCheckoutEnabled ? "Optionally attach a PDF CV, then pay securely through Paystack and submit." : "Optionally attach a PDF CV and submit. No application fee is currently collected."}</li>
             <li>Keep your application reference and track progress in My applications.</li>
           </ol>
         </div>
@@ -97,7 +98,7 @@ export default function ApplyPage({ user }: { user: AppUser }) {
             {activeProgram && <>
               <div className="rounded-lg bg-secondary p-3 text-sm">
                 <p className="font-semibold">{activeProgram.name}{activeProgram.company ? ` · ${activeProgram.company}` : ""}</p>
-                <p className="mt-1 text-muted-foreground">Application fee: {activeProgram.application_fee_minor == null ? "confirmed at checkout" : money(activeProgram.application_fee_minor)}.</p>
+                <p className="mt-1 text-muted-foreground">Application fee: {applicationCheckoutEnabled ? activeProgram.application_fee_minor == null ? "confirmed at checkout" : money(activeProgram.application_fee_minor) : "not currently collected"}.</p>
                 <button type="button" disabled={formBusy} className="mt-2 font-semibold text-primary underline disabled:opacity-50"
                   onClick={() => { if (window.confirm("Choose another program? Unsaved form details will be lost.")) setActiveProgram(null); }}>Choose another program</button>
               </div>
