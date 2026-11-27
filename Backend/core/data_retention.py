@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import delete
-from sqlmodel import Session, select
+from sqlmodel import Session, or_, select
 
 from Backend.core import storage
 from Backend.core.audit import permit_retention_delete
@@ -99,9 +99,12 @@ def purge_expired_retained_data(
     )
     expired_applications = session.exec(
         select(application)
-        .join(program, application.program_id == program.id)
-        .where(program.cycle_closed_at <= application_cutoff)
-        .order_by(program.cycle_closed_at, application.created_at)
+        .outerjoin(program, application.program_id == program.id)
+        .where(or_(
+            program.cycle_closed_at <= application_cutoff,
+            (application.program_id.is_(None)) & (application.created_at <= application_cutoff),
+        ))
+        .order_by(application.created_at, application.id)
         .limit(limit)
     ).all()
 

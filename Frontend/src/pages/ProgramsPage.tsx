@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Bell, Bookmark, CalendarDays, Clock3, MapPin, Search, ShieldCheck, X } from "lucide-react";
 import { Link, useMatch, useNavigate, useSearchParams } from "react-router-dom";
 import type { AppUser } from "../App";
-import ApplyFormModal from "../components/ApplyFormModal";
 import AsyncState from "../components/AsyncState";
 import FilterMenu from "../components/FilterMenu";
 import { StudentPage, studentField, studentLink } from "../components/StudentPortalUI";
@@ -66,9 +65,7 @@ export default function ProgramsPage({ user, initialSelectedProgramId, onInitial
   const remoteOnly = params.get("remote") === "1";
   const verifiedOnly = params.get("verified") === "1";
   const paramsRef = useRef(params);
-  const applyingRef = useRef(params.get("apply") === "1");
   paramsRef.current = params;
-  applyingRef.current = params.get("apply") === "1";
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -160,14 +157,18 @@ export default function ProgramsPage({ user, initialSelectedProgramId, onInitial
   const selected = listedProgram || savedProgram || detail?.data;
   const selectedDetails = selected?.opportunity || emptyOpportunity;
   const selectedMatchReasons = selected && profile ? matchReasons(selected, profile) : [];
-  const applying = params.get("apply") === "1" && selected && isOpen(selected) && !isWorkStudyProgram(selected) ? selected : null;
+  useEffect(() => {
+    if (selected && params.get("apply") === "1" && isOpen(selected) && !isWorkStudyProgram(selected)) {
+      navigate(`/app/apply?${new URLSearchParams({ portal: "internship", program: selected.id })}`, { replace: true });
+    }
+  }, [navigate, params, selected]);
 
   useEffect(() => {
     if (!selectedId) return;
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !applyingRef.current) closeDetails();
+      if (event.key === "Escape") closeDetails();
     };
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKeyDown);
@@ -228,13 +229,6 @@ export default function ProgramsPage({ user, initialSelectedProgramId, onInitial
     const next = new URLSearchParams(paramsRef.current);
     next.delete("apply");
     navigate({ pathname: "/app/programs", search: next.toString() }, { preventScrollReset: true, state: { keepScroll: true } });
-  }
-
-  function filterApply(open: boolean) {
-    const next = new URLSearchParams(params);
-    if (open) next.set("apply", "1");
-    else next.delete("apply");
-    setParams(next, { replace: true, preventScrollReset: true });
   }
 
   const listingTabs = [
@@ -431,10 +425,10 @@ export default function ProgramsPage({ user, initialSelectedProgramId, onInitial
           {isOpen(selected) && isWorkStudyProgram(selected) && <Link className={studentLink} to="/app/apply?portal=work-study">
             Open Work and Study registration <ArrowRight className="size-4" aria-hidden="true" />
           </Link>}
-          {isOpen(selected) && !isWorkStudyProgram(selected) && <button type="button" className={studentLink} onClick={() => filterApply(true)}>
+          {isOpen(selected) && !isWorkStudyProgram(selected) && <Link className={studentLink} to={`/app/apply?${new URLSearchParams({ portal: "internship", program: selected.id })}`}>
             {savedById.get(selected.id)?.has_draft ? "Resume draft" : "Apply for this program"}
             <ArrowRight className="size-4" aria-hidden="true" />
-          </button>}
+          </Link>}
           {(isOpen(selected) || savedById.get(selected.id)?.saved) && <button type="button" className={button}
             disabled={!savedResult?.data || saving} onClick={() => void save(selected)}>
             <Bookmark className="size-4" aria-hidden="true" />
@@ -460,8 +454,5 @@ export default function ProgramsPage({ user, initialSelectedProgramId, onInitial
     </div>}
 
     {selected && params.get("apply") === "1" && !isOpen(selected) && <p role="status" className="program-error">Applications for this program are closed.</p>}
-    {applying && <ApplyFormModal prefilledCompany={applying.company} prefilledRole={applying.name} programId={applying.id}
-      ownerEmail={user.email} ownerName={user.name} onClose={() => { filterApply(false); setSavedRevision(old => old + 1); }}
-      onViewApplications={() => navigate("/app/applications")} onBackDashboard={() => navigate("/app/programs")} />}
   </StudentPage>;
 }

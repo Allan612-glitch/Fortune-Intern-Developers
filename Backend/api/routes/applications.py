@@ -9,7 +9,7 @@ from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Request, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import Response
-from sqlalchemy import text
+from sqlalchemy import func, text
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, or_, select
 
@@ -57,12 +57,13 @@ class _ApplicationFields:
     year_of_study: str
     suggested_company: str
     date_of_birth: str
+    personal_internship: bool = False
 
 
 @dataclass(frozen=True)
 class _PreparedApplication:
     fields: _ApplicationFields
-    program_id: UUID
+    program_id: UUID | None
     program_name: str
     program_company: str | None
     date_of_birth: date
@@ -86,7 +87,7 @@ def serialize_application(row: application, program_name: str, opportunity: dict
     return ApplicationResponse(
         id=str(row.id),
         user_id=str(row.user_id),
-        program_id=str(row.program_id),
+        program_id=str(row.program_id) if row.program_id else None,
         program_name=program_name,
         status=row.status,
         student_update=row.student_update if row.status in {"submitted", "applied", "review", "under_review", "shortlisted", "interview"} else None,
@@ -161,7 +162,7 @@ def _program_cycle_is_closed(row: program) -> bool:
 def _lock_application_identity(
     session: Session,
     user_id: UUID,
-    program_id: UUID,
+    program_id: UUID | str,
 ) -> None:
     if session.get_bind().dialect.name != "postgresql":
         return
@@ -209,6 +210,11 @@ def _prepare_application(
             ),
         )
 
+    if fields.personal_internship and (fields.program_id or fields.program_name):
+        raise HTTPException(status_code=422, detail="A personal internship cannot specify a program")
+    if fields.personal_internship and not fields.company_name.strip():
+        raise HTTPException(status_code=422, detail="Company name is required for a personal internship")
+
     program_record = None
     if fields.program_id:
         try:
@@ -226,24 +232,22 @@ def _prepare_application(
             detail="Applications for this internship cycle are closed",
         )
 
-    program_name = (
-        program_record.name if program_record else fields.program_name
-    ).strip()
+    program_name = ("Personal internship" if fields.personal_internship else
+        program_record.name if program_record else fields.program_name).strip()
     if not program_name:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Program name is required",
         )
 
-    program_record = program_record or session.exec(
-        select(program).where(program.name == program_name)
-    ).first()
-    if not program_record:
+    if not fields.personal_internship and not program_record:
+        program_record = session.exec(select(program).where(program.name == program_name)).first()
+    if not fields.personal_internship and not program_record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Program not found",
         )
-    if _program_cycle_is_closed(program_record):
+    if program_record and _program_cycle_is_closed(program_record):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Applications for this internship cycle are closed",
@@ -256,7 +260,9 @@ def _prepare_application(
         else "submitted"
     )
 
-    _lock_application_identity(session, account.id, program_record.id)
+    company = fields.company_name.strip()
+    identity = program_record.id if program_record else f"personal:{company.lower()}"
+    _lock_application_identity(session, account.id, identity)
     duplicate_identity = application.applicant_name == fields.applicant_name
     if fields.student_index_number:
         duplicate_identity = or_(
@@ -271,7 +277,8 @@ def _prepare_application(
     existing_application = session.exec(
         select(application).where(
             application.user_id == account.id,
-            application.program_id == program_record.id,
+            application.program_id == program_record.id if program_record else application.program_id.is_(None),
+            True if program_record else func.lower(func.trim(application.host_company_name)) == company.lower(),
             application.status.notin_(("accepted", "rejected", "withdrawn")),
             duplicate_identity,
         )
@@ -279,14 +286,15 @@ def _prepare_application(
     if existing_application:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="You already have an active application for this program",
+            detail=("You already have an active application for this program" if program_record
+                    else "You already have an active application for this company"),
         )
 
     return _PreparedApplication(
         fields=fields,
-        program_id=program_record.id,
+        program_id=program_record.id if program_record else None,
         program_name=program_name,
-        program_company=program_record.company,
+        program_company=program_record.company if program_record else None,
         date_of_birth=date_of_birth,
         initial_status=initial_status,
     )
@@ -337,7 +345,7 @@ def _save_application(
         date_of_birth=prepared.date_of_birth,
     )
     session.exec(select(user.id).where(user.id == account.id).with_for_update()).one()
-    saved = session.get(StudentOpportunity, (account.id, new_application.program_id))
+    saved = session.get(StudentOpportunity, (account.id, new_application.program_id)) if new_application.program_id else None
     if saved is not None:
         if saved.saved:
             saved.draft = None
@@ -376,7 +384,7 @@ def _save_application(
         object_id=str(new_application.id),
         workflow_id=str(new_application.id),
         changes={"status": (None, new_application.status)},
-        context={"program_id": str(new_application.program_id)},
+        context={"program_id": str(new_application.program_id)} if new_application.program_id else None,
     )
     try:
         session.commit()
@@ -391,7 +399,8 @@ def _save_application(
                 ) from error
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="You already have an active application for this program",
+            detail=("You already have an active application for this program" if prepared.program_id
+                    else "You already have an active application for this company"),
         ) from error
     session.refresh(new_application)
 
@@ -433,7 +442,7 @@ def list_applications(
     ).all()
 
     return [
-        serialize_application(row, program_name or "Program", opportunity)
+        serialize_application(row, program_name or ("Personal internship" if row.program_id is None else "Program"), opportunity)
         for row, program_name, opportunity in rows
     ]
 
@@ -472,7 +481,7 @@ def verify_letter(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Applicant not found",
         )
-    program_record = session.get(program, row.program_id)
+    program_record = session.get(program, row.program_id) if row.program_id else None
     return LetterVerificationResponse(
         valid=True,
         reference=reference,
@@ -497,8 +506,8 @@ def get_application(
         row = None
     if not row or row.user_id != account.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found")
-    program_record = session.get(program, row.program_id)
-    return serialize_application(row, program_record.name if program_record else "Program", program_record.opportunity if program_record else None)
+    program_record = session.get(program, row.program_id) if row.program_id else None
+    return serialize_application(row, program_record.name if program_record else "Personal internship", program_record.opportunity if program_record else None)
 
 
 @router.get(
@@ -586,8 +595,8 @@ async def upload_supervisor_assessment(
     )
     session.commit()
     session.refresh(row)
-    program_record = session.get(program, row.program_id)
-    return serialize_application(row, program_record.name if program_record else "Program", program_record.opportunity if program_record else None)
+    program_record = session.get(program, row.program_id) if row.program_id else None
+    return serialize_application(row, program_record.name if program_record else "Personal internship", program_record.opportunity if program_record else None)
 
 
 @router.get("/{application_id}/placement-document/{kind}")
@@ -600,7 +609,7 @@ def download_placement_document(application_id: UUID, kind: Literal["recommendat
     if row.status != "accepted" or not row.letter_reference:
         raise HTTPException(409, "Placement documents have not been issued")
     content = (documents.build_assessment_form_pdf() if kind == "assessment" else
-               documents.build_application_recommendation(row, account, session.get(program, row.program_id), row.letter_reference))
+               documents.build_application_recommendation(row, account, session.get(program, row.program_id) if row.program_id else None, row.letter_reference))
     record_audit_event(session, request, actor_id=account.id, action="application.placement_document.download",
                        object_type="application", object_id=str(row.id), context={"format": kind})
     session.commit()
@@ -628,7 +637,7 @@ def download_completion_certificate(
     ):
         raise HTTPException(status_code=403, detail="The completion certificate is not available")
 
-    program_record = session.get(program, row.program_id)
+    program_record = session.get(program, row.program_id) if row.program_id else None
     company = (
         row.host_company_name
         or (program_record.company if program_record else None)
@@ -766,6 +775,7 @@ async def create_application(
             year_of_study=str(form.get("year_of_study") or "").strip(),
             suggested_company=str(form.get("suggested_company") or "").strip(),
             date_of_birth=str(form.get("date_of_birth") or ""),
+            personal_internship=str(form.get("personal_internship") or "").lower() == "true",
         )
         resume = form.get("resume")
     else:
@@ -784,6 +794,7 @@ async def create_application(
             year_of_study=str(payload.get("year_of_study") or "").strip(),
             suggested_company=str(payload.get("suggested_company") or "").strip(),
             date_of_birth=str(payload.get("date_of_birth") or ""),
+            personal_internship=payload.get("personal_internship") is True,
         )
 
     prepared = await run_in_threadpool(

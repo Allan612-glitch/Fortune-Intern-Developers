@@ -47,7 +47,7 @@ def export_report(
         title, headers = "Applications", ["Applicant", "Program", "Institution", "Contact", "Status", "Submitted"]
         records = session.exec(select(application, program.name).outerjoin(program, program.id == application.program_id)
                                .where(application.id.in_(ids)).order_by(application.created_at.desc(), application.id)).all()
-        rows = [[app.applicant_name, name, app.applicant_institution, app.applicant_contact,
+        rows = [[app.applicant_name, name or ("Personal internship" if app.program_id is None else "Program"), app.applicant_institution, app.applicant_contact,
                  app.status.replace("_", " ").title(), date_label(app.created_at)] for app, name in records]
     elif table == "programs":
         title, headers = "Programs", ["Program", "Company", "Category", "Location", "Duration", "Deadline", "Status"]

@@ -343,6 +343,7 @@ def list_admin_applications(
 	if term:
 		statement = statement.where(or_(
 			application.applicant_name.icontains(term, autoescape=True),
+			application.host_company_name.icontains(term, autoescape=True),
 			program.name.icontains(term, autoescape=True),
 			application.student_index_number.icontains(term, autoescape=True),
 			application.letter_reference.icontains(term, autoescape=True),
@@ -358,8 +359,8 @@ def list_admin_applications(
 	for row, program_name, reviewer_name in rows:
 		results.append(AdminApplicationResponse(
 			**review_details(row, reviewer_name),
-			id=str(row.id), user_id=str(row.user_id), program_id=str(row.program_id),
-			program_name=program_name or "Program",
+			id=str(row.id), user_id=str(row.user_id), program_id=str(row.program_id) if row.program_id else None,
+			program_name=program_name or ("Personal internship" if row.program_id is None else "Program"),
 			status=row.status, resume_filename=row.resume_filename,
 			documents_sent=row.documents_sent,
 			supervisor_assessment_filename=getattr(row, "supervisor_assessment_filename", None),
@@ -444,7 +445,7 @@ def export_admin_applications(
 			row.applicant_institution or "",
 			row.applicant_course or "",
 			row.year_of_study or "",
-			program_name or "Program",
+			program_name or ("Personal internship" if row.program_id is None else "Program"),
 			row.host_company_name or "",
 			row.host_company_address or "",
 			row.suggested_company or "",
@@ -593,8 +594,8 @@ def approve_application_certificate(
 	applicant = session.get(user, row.user_id)
 	if not applicant:
 		raise HTTPException(status_code=404, detail="Applicant not found")
-	program_record = session.get(program, row.program_id)
-	program_name = program_record.name if program_record else "Program"
+	program_record = session.get(program, row.program_id) if row.program_id else None
+	program_name = program_record.name if program_record else "Personal internship"
 	try:
 		send_certificate_available_email(
 			to_email=applicant.email,
@@ -633,7 +634,7 @@ def approve_application_certificate(
 	session.commit()
 	session.refresh(row)
 	return ApplicationResponse(
-		id=str(row.id), user_id=str(row.user_id), program_id=str(row.program_id),
+		id=str(row.id), user_id=str(row.user_id), program_id=str(row.program_id) if row.program_id else None,
 		program_name=program_name, status=row.status, resume_filename=row.resume_filename,
 		documents_sent=row.documents_sent,
 		supervisor_assessment_filename=getattr(row, "supervisor_assessment_filename", None),
@@ -797,8 +798,8 @@ def update_application_status(application_id: str, payload: AdminApplicationStat
 				read=False,
 			))
 		session.commit()
-	program_record = session.get(program, row.program_id)
-	program_name = program_record.name if program_record else "Program"
+	program_record = session.get(program, row.program_id) if row.program_id else None
+	program_name = program_record.name if program_record else "Personal internship"
 
 	if requested_status == "accepted" and not row.documents_sent:
 		retry_id = None
@@ -847,7 +848,7 @@ def update_application_status(application_id: str, payload: AdminApplicationStat
 		session.commit()
 
 	return ApplicationResponse(
-		id=str(row.id), user_id=str(row.user_id), program_id=str(row.program_id),
+		id=str(row.id), user_id=str(row.user_id), program_id=str(row.program_id) if row.program_id else None,
 		program_name=program_name, status=row.status, resume_filename=row.resume_filename,
 		documents_sent=row.documents_sent,
 		supervisor_assessment_filename=getattr(row, "supervisor_assessment_filename", None),

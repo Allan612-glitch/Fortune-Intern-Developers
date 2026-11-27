@@ -443,6 +443,29 @@ class TestApplicationAgeAndLetterVerification(unittest.TestCase):
 
 
 class TestRetentionEnforcement(unittest.TestCase):
+    def test_personal_applications_are_purged_three_years_after_submission(self):
+        engine = create_engine("sqlite://")
+        SQLModel.metadata.create_all(engine)
+        now = datetime(2026, 11, 4, tzinfo=timezone.utc)
+        cutoff = add_calendar_years(now, -3)
+        with Session(engine) as session:
+            applicant = user(name="Test Applicant", email="applicant@example.test")
+            session.add(applicant)
+            session.commit()
+            expired = application(user_id=applicant.id, status="submitted", host_company_name="First",
+                                  created_at=cutoff, resume_path="resumes/personal.pdf")
+            recent = application(user_id=applicant.id, status="submitted", host_company_name="Second",
+                                 created_at=cutoff + timedelta(seconds=1))
+            session.add_all([expired, recent])
+            session.commit()
+            expired_id, recent_id = expired.id, recent.id
+            with patch("Backend.core.data_retention.storage.delete_file") as delete_file:
+                self.assertEqual(purge_expired_retained_data(session, now=now), (1, 0))
+            delete_file.assert_called_once_with("resumes/personal.pdf")
+            self.assertIsNone(session.get(application, expired_id))
+            self.assertIsNotNone(session.get(application, recent_id))
+        engine.dispose()
+
     def test_closed_program_applications_and_expired_consent_logs_are_purged(self):
         engine = create_engine("sqlite://")
         SQLModel.metadata.create_all(engine)

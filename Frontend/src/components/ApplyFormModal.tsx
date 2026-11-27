@@ -134,6 +134,7 @@ export default function ApplyFormModal({
   const [error, setError] = useState("");
   const [consent, setConsent] = useState(false);
   const resumeInputId = useId();
+  const companyListId = useId();
   const [resume, setResume] = useState<File | null>(null);
   const [cvError, setCvError] = useState("");
   const edited = useRef(new Set<string>());
@@ -298,7 +299,7 @@ export default function ApplyFormModal({
     const now = new Date().toISOString();
     const payload = new FormData();
     if (programId) payload.append("program_id", programId);
-    else payload.append("program_name", prefilledRole || "Internship Application");
+    else payload.append("personal_internship", "true");
     if (resume) payload.append("resume", resume);
     payload.append("university", form.institution === "Other" ? form.otherInstitution : form.institution);
     payload.append("course", form.program);
@@ -596,23 +597,25 @@ export default function ApplyFormModal({
           <Section title="Company / Placement Information">
             <Field
               label="Company / Organization Name *"
-              instruction="Enter the host company or organization name where you are doing your internship."
+              instruction="Enter a company or choose from the suggestions."
               value={form.companyName}
               onChange={(value) => set("companyName", value)}
+              list={companyListId}
             />
+            <datalist id={companyListId}>{allPartners.map(company => <option key={company} value={company} />)}</datalist>
             <Field
               label="Company Address *"
               instruction="Enter the complete postal or physical address of the host company."
               value={form.companyAddress}
               onChange={(value) => set("companyAddress", value)}
             />
-            <Select
+            {programId && <Select
               label={inline ? "Alternative partner organisation (optional)" : "Suggested Company for Internship"}
               instruction={inline ? "Optionally suggest another partner organisation as a backup to your selected program." : "Select your preferred company placement from the partner list."}
               value={form.suggestedCompany}
               onChange={(value) => set("suggestedCompany", value)}
               options={allPartners}
-            />
+            />}
             <div>
               <label htmlFor={resumeInputId} className="text-sm font-semibold">
                 Upload CV (optional)
@@ -725,6 +728,7 @@ function Field({
   type = "text",
   inputMode,
   readOnly,
+  list,
 }: {
   label: string;
   instruction?: string;
@@ -734,6 +738,7 @@ function Field({
   type?: string;
   inputMode?: "numeric";
   readOnly?: boolean;
+  list?: string;
 }) {
   return (
     <label className="block">
@@ -750,6 +755,7 @@ function Field({
         type={type}
         inputMode={inputMode}
         readOnly={readOnly}
+        list={list}
         className="mt-2 w-full px-3 py-2.5 rounded-xl border border-border bg-muted/30 text-sm focus:outline-none focus:ring-2"
       />
     </label>

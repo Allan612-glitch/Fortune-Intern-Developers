@@ -64,7 +64,7 @@ def get_dashboard(
 	recent_applications = [
 		DashboardApplication(
 			id=str(row.id),
-			program_name=program_name or "Program",
+			program_name=program_name or ("Personal internship" if row.program_id is None else "Program"),
 			status=row.status,
 			created_at=row.created_at.isoformat(),
 		)

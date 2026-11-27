@@ -923,7 +923,7 @@ export default function AdminPage({ tab, onNavigate, allowedSections, programDet
                   {app.requires_minor_review && <p className="mt-1 text-xs font-semibold text-amber-800">Under 18 · verify guardian or institution approval</p>}
                 </td>
                 {!programDetailId && <td role="cell" data-label="Program" className="admin-table-wide">
-                  <Link to={`/app/admin/programs/${app.program_id}`} className="font-medium text-primary hover:underline">{app.program_name}</Link>
+                  {app.program_id ? <Link to={`/app/admin/programs/${app.program_id}`} className="font-medium text-primary hover:underline">{app.program_name}</Link> : app.program_name}
                 </td>}
                 <td role="cell" data-label="Submitted" className="text-muted-foreground">{dateLabel(app.created_at)}</td>
                 <td role="cell" data-label="Status">

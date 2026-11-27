@@ -12,7 +12,7 @@ from fastapi import UploadFile
 from fastapi.testclient import TestClient
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine, select
 
@@ -135,6 +135,70 @@ class TestWorkStudyAndResumeEndpoints(unittest.TestCase):
             response = self.client.post("/api/applications", data=data, files={"resume": ("valid.pdf", content, "application/pdf")})
         self.assertEqual(response.status_code, 201, response.text)
         self.assertEqual(response.json()["resume_filename"], "valid.pdf")
+
+    def test_personal_applications_are_saved_without_a_catalog_program(self):
+        payload = {
+            "personal_internship": True, "companyName": "Example Company",
+            "companyAddress": "Accra", "date_of_birth": "2000-01-01",
+            "applicant_name": self.student.name, "student_index_number": "1234567",
+        }
+        with patch("Backend.api.routes.applications.send_application_received_email"):
+            first = self.client.post("/api/applications", json=payload)
+            duplicate = self.client.post("/api/applications", json={**payload, "companyName": " example company "})
+            another = self.client.post("/api/applications", files={
+                key: (None, str(value)) for key, value in
+                {**payload, "personal_internship": "true", "companyName": "Another Company"}.items()
+            })
+        self.assertEqual(first.status_code, 201, first.text)
+        self.assertIsNone(first.json()["program_id"])
+        self.assertEqual(first.json()["program_name"], "Personal internship")
+        self.assertEqual(first.json()["host_company_name"], "Example Company")
+        self.assertEqual(duplicate.status_code, 409)
+        self.assertEqual(another.status_code, 201, another.text)
+        self.assertEqual(self.client.post("/api/applications", json={**payload, "companyName": " "}).status_code, 422)
+        self.assertEqual(self.client.post("/api/applications", json={**payload, "program_id": str(self.program.id)}).status_code, 422)
+        self.assertEqual(len(self.client.get("/api/applications").json()), 2)
+        with Session(self.engine) as session:
+            self.assertEqual(len(session.exec(select(program)).all()), 1)
+        self.actor = self.other
+        self.assertEqual(self.client.get("/api/applications").json(), [])
+        self.actor = self.admin
+        results = self.client.get("/api/admin/applications", params={"q": "Example Company"})
+        self.assertEqual(results.status_code, 200, results.text)
+        self.assertIsNone(results.json()[0]["program_id"])
+        with patch("Backend.api.routes.admin.send_application_documents_email"):
+            accepted = self.client.put(f"/api/admin/applications/{first.json()['id']}/status",
+                                       json={"status": "accepted", "reason": "eligibility_confirmed"})
+        self.assertEqual(accepted.status_code, 200, accepted.text)
+        self.assertIsNone(accepted.json()["program_id"])
+        self.actor = self.student
+        self.assertEqual(self.client.get(f"/api/applications/{first.json()['id']}").json()["program_name"], "Personal internship")
+        self.assertEqual(self.client.get("/api/dashboard").status_code, 200)
+
+    def test_personal_application_migration_preserves_existing_rows(self):
+        path = Path(__file__).resolve().parents[2] / "Database" / "Database" / "migrations" / "versions" / "c2a8e4f6b307_personal_internship_applications.py"
+        spec = importlib.util.spec_from_file_location("personal_application_migration", path)
+        if spec is None or spec.loader is None:
+            raise RuntimeError("Unable to load personal application migration")
+        migration = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(migration)
+        engine = create_engine("sqlite://")
+        with engine.begin() as connection:
+            connection.execute(text("CREATE TABLE applications (id INTEGER PRIMARY KEY, user_id TEXT NOT NULL, program_id CHAR(32) NOT NULL, status TEXT NOT NULL, host_company_name TEXT, applicant_name TEXT, student_index_number TEXT)"))
+            connection.execute(text("INSERT INTO applications (id, user_id, program_id, status) VALUES (1, 'user', 'program', 'submitted')"))
+            with Operations.context(MigrationContext.configure(connection)):
+                migration.upgrade()
+            self.assertTrue(next(col for col in inspect(connection).get_columns("applications") if col["name"] == "program_id")["nullable"])
+            connection.execute(text("INSERT INTO applications (id, user_id, program_id, status, host_company_name) VALUES (2, 'user', NULL, 'submitted', 'Company')"))
+            with Operations.context(MigrationContext.configure(connection)):
+                with self.assertRaisesRegex(RuntimeError, "personal internship"):
+                    migration.downgrade()
+            connection.execute(text("DELETE FROM applications WHERE id = 2"))
+            with Operations.context(MigrationContext.configure(connection)):
+                migration.downgrade()
+            self.assertEqual(connection.execute(text("SELECT program_id FROM applications WHERE id = 1")).scalar(), "program")
+            self.assertFalse(next(col for col in inspect(connection).get_columns("applications") if col["name"] == "program_id")["nullable"])
+        engine.dispose()
 
     def test_other_document_uploads_keep_existing_docx_support(self):
         data = io.BytesIO()
