@@ -414,7 +414,7 @@ export default function ProgramsPage({ user, initialSelectedProgramId, onInitial
             {selected.description && <section className="program-detail-section">
               <h3>About this opportunity</h3><p>{selected.description}</p>
             </section>}
-            {(selectedDetails.eligibility || selectedDetails.eligible_courses.length || selectedDetails.eligible_years.length) &&
+            {(Boolean(selectedDetails.eligibility) || selectedDetails.eligible_courses.length > 0 || selectedDetails.eligible_years.length > 0) &&
               <section className="program-detail-section">
                 <h3>Eligibility</h3>
                 {selectedDetails.eligible_courses.length > 0 && <p>Eligible courses: {selectedDetails.eligible_courses.join(", ")}</p>}
