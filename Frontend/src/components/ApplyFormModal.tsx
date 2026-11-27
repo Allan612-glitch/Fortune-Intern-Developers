@@ -288,8 +288,6 @@ export default function ApplyFormModal({
       return "Please enter a valid email address.";
     if (!/^\d{7,8}$/.test(form.indexNumber.trim()))
       return "Enter a valid 7- or 8-digit index number.";
-    if (inline && !form.suggestedCompany)
-      return "Please choose a preferred partner organisation.";
     if (inline && !consent)
       return "Please confirm your consent before submitting.";
     return "";
@@ -615,8 +613,8 @@ export default function ApplyFormModal({
               onChange={(value) => set("companyAddress", value)}
             />
             <Select
-              label={inline ? "Preferred partner organisation *" : "Suggested Company for Internship"}
-              instruction="Select your preferred company placement from the partner list."
+              label={inline ? "Alternative partner organisation (optional)" : "Suggested Company for Internship"}
+              instruction={inline ? "Optionally suggest another partner organisation as a backup to your selected program." : "Select your preferred company placement from the partner list."}
               value={form.suggestedCompany}
               onChange={(value) => set("suggestedCompany", value)}
               options={allPartners}
