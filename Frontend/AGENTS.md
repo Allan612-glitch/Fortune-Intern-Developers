@@ -29,6 +29,7 @@ Read this file fully before doing anything. Update it before you finish.
 
 ## Handoff log (newest first, keep last ~10 entries)
 Format: DATE – agent – what changed (files) – what is unfinished – commands the user must run
+- 2026-11-27 – Copilot – added display-only GHS 5 and GHS 10 price tags to the Apply portal cards (src/pages/ApplyPage.tsx, src/pages/ApplyPage.css) – payment behavior is unchanged – no command required
 - 2026-11-27 – Copilot – made the Apply portal cards more compact and responsive (src/pages/ApplyPage.tsx, src/pages/ApplyPage.css) – no command required
 - 2026-11-27 – Copilot – styled the Apply portal cards in blue and green with numbered steps and feature tags (src/pages/ApplyPage.tsx, src/pages/ApplyPage.css) – screenshot fees are not shown because they do not match the current payment flows; browser appearance not checked – no command required
 - 2026-11-27 – Copilot – temporarily bypassed internship checkout for all users while retaining paid-submission retries and an opt-in Paystack checkout build flag – payment enforcement is still not implemented in the application API – to re-enable checkout set `VITE_APPLICATION_CHECKOUT_ENABLED=true`, configure matching Paystack keys, and rebuild and deploy the frontend

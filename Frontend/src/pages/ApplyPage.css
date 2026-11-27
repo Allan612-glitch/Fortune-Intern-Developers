@@ -23,6 +23,42 @@
   --portal-end: #105333;
 }
 
+.apply-portal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.apply-portal-price {
+  display: grid;
+  justify-items: center;
+  flex-shrink: 0;
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 0.4rem 0.7rem;
+  color: #123766;
+  line-height: 1.2;
+}
+
+.apply-portal-price strong {
+  font-size: 1.125rem;
+  font-weight: 800;
+}
+
+.apply-portal-price span {
+  color: var(--portal-end);
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.apply-portal-price small {
+  margin-top: 0.15rem;
+  font-size: 0.625rem;
+}
+
 .apply-portal-label {
   font-size: 0.75rem;
   font-weight: 800;

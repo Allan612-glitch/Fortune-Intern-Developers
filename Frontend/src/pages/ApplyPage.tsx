@@ -60,7 +60,10 @@ export default function ApplyPage({ user }: { user: AppUser }) {
     <div className="apply-portal-grid">
       <section className="student-panel overflow-hidden" aria-labelledby="internship-title">
         <div className="apply-portal-intro apply-portal-internship">
-          <p className="apply-portal-label">Portal A</p>
+          <div className="apply-portal-header">
+            <p className="apply-portal-label">Portal A</p>
+            <p className="apply-portal-price"><strong>GHS 5</strong><span>One time fee</span><small>Display only</small></p>
+          </div>
           <h2 id="internship-title">Internship Application Portal</h2>
           <p className="apply-portal-description">Explore internships and attachments with organisations across a range of industries.</p>
           <details className="apply-portal-details">
@@ -139,7 +142,10 @@ export default function ApplyPage({ user }: { user: AppUser }) {
 
       <section id="work-study-portal-section" className="student-panel overflow-hidden" aria-labelledby="work-study-title">
         <div className="apply-portal-intro apply-portal-work-study">
-          <p className="apply-portal-label">Portal B</p>
+          <div className="apply-portal-header">
+            <p className="apply-portal-label">Portal B</p>
+            <p className="apply-portal-price"><strong>GHS 10</strong><span>One time fee</span><small>Display only</small></p>
+          </div>
           <h2 id="work-study-title">Work and Study Registration Portal</h2>
           <p className="apply-portal-description">Explore flexible earning roles on and near campus that can fit around your studies.</p>
           <details className="apply-portal-details">
