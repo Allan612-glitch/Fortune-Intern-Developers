@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import type { AppUser } from "../App";
 import ApplyFormModal from "../components/ApplyFormModal";
 import AsyncState from "../components/AsyncState";
@@ -14,9 +14,11 @@ const programPageSize = 25;
 
 export default function ApplyPage({ user }: { user: AppUser }) {
   const navigate = useNavigate();
-  const [internshipOpen, setInternshipOpen] = useState(false);
-  const [workStudyOpen, setWorkStudyOpen] = useState(false);
-  const [workStudyStarted, setWorkStudyStarted] = useState(false);
+  const [searchParams] = useSearchParams();
+  const portal = searchParams.get("portal");
+  const [internshipOpen, setInternshipOpen] = useState(portal === "internship");
+  const [workStudyOpen, setWorkStudyOpen] = useState(portal === "work-study");
+  const [workStudyStarted, setWorkStudyStarted] = useState(portal === "work-study");
   const [programs, setPrograms] = useState<Program[]>([]);
   const [programQuery, setProgramQuery] = useState("");
   const [programSearch, setProgramSearch] = useState("");
@@ -27,6 +29,16 @@ export default function ApplyPage({ user }: { user: AppUser }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
+
+  useEffect(() => {
+    if (portal === "internship") setInternshipOpen(true);
+    if (portal === "work-study") {
+      setWorkStudyOpen(true);
+      setWorkStudyStarted(true);
+      const frame = requestAnimationFrame(() => document.getElementById("work-study-portal-section")?.scrollIntoView({ block: "start" }));
+      return () => cancelAnimationFrame(frame);
+    }
+  }, [portal]);
 
   useEffect(() => {
     if (!internshipOpen) return;
@@ -116,7 +128,7 @@ export default function ApplyPage({ user }: { user: AppUser }) {
         </div>
       </section>
 
-      <section className="student-panel overflow-hidden" aria-labelledby="work-study-title">
+      <section id="work-study-portal-section" className="student-panel overflow-hidden" aria-labelledby="work-study-title">
         <div className="border-b border-border bg-secondary/60 p-4 sm:p-5">
           <p className="text-xs font-bold uppercase tracking-wider text-primary">Portal B</p>
           <h2 id="work-study-title" className="mt-1 text-lg font-bold">Work and study registration</h2>
