@@ -1,0 +1,107 @@
+.apply-portal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+  align-items: start;
+  gap: 1rem;
+}
+
+.apply-portal-intro {
+  padding: 1.25rem;
+  color: #fff;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.16) 2px, transparent 2px), linear-gradient(135deg, var(--portal-start), var(--portal-end));
+  background-size: 36px 36px, auto;
+  background-position: 0 0, center;
+}
+
+.apply-portal-internship {
+  --portal-start: #3070ad;
+  --portal-end: #194879;
+}
+
+.apply-portal-work-study {
+  --portal-start: #207d48;
+  --portal-end: #105333;
+}
+
+.apply-portal-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.apply-portal-intro h2 {
+  margin-top: 0.5rem;
+  max-width: 20ch;
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.apply-portal-description {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.apply-portal-details {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.apply-portal-details summary {
+  width: fit-content;
+  cursor: pointer;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.apply-portal-steps {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0;
+  list-style: none;
+  counter-reset: portal-step;
+}
+
+.apply-portal-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  counter-increment: portal-step;
+}
+
+.apply-portal-steps li::before {
+  display: grid;
+  flex: 0 0 1.5rem;
+  height: 1.5rem;
+  place-items: center;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  font-size: 0.75rem;
+  font-weight: 800;
+  content: counter(portal-step);
+}
+
+.apply-portal-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.apply-portal-tags li {
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.16);
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
