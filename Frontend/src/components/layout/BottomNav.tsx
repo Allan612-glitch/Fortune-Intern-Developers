@@ -8,7 +8,6 @@ interface BottomNavProps {
 }
 
 const compactLabels: Record<string, string> = {
-  announcements: "News",
   profile: "Profile",
 };
 
@@ -32,7 +31,7 @@ export default function BottomNav({ page, onNavigate }: BottomNavProps) {
     >
       <div className="flex w-full items-center">
         {navItems
-          .filter((item) => ["home", "dashboard", "apply", "announcements", "profile"].includes(item.id))
+          .filter((item) => ["home", "dashboard", "apply", "programs", "profile"].includes(item.id))
           .map((item) => {
             const active = page === item.id;
             return (
